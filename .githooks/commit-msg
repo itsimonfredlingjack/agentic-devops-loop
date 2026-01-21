@@ -1,0 +1,45 @@
+#!/bin/bash
+# Commit-msg hook: Validates commit message format
+# Format: {JIRA-ID}: {description}
+# Example: PROJ-123: Implements login endpoint
+# Smart Commits: PROJ-123 #comment Code ready #in-review
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits
+if [[ "$COMMIT_MSG" =~ ^Merge ]]; then
+    exit 0
+fi
+
+# Skip revert commits
+if [[ "$COMMIT_MSG" =~ ^Revert ]]; then
+    exit 0
+fi
+
+# Standard format: JIRA-ID: description
+STANDARD_REGEX="^[A-Z]+-[0-9]+: .+"
+
+# Smart commit format: JIRA-ID #command or JIRA-ID: desc #command
+SMART_COMMIT_REGEX="^[A-Z]+-[0-9]+.*#(comment|time|in-progress|in-review|done|resolved|closed)"
+
+if [[ "$COMMIT_MSG" =~ $STANDARD_REGEX ]] || [[ "$COMMIT_MSG" =~ $SMART_COMMIT_REGEX ]]; then
+    exit 0
+fi
+
+echo "ERROR: Commit message does not follow naming convention."
+echo ""
+echo "Required format: {JIRA-ID}: {description}"
+echo "  JIRA-ID: PROJECT-123 (uppercase project key, number)"
+echo "  Description: Clear description of changes"
+echo ""
+echo "Examples:"
+echo "  PROJ-123: Implements login endpoint"
+echo "  PROJ-456: Fix null pointer exception in user service"
+echo ""
+echo "Smart Commits (for Jira automation):"
+echo "  PROJ-123 #comment Code review ready #in-review"
+echo "  PROJ-123: Done with tests #resolved"
+echo ""
+echo "Your message: $COMMIT_MSG"
+exit 1

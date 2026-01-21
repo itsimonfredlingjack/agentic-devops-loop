@@ -1,0 +1,45 @@
+# CODEOWNERS - Security Critical Files
+# These patterns require manual review to prevent agent privilege escalation
+#
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ============================================================================
+# SECURITY CRITICAL: All changes to these files require human review
+# ============================================================================
+
+# GitHub configuration (workflows, actions, issue templates, etc.)
+# Prevents agent from modifying CI/CD pipelines or GitHub settings
+/.github/ @REPO_OWNER
+
+# Claude Code hooks (PreToolUse validation, stop-hooks)
+# Prevents agent from disabling its own safety constraints
+/.claude/hooks/ @REPO_OWNER
+
+# Docker configuration (privilege escalation risk)
+/Dockerfile @REPO_OWNER
+/docker-compose.yml @REPO_OWNER
+/docker-compose.yaml @REPO_OWNER
+/docker-compose*.yml @REPO_OWNER
+/docker-compose*.yaml @REPO_OWNER
+
+# Environment and secrets (credential exposure risk)
+/.env @REPO_OWNER
+/.env.* @REPO_OWNER
+/.envrc @REPO_OWNER
+/secrets/ @REPO_OWNER
+/**/secrets/ @REPO_OWNER
+/.secrets @REPO_OWNER
+
+# Dependency lock files (supply chain security)
+/package-lock.json @REPO_OWNER
+/yarn.lock @REPO_OWNER
+/pnpm-lock.yaml @REPO_OWNER
+/Gemfile.lock @REPO_OWNER
+/poetry.lock @REPO_OWNER
+/Pipfile.lock @REPO_OWNER
+/go.sum @REPO_OWNER
+
+# ============================================================================
+# NOTE: Replace @REPO_OWNER with actual GitHub username(s) or team(s)
+# Example: @myusername or @myorg/security-team
+# ============================================================================

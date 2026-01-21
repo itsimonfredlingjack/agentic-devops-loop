@@ -1,0 +1,15 @@
+{
+  "$schema": "https://claude.ai/schemas/claude-code-settings.json",
+  "hooks": {
+    "enabled": true,
+    "directory": ".claude/hooks"
+  },
+  "plugins": {
+    "enabled": true,
+    "directory": ".claude/plugins"
+  },
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}
