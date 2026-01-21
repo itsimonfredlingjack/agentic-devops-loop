@@ -1,0 +1,121 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validate-pr:
+    name: Validate PR Title & Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR Title contains Jira ID
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request.title;
+            const branchName = context.payload.pull_request.head.ref;
+
+            // Regex patterns
+            const titleRegex = /\[[A-Z]+-\d+\]/;  // [PROJ-123] format
+            const branchJiraRegex = /[A-Z]+-\d+/;  // Extract JIRA-ID from branch
+            const branchFormatRegex = /^(feature|bugfix|hotfix)\/[A-Z]+-\d+-[a-z0-9-]+$/;
+            const claudeBranchRegex = /^claude\//;  // Allow claude/ branches
+
+            let errors = [];
+            let warnings = [];
+
+            // Check if title contains Jira ID
+            const titleHasJira = titleRegex.test(prTitle);
+            const branchHasJira = branchJiraRegex.test(branchName);
+
+            if (!titleHasJira && !branchHasJira) {
+              errors.push(`PR title must contain a Jira ID in format [PROJ-123]`);
+              errors.push(`Current title: "${prTitle}"`);
+              errors.push(`Example: [PROJ-123] Add user authentication`);
+            }
+
+            // Check branch naming (skip claude/ branches)
+            if (!claudeBranchRegex.test(branchName)) {
+              if (!branchFormatRegex.test(branchName)) {
+                warnings.push(`Branch "${branchName}" doesn't follow naming convention`);
+                warnings.push(`Expected: {type}/{JIRA-ID}-{slug}`);
+                warnings.push(`Example: feature/PROJ-123-user-authentication`);
+              }
+            }
+
+            // Output results
+            if (warnings.length > 0) {
+              core.warning('Branch naming warning:\n' + warnings.join('\n'));
+            }
+
+            if (errors.length > 0) {
+              core.setFailed('PR validation failed:\n' + errors.join('\n'));
+            } else {
+              console.log('✅ PR validation passed');
+              if (titleHasJira) {
+                console.log(`   Jira ID found in title: ${prTitle.match(titleRegex)[0]}`);
+              } else if (branchHasJira) {
+                console.log(`   Jira ID found in branch: ${branchName.match(branchJiraRegex)[0]}`);
+              }
+            }
+
+  validate-commits:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+
+            // Get commits in this PR
+            const base = context.payload.pull_request.base.sha;
+            const head = context.payload.pull_request.head.sha;
+
+            const commits = execSync(`git log --format="%H %s" ${base}..${head}`)
+              .toString()
+              .trim()
+              .split('\n')
+              .filter(line => line.length > 0);
+
+            if (commits.length === 0) {
+              console.log('No commits to validate');
+              return;
+            }
+
+            const commitRegex = /^[a-f0-9]+ [A-Z]+-\d+[:\s]/;
+            const mergeRegex = /^[a-f0-9]+ Merge/;
+            const revertRegex = /^[a-f0-9]+ Revert/;
+
+            let invalidCommits = [];
+
+            for (const commit of commits) {
+              // Skip merge and revert commits
+              if (mergeRegex.test(commit) || revertRegex.test(commit)) {
+                continue;
+              }
+
+              if (!commitRegex.test(commit)) {
+                const [hash, ...msgParts] = commit.split(' ');
+                invalidCommits.push(`  ${hash.substring(0, 7)}: ${msgParts.join(' ')}`);
+              }
+            }
+
+            if (invalidCommits.length > 0) {
+              core.warning([
+                'Some commits do not follow the naming convention:',
+                ...invalidCommits,
+                '',
+                'Expected format: JIRA-ID: description',
+                'Example: PROJ-123: Implements login endpoint'
+              ].join('\n'));
+            } else {
+              console.log('✅ All commit messages follow naming convention');
+            }

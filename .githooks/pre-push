@@ -1,0 +1,38 @@
+#!/bin/bash
+# Pre-push hook: Validates branch naming convention
+# Format: {type}/{JIRA-ID}-{slug}
+# Example: feature/PROJ-123-user-authentication
+
+BRANCH_NAME=$(git symbolic-ref --short HEAD)
+
+# Allow main/master/develop branches
+if [[ "$BRANCH_NAME" =~ ^(main|master|develop)$ ]]; then
+    exit 0
+fi
+
+# Allow claude/ prefixed branches (agentic dev loop)
+if [[ "$BRANCH_NAME" =~ ^claude/ ]]; then
+    exit 0
+fi
+
+# Validate branch naming pattern
+BRANCH_REGEX="^(feature|bugfix|hotfix)\/[A-Z]+-[0-9]+-[a-z0-9-]+$"
+
+if ! [[ "$BRANCH_NAME" =~ $BRANCH_REGEX ]]; then
+    echo "ERROR: Branch name '$BRANCH_NAME' does not follow naming convention."
+    echo ""
+    echo "Required format: {type}/{JIRA-ID}-{slug}"
+    echo "  Types: feature, bugfix, hotfix"
+    echo "  JIRA-ID: PROJECT-123 (uppercase project, number)"
+    echo "  Slug: lowercase-with-dashes"
+    echo ""
+    echo "Examples:"
+    echo "  feature/PROJ-123-user-authentication"
+    echo "  bugfix/PROJ-456-fix-null-pointer"
+    echo "  hotfix/PROJ-789-security-patch"
+    echo ""
+    echo "Regex: $BRANCH_REGEX"
+    exit 1
+fi
+
+exit 0
