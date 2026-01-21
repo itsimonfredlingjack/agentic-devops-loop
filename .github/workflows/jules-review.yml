@@ -1,0 +1,222 @@
+name: Jules Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - develop
+
+# Minimal permissions by default
+permissions:
+  contents: read
+
+jobs:
+  code-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # For fix-commits
+      pull-requests: write   # For comments
+      issues: write          # For creating issues on major problems
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.js
+            **/*.ts
+            **/*.tsx
+            **/*.jsx
+            **/*.py
+            **/*.java
+            **/*.go
+            **/*.rs
+            **/*.rb
+            **/*.php
+            **/*.cs
+            **/*.cpp
+            **/*.c
+            **/*.h
+
+      - name: Setup Node.js
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Jules Code Review
+        if: steps.changed-files.outputs.any_changed == 'true'
+        id: jules-review
+        uses: actions/github-script@v7
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const changedFiles = process.env.CHANGED_FILES.split(' ').filter(f => f);
+
+            if (changedFiles.length === 0) {
+              console.log('No code files changed, skipping review');
+              return;
+            }
+
+            console.log(`Reviewing ${changedFiles.length} files...`);
+
+            // Collect file contents for review
+            const filesToReview = [];
+            for (const file of changedFiles) {
+              try {
+                const content = fs.readFileSync(file, 'utf8');
+                filesToReview.push({ path: file, content });
+              } catch (e) {
+                console.log(`Could not read ${file}: ${e.message}`);
+              }
+            }
+
+            // Build review prompt
+            const reviewPrompt = `
+            You are Jules, an AI code reviewer. Review the following code changes for:
+
+            ## Security (OWASP Top 10)
+            - SQL Injection
+            - XSS vulnerabilities
+            - Insecure authentication
+            - Sensitive data exposure
+            - Security misconfiguration
+            - Using components with known vulnerabilities
+
+            ## Performance
+            - Inefficient loops (O(n²) where O(n) is possible)
+            - N+1 query patterns
+            - Memory leaks
+            - Unnecessary computations
+
+            ## Code Style
+            - Follow project linting rules
+            - Consistent naming conventions
+            - Proper error handling
+            - Code readability
+
+            For each issue found, respond in this JSON format:
+            {
+              "issues": [
+                {
+                  "severity": "critical|warning|info",
+                  "file": "path/to/file",
+                  "line": 42,
+                  "category": "security|performance|style",
+                  "title": "Brief issue title",
+                  "description": "Detailed explanation",
+                  "suggestion": "How to fix it",
+                  "fix": "Optional: exact code fix if simple"
+                }
+              ],
+              "summary": "Overall assessment",
+              "approved": true|false
+            }
+
+            Files to review:
+            ${filesToReview.map(f => `
+            === ${f.path} ===
+            \`\`\`
+            ${f.content.substring(0, 10000)}
+            \`\`\`
+            `).join('\n')}
+            `;
+
+            // Store review data for next steps
+            core.setOutput('files_reviewed', changedFiles.length);
+            core.setOutput('review_prompt', reviewPrompt);
+
+            // Note: In production, this would call the Anthropic API
+            // For now, we'll create a placeholder that can be extended
+            console.log('Review prompt prepared for Jules analysis');
+            console.log(`Files to review: ${changedFiles.join(', ')}`);
+
+      - name: Process Review Results
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This step would process Jules' response and:
+            // 1. Create fix commits for critical issues
+            // 2. Add comments for warnings
+            // 3. Post LGTM if approved
+
+            const prNumber = context.payload.pull_request.number;
+
+            // Placeholder: Post initial review comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🤖 Jules Code Review
+
+            Automated code review initiated.
+
+            **Review Focus:**
+            - 🔒 Security (OWASP Top 10)
+            - ⚡ Performance (loops, queries)
+            - 📝 Code Style (linting rules)
+
+            ---
+            *Configure Jules in \`.github/workflows/jules-review.yml\`*
+            *Requires \`ANTHROPIC_API_KEY\` secret for full functionality*`
+            });
+
+            console.log('Review comment posted');
+
+      - name: Auto-fix Critical Issues
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This step would:
+            // 1. Parse critical issues from Jules response
+            // 2. Apply automatic fixes
+            // 3. Commit and push changes
+
+            // Placeholder for auto-fix logic
+            console.log('Auto-fix step - would apply critical fixes here');
+
+            // Example of how to commit fixes:
+            // const { execSync } = require('child_process');
+            // execSync('git config user.name "Jules Bot"');
+            // execSync('git config user.email "jules@example.com"');
+            // execSync('git add -A');
+            // execSync('git commit -m "fix: Auto-fix critical issues found by Jules"');
+            // execSync('git push');
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run security scan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('Security scan placeholder');
+            console.log('In production, integrate with:');
+            console.log('- CodeQL for static analysis');
+            console.log('- Dependabot for dependency scanning');
+            console.log('- Trivy for container scanning');
