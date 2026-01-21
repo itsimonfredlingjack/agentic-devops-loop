@@ -1,236 +1,203 @@
-# Agentic Dev Loop
+# Agentic Dev Loop 🤖
 
-An autonomous development system where Claude Code implements Jira tickets in a persistent "Ralph Wiggum" loop until tests pass, then pushes to GitHub for AI review.
+> **Autonomous development:** Jira ticket → Claude Code → GitHub PR → Jules review → Merge
 
-## Architecture
+An autonomous development system where AI implements Jira tickets in a persistent loop until tests pass, then creates PRs for AI-powered code review.
+
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)](/.github/workflows/ci.yml)
+[![Jules](https://img.shields.io/badge/Review-Jules%20AI-green)](/.github/workflows/jules-review.yml)
+[![Self-Healing](https://img.shields.io/badge/Self--Healing-Enabled-orange)](/.github/workflows/self-healing.yml)
+
+---
+
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Agentic Dev Loop                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   Jira ──MCP──> Claude Code (Ralph Loop) ──git──> GitHub Actions    │
-│    │                      │                            │             │
-│    │                      │                            ▼             │
-│    │            docs/CURRENT_TASK.md              Jules Review       │
-│    │            (persistent memory)                    │             │
-│    │                      │                            │             │
-│    └──────────────────────┼────────────────────────────┘             │
-│                           │                                          │
-│              Stop-Hook validates exit:                               │
-│              - Tests pass? ✓                                        │
-│              - Lint pass? ✓                                         │
-│              - Promise found? ✓                                     │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────┐     ┌─────────────────┐     ┌──────────────┐     ┌───────┐
+│  Jira   │────▶│  Claude Code    │────▶│ GitHub Actions│────▶│ Merge │
+│ Ticket  │     │  (Ralph Loop)   │     │  + Jules AI   │     │       │
+└─────────┘     └─────────────────┘     └──────────────┘     └───────┘
+     │                  │                      │
+     │                  ▼                      │
+     │         CURRENT_TASK.md                 │
+     │        (Persistent Memory)              │
+     │                                         │
+     └─────────────────────────────────────────┘
+                    Self-Healing
 ```
+
+1. **Create** a Jira ticket with acceptance criteria
+2. **Run** `/start-task PROJ-123` in Claude Code
+3. **Watch** as the agent implements using TDD
+4. **Review** the auto-generated PR (with Jules AI assist)
+5. **Merge** when satisfied
+
+---
 
 ## Quick Start
 
-### 1. Configure Environment
-
 ```bash
+# 1. Configure credentials
 cp .env.example .env
-# Edit .env with your Jira credentials
-```
+# Edit .env with your Jira details
 
-### 2. Setup Git Hooks
-
-```bash
+# 2. Install git hooks
 ./scripts/setup-hooks.sh
-```
 
-### 3. Start a Task
-
-```bash
+# 3. Start Claude and begin
 claude
 # Then: /start-task PROJ-123
 ```
 
-### 4. Let it Run
+📖 **Full guide:** [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
-The agent will:
-1. Fetch the Jira ticket
-2. Create a properly named branch
-3. Implement the solution (TDD)
-4. Run tests and lint repeatedly
-5. Only exit when all criteria pass
-6. Push and create a PR
+---
 
-## Components
+## Features
 
-### Phase 1: Infrastructure ✅
+### ✅ All Phases Complete
 
-- `.github/CODEOWNERS` - Protects security-critical files
-- `.github/workflows/pr-validation.yml` - Validates PR format and commits
-- `.githooks/commit-msg` - Enforces commit message format
-- `.githooks/pre-push` - Pre-push validation
+| Phase | Component | Status |
+|-------|-----------|--------|
+| **1. Infrastructure** | CODEOWNERS, git hooks, PR validation | ✅ |
+| **2. MCP Integration** | Jira tools (get, search, transition, comment) | ✅ |
+| **3. Ralph Loop** | Stop-hook, exit policy, persistent memory | ✅ |
+| **4. Jules Review** | AI code review on PRs | ✅ |
+| **5. Self-Healing** | Auto-fix on CI failures (max 3 retries) | ✅ |
+| **6. Security** | PreToolUse validation, prompt injection protection | ✅ |
+| **7. Init Flow** | /start-task, TDD workflow, GUIDELINES.md | ✅ |
 
-### Phase 2: MCP Integration ✅
+### 🔒 Security
 
-- `.claude/plugins/agentic-loop/manifest.json` - Jira MCP server config
-- Environment variables for credentials
+- **CODEOWNERS** protects `.github/` and `.claude/hooks/`
+- **PreToolUse hook** validates package installs against allowlist
+- **Dangerous commands blocked:** `curl | bash`, `eval`, `sudo`, etc.
+- **Prompt injection protection** for external data (Jira descriptions)
+- **Container isolation** available via Docker
 
-**Jira Tools Available:**
-- `jira_get_issue` - Fetch ticket details
-- `jira_search` - JQL queries
-- `jira_transition_issue` - Move ticket status
-- `jira_add_comment` - Log agent activity
+### 🔄 Ralph Loop Exit Criteria
 
-### Phase 3: Ralph Loop ✅
+The agent **cannot exit** until:
+- ✅ All tests pass
+- ✅ No linting errors
+- ✅ Completion promise found
+- ⏱️ Or max 25 iterations reached
 
-- `.claude/hooks/stop-hook.py` - Validates exit criteria
-- `.claude/ralph-config.json` - Exit policy configuration
-- `docs/CURRENT_TASK.md` - Persistent memory file
+### 📊 Traceability
 
-**Exit Criteria:**
-1. All tests pass
-2. All linting passes
-3. Completion promise found: `<promise>DONE</promise>`
-4. Max 25 iterations (hard limit)
+Every git operation references Jira:
+- **Branch:** `feature/PROJ-123-description`
+- **Commit:** `PROJ-123: Implements feature X`
+- **PR Title:** `[PROJ-123] Add feature X`
 
-### Phase 4-5: GitHub Actions & Jules (TODO)
+---
 
-- Jules AI review on PR
-- Self-healing on CI failure
-
-## Directory Structure
+## File Structure
 
 ```
 .
 ├── .claude/
-│   ├── hooks/
-│   │   └── stop-hook.py       # Ralph Loop exit validator
-│   ├── plugins/
-│   │   └── agentic-loop/
-│   │       └── manifest.json  # MCP server configuration
-│   ├── skills/
-│   │   ├── start-task.md      # Initialize task workflow
-│   │   └── finish-task.md     # Complete task workflow
-│   ├── ralph-config.json      # Exit policy
-│   └── settings.json          # Claude Code settings
+│   ├── hooks/           # Stop-hook + PreToolUse security
+│   ├── plugins/         # Jira MCP configuration
+│   ├── skills/          # /start-task, /finish-task
+│   └── settings.json    # Claude Code config
 ├── .github/
-│   ├── CODEOWNERS             # Security-critical file protection
-│   ├── workflows/
-│   │   └── pr-validation.yml  # PR and commit validation
-│   └── PULL_REQUEST_TEMPLATE.md
-├── .githooks/
-│   ├── commit-msg             # Commit message validation
-│   └── pre-push               # Pre-push checks
+│   ├── CODEOWNERS       # Protected file rules
+│   └── workflows/       # CI, Jules, Self-healing
 ├── docs/
-│   └── CURRENT_TASK.md        # Persistent task memory
-├── scripts/
-│   ├── setup-hooks.sh         # Install git hooks
-│   ├── create-branch.sh       # Create properly named branch
-│   └── create-pr.sh           # Create PR with template
-├── .env.example               # Environment template
-├── .gitignore
-└── README.md
+│   ├── CURRENT_TASK.md  # Agent persistent memory
+│   ├── GUIDELINES.md    # Agent behavior reference
+│   └── QUICKSTART.md    # This guide
+└── scripts/             # Helper scripts
 ```
 
-## Traceability
-
-All git operations reference the Jira ticket:
-
-- **Branch:** `{type}/{JIRA-ID}-{slug}`
-  - Example: `feature/PROJ-123-add-user-auth`
-- **Commit:** `{JIRA-ID}: {description}`
-  - Example: `PROJ-123: Implements login endpoint`
-- **PR Title:** `[{JIRA-ID}] {summary}`
-  - Example: `[PROJ-123] Add user authentication`
-
-## Security
-
-### Protected Files (via CODEOWNERS)
-
-These files require human review:
-- `.github/` - Workflows, actions
-- `.claude/hooks/` - Agent safety constraints
-- `Dockerfile`, `docker-compose.yml`
-- `.env`, secrets
-- Lock files (package-lock.json, etc.)
-
-### Agent Restrictions
-
-The agent CANNOT:
-- Modify its own hooks or workflows
-- Use `git push --force`
-- Use `git reset --hard`
-- Approve its own infrastructure changes
+---
 
 ## Configuration
-
-### ralph-config.json
-
-```json
-{
-  "exit_policy": {
-    "completion_promise": "<promise>DONE</promise>",
-    "max_iterations": 25,
-    "requirements": {
-      "tests_must_pass": true,
-      "lint_must_pass": true
-    }
-  }
-}
-```
 
 ### Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `JIRA_URL` | Jira Cloud URL (e.g., https://company.atlassian.net) |
-| `JIRA_USERNAME` | Jira email address |
-| `JIRA_API_TOKEN` | Jira API token |
+| `JIRA_URL` | `https://company.atlassian.net` |
+| `JIRA_USERNAME` | Your Jira email |
+| `JIRA_API_TOKEN` | API token from Atlassian |
 
-## Skills
+### Package Allowlist
 
-### /start-task
+Edit `.claude/package-allowlist.json` to allow project-specific packages:
 
-Initializes a new task:
-1. Fetches Jira ticket
-2. Creates branch
-3. Populates CURRENT_TASK.md
-4. Transitions Jira to "In Progress"
+```json
+{
+  "npm": ["react", "next", "tailwindcss"],
+  "pip": ["django", "celery", "redis"]
+}
+```
 
-### /finish-task
+### Ralph Loop Config
 
-Completes a task:
-1. Verifies all criteria
-2. Creates PR
-3. Transitions Jira to "In Review"
-4. Outputs completion promise
+Edit `.claude/ralph-config.json`:
+
+```json
+{
+  "exit_policy": {
+    "max_iterations": 25,
+    "completion_promise": "<promise>DONE</promise>"
+  }
+}
+```
+
+---
+
+## GitHub Actions
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `pr-validation.yml` | PR opened | Validate title, commits, branch |
+| `ci.yml` | Push/PR | Lint, test, build |
+| `jules-review.yml` | PR opened | AI code review |
+| `self-healing.yml` | CI failure | Auto-fix attempts |
+
+---
+
+## Docker (Optional)
+
+Run the agent in an isolated container:
+
+```bash
+docker compose up -d
+docker compose exec agent bash
+# Now run claude inside container
+```
+
+---
 
 ## Troubleshooting
 
-### Agent Won't Exit
+| Problem | Solution |
+|---------|----------|
+| Agent won't exit | Check tests pass, check `.claude/ralph-state.json` |
+| Jira connection fails | Verify `.env` credentials |
+| Git hooks not working | Run `./scripts/setup-hooks.sh` |
+| Package install blocked | Add to `.claude/package-allowlist.json` |
 
-The stop-hook blocks exit until:
-1. Tests pass
-2. Lint passes
-3. `<promise>DONE</promise>` appears in transcript
-
-Check `.claude/ralph-state.json` for iteration count.
-
-### Jira Connection Fails
-
-1. Verify `.env` credentials
-2. Check API token permissions
-3. Ensure MCP server is configured
-
-### Git Hook Errors
-
-Run `./scripts/setup-hooks.sh` to reinstall hooks.
+---
 
 ## Contributing
 
-1. Create a branch following naming convention
+1. Create branch: `feature/PROJ-123-description`
 2. Make changes
-3. Ensure tests pass
-4. Create PR with Jira ID
+3. Commit: `PROJ-123: Description`
+4. Create PR
 
-**Note:** Changes to `.github/` or `.claude/hooks/` require human review via CODEOWNERS.
+**Note:** Changes to `.github/` or `.claude/hooks/` require human review.
+
+---
 
 ## License
 
 MIT
+
+---
+
+**Built with Claude Code** 🤖
