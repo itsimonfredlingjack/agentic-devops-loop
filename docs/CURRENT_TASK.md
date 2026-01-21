@@ -1,22 +1,77 @@
 # Current Task
 
-This file serves as persistent memory for the agentic development loop.
-It helps prevent context rot by maintaining task state across sessions.
+> **READ THIS FILE FIRST** at the start of every iteration.
+> This is your persistent memory - it survives context compaction.
 
 ## Active Task
 
-_No active task_
+**Jira ID:** _None_
+**Status:** No active task
+**Branch:** _None_
+**Started:** _Not started_
 
-## Task History
+## Acceptance Criteria
 
-| Date | Task | Status |
-|------|------|--------|
-| - | - | - |
+<!-- Copy acceptance criteria from Jira ticket here -->
 
-## Context Notes
+- [ ] _No criteria defined_
 
-Use this section to store important context that should persist across sessions.
+## Implementation Checklist
+
+<!-- Track your progress through the implementation -->
+
+- [ ] Understand the requirements
+- [ ] Write/update tests first (TDD)
+- [ ] Implement the solution
+- [ ] All tests pass
+- [ ] Linting passes
+- [ ] Code reviewed (self or peer)
+
+## Current Progress
+
+### Iteration Log
+
+| # | Action | Result | Next Step |
+|---|--------|--------|-----------|
+| - | - | - | - |
+
+### Blockers
+
+_None_
+
+### Decisions Made
+
+_None_
+
+## Technical Context
+
+### Files Modified
+
+_None_
+
+### Dependencies Added
+
+_None_
+
+### API Changes
+
+_None_
+
+## Exit Criteria
+
+Before outputting `<promise>DONE</promise>`, verify:
+
+1. [ ] All acceptance criteria are met
+2. [ ] All tests pass: `pytest` or `npm test`
+3. [ ] No linting errors: `ruff check .` or `npm run lint`
+4. [ ] Changes committed with proper message format: `{JIRA-ID}: {description}`
+5. [ ] Branch pushed to remote
+
+## Notes
+
+<!-- Any additional context that should persist -->
 
 ---
 
 *Last updated: Not yet*
+*Iteration: 0*
