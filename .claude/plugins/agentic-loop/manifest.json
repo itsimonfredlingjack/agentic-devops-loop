@@ -1,0 +1,9 @@
+{
+  "name": "agentic-loop",
+  "version": "1.0.0",
+  "description": "Plugin for agentic development loop with persistent memory and self-healing capabilities",
+  "enabled": true,
+  "mcp": {
+    "servers": []
+  }
+}
