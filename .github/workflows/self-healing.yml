@@ -74,7 +74,7 @@ jobs:
             core.setOutput('attempt_count', attemptCount);
 
             if (!shouldAttempt) {
-              console.log('⚠️ Max self-healing attempts reached. Manual intervention required.');
+              console.log('Max self-healing attempts reached. Manual intervention required.');
             }
 
   fetch-logs:
@@ -122,7 +122,7 @@ jobs:
                     job_id: job.id
                   });
 
-                  // Extract error lines (simplified)
+                  // Extract error lines
                   const logLines = logs.split('\n');
                   const errorLines = logLines.filter(line =>
                     line.toLowerCase().includes('error') ||
@@ -172,118 +172,109 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Analyze and fix errors
-        id: fix-errors
-        uses: actions/github-script@v7
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Save error logs to file
         env:
           ERROR_LOGS: ${{ needs.fetch-logs.outputs.error_logs }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "$ERROR_LOGS" > /tmp/error-logs.json
+
+      - name: Analyze and fix with Claude Code
+        id: fix-errors
+        env:
+          CLAUDE_CODE_USE_BEDROCK: ${{ secrets.CLAUDE_CODE_USE_BEDROCK }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
           ATTEMPT_COUNT: ${{ needs.analyze-failure.outputs.attempt_count }}
-        with:
-          script: |
-            const fs = require('fs');
-            const { execSync } = require('child_process');
+        run: |
+          ATTEMPT=$((ATTEMPT_COUNT + 1))
+          echo "Self-healing attempt ${ATTEMPT}/3"
 
-            const errorLogs = JSON.parse(process.env.ERROR_LOGS || '[]');
-            const attemptCount = parseInt(process.env.ATTEMPT_COUNT) + 1;
+          # Read error logs
+          ERROR_LOGS=$(cat /tmp/error-logs.json)
 
-            console.log(`Self-healing attempt ${attemptCount}/3`);
-            console.log('Error logs:', JSON.stringify(errorLogs, null, 2));
+          # Create prompt for Claude Code
+          cat > /tmp/fix-prompt.md << 'PROMPT_EOF'
+          The CI pipeline failed. Analyze these error logs and fix the issues:
 
-            // Build analysis prompt for Jules
-            const analysisPrompt = `
-            You are Jules, an AI assistant helping to fix CI/CD failures.
+          ## Error Logs
+          PROMPT_EOF
 
-            ## Error Logs
-            ${errorLogs.map(log => `
-            ### Job: ${log.job}
-            \`\`\`
-            ${log.errors.join('\n')}
-            \`\`\`
-            `).join('\n')}
+          echo "$ERROR_LOGS" >> /tmp/fix-prompt.md
 
-            ## Task
-            Analyze the error logs and determine:
-            1. What is the root cause of the failure?
-            2. Can this be automatically fixed?
-            3. If yes, provide the exact fix.
+          cat >> /tmp/fix-prompt.md << 'PROMPT_EOF'
 
-            Respond in JSON format:
-            {
-              "rootCause": "Description of the issue",
-              "canAutoFix": true|false,
-              "fixes": [
-                {
-                  "file": "path/to/file",
-                  "action": "modify|create|delete",
-                  "content": "new content or patch",
-                  "description": "what this fix does"
-                }
-              ],
-              "manualSteps": ["Step 1", "Step 2"] // if canAutoFix is false
-            }
-            `;
+          ## Instructions
+          1. Identify the root cause of each failure
+          2. Fix issues that can be automatically resolved:
+             - Linting errors: run linter with --fix
+             - Formatting errors: run formatter
+             - Missing dependencies: update package.json
+             - Type errors: fix type issues if straightforward
+          3. Do NOT fix:
+             - Failing tests (requires understanding business logic)
+             - Complex type errors
+             - Issues requiring architectural changes
 
-            console.log('Analysis prompt prepared for Jules');
+          Make minimal, focused changes. Explain what you fixed.
+          PROMPT_EOF
 
-            // Placeholder: In production, call Anthropic API here
-            // For now, attempt common fixes
+          # Run Claude Code to analyze and fix
+          FIX_OUTPUT=$(claude-code --print "$(cat /tmp/fix-prompt.md)" 2>/dev/null || echo "CLAUDE_CODE_SKIPPED")
 
-            let fixApplied = false;
-            let fixDescription = '';
+          echo "$FIX_OUTPUT" > /tmp/fix-output.txt
 
-            // Common fix patterns
-            for (const log of errorLogs) {
-              const errorText = log.errors.join('\n').toLowerCase();
+          # Try common automatic fixes as fallback
+          FIX_APPLIED=false
+          FIX_DESCRIPTION=""
 
-              // Check for common fixable issues
-              if (errorText.includes('lockfile') || errorText.includes('package-lock')) {
-                console.log('Detected lockfile issue, attempting npm install');
-                try {
-                  execSync('npm install', { stdio: 'inherit' });
-                  fixApplied = true;
-                  fixDescription = 'Regenerated package-lock.json';
-                } catch (e) {
-                  console.log('npm install failed:', e.message);
-                }
-              }
+          # Check error patterns and apply fixes
+          if echo "$ERROR_LOGS" | grep -qi "eslint\|lint"; then
+            echo "Attempting ESLint fix..."
+            if npm run lint -- --fix 2>/dev/null; then
+              FIX_APPLIED=true
+              FIX_DESCRIPTION="Applied ESLint auto-fixes"
+            fi
+          fi
 
-              if (errorText.includes('typescript') && errorText.includes('cannot find')) {
-                console.log('Detected TypeScript type error');
-                // Could attempt to add missing imports
-              }
+          if echo "$ERROR_LOGS" | grep -qi "prettier\|format"; then
+            echo "Attempting Prettier fix..."
+            if npm run format 2>/dev/null; then
+              FIX_APPLIED=true
+              FIX_DESCRIPTION="${FIX_DESCRIPTION:+$FIX_DESCRIPTION, }Applied code formatting"
+            fi
+          fi
 
-              if (errorText.includes('lint') || errorText.includes('eslint')) {
-                console.log('Detected linting error, attempting auto-fix');
-                try {
-                  execSync('npm run lint -- --fix', { stdio: 'inherit' });
-                  fixApplied = true;
-                  fixDescription = 'Applied ESLint auto-fixes';
-                } catch (e) {
-                  console.log('Lint fix failed:', e.message);
-                }
-              }
+          if echo "$ERROR_LOGS" | grep -qi "lockfile\|package-lock"; then
+            echo "Regenerating lockfile..."
+            if npm install 2>/dev/null; then
+              FIX_APPLIED=true
+              FIX_DESCRIPTION="${FIX_DESCRIPTION:+$FIX_DESCRIPTION, }Regenerated package-lock.json"
+            fi
+          fi
 
-              if (errorText.includes('prettier') || errorText.includes('formatting')) {
-                console.log('Detected formatting error');
-                try {
-                  execSync('npm run format', { stdio: 'inherit' });
-                  fixApplied = true;
-                  fixDescription = 'Applied code formatting';
-                } catch (e) {
-                  console.log('Format failed:', e.message);
-                }
-              }
-            }
+          # Check if there are actual changes
+          if ! git diff --quiet || ! git diff --staged --quiet; then
+            FIX_APPLIED=true
+            if [ -z "$FIX_DESCRIPTION" ]; then
+              FIX_DESCRIPTION="Applied automatic fixes via Claude Code"
+            fi
+          fi
 
-            core.setOutput('fix_applied', fixApplied);
-            core.setOutput('fix_description', fixDescription);
+          echo "fix_applied=$FIX_APPLIED" >> $GITHUB_OUTPUT
+          echo "fix_description=$FIX_DESCRIPTION" >> $GITHUB_OUTPUT
 
       - name: Commit and push fix
         if: steps.fix-errors.outputs.fix_applied == 'true'
+        env:
+          ATTEMPT_COUNT: ${{ needs.analyze-failure.outputs.attempt_count }}
+          FIX_DESCRIPTION: ${{ steps.fix-errors.outputs.fix_description }}
         run: |
           git config user.name "Jules Bot"
-          git config user.email "jules-bot@example.com"
+          git config user.email "jules-bot@users.noreply.github.com"
 
           # Check if there are changes to commit
           if git diff --quiet && git diff --staged --quiet; then
@@ -291,22 +282,28 @@ jobs:
             exit 0
           fi
 
-          git add -A
-          git commit -m "[self-healing] ${{ steps.fix-errors.outputs.fix_description }}
+          ATTEMPT=$((ATTEMPT_COUNT + 1))
 
-          Automatic fix attempt ${{ needs.analyze-failure.outputs.attempt_count }}/3
-          Triggered by failed workflow run"
+          git add -A
+          git commit -m "[self-healing] ${FIX_DESCRIPTION}
+
+          Automatic fix attempt ${ATTEMPT}/3
+          Triggered by failed CI workflow
+          Powered by Claude Code CLI"
 
           git push origin ${{ needs.analyze-failure.outputs.branch }}
-          echo "✅ Fix committed and pushed"
+          echo "Fix committed and pushed"
 
       - name: Post status comment
         uses: actions/github-script@v7
+        env:
+          FIX_APPLIED: ${{ steps.fix-errors.outputs.fix_applied }}
+          FIX_DESCRIPTION: ${{ steps.fix-errors.outputs.fix_description }}
         with:
           script: |
             const branch = '${{ needs.analyze-failure.outputs.branch }}';
-            const fixApplied = '${{ steps.fix-errors.outputs.fix_applied }}' === 'true';
-            const fixDescription = '${{ steps.fix-errors.outputs.fix_description }}';
+            const fixApplied = process.env.FIX_APPLIED === 'true';
+            const fixDescription = process.env.FIX_DESCRIPTION || 'No description';
             const attemptCount = parseInt('${{ needs.analyze-failure.outputs.attempt_count }}') + 1;
 
             // Find associated PR
@@ -326,22 +323,23 @@ jobs:
             let body;
 
             if (fixApplied) {
-              body = `## 🔧 Self-Healing Pipeline
+              body = `## Self-Healing Pipeline
 
             **Attempt:** ${attemptCount}/3
-            **Status:** ✅ Fix Applied
+            **Status:** Fix Applied
 
             **Description:** ${fixDescription}
 
             A new commit has been pushed with automatic fixes. The CI will re-run shortly.
 
             ---
+            *Powered by Claude Code CLI*
             *If this fix doesn't resolve the issue, manual intervention may be required.*`;
             } else {
-              body = `## 🔧 Self-Healing Pipeline
+              body = `## Self-Healing Pipeline
 
             **Attempt:** ${attemptCount}/3
-            **Status:** ⚠️ Could not auto-fix
+            **Status:** Could not auto-fix
 
             The self-healing pipeline analyzed the failure but could not determine an automatic fix.
 
@@ -389,7 +387,7 @@ jobs:
             const { data: issue } = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 CI Failure requires manual intervention: ${branch}`,
+              title: `CI Failure requires manual intervention: ${branch}`,
               body: `## Self-Healing Limit Reached
 
             The self-healing pipeline has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
@@ -410,7 +408,8 @@ jobs:
             ${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
 
             ---
-            *This issue was automatically created by the self-healing pipeline.*`,
+            *This issue was automatically created by the self-healing pipeline.*
+            *Powered by Claude Code CLI*`,
               labels: ['ci-failure', 'needs-attention']
             });
 
@@ -422,7 +421,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prs[0].number,
-                body: `## 🚨 Self-Healing Limit Reached
+                body: `## Self-Healing Limit Reached
 
             The automatic fix pipeline has exhausted all attempts (${attemptCount}/3).
 

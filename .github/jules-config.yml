@@ -1,5 +1,23 @@
 # Jules AI Configuration
 # This file configures the behavior of Jules code review and self-healing
+# Powered by Claude Code CLI (works with Claude Max subscription)
+
+# ============================================================================
+# AUTHENTICATION OPTIONS (choose one)
+# ============================================================================
+#
+# Option 1: Claude Max via AWS Bedrock (Recommended for CI/CD)
+#   Set these secrets in your GitHub repository:
+#   - CLAUDE_CODE_USE_BEDROCK: "1"
+#   - AWS_ACCESS_KEY_ID: your-key
+#   - AWS_SECRET_ACCESS_KEY: your-secret
+#   - AWS_REGION: us-east-1 (or your region)
+#
+# Option 2: Direct Anthropic API
+#   Set this secret in your GitHub repository:
+#   - ANTHROPIC_API_KEY: your-api-key
+#
+# ============================================================================
 
 review:
   # Enable/disable review features
@@ -59,7 +77,7 @@ self_healing:
   # Enable/disable self-healing
   enabled: true
 
-  # Maximum auto-fix attempts per branch
+  # Maximum auto-fix attempts per branch (security limit)
   max_attempts: 3
 
   # Workflows to monitor for failures
@@ -69,7 +87,7 @@ self_healing:
     - Test
     - Lint
 
-  # Auto-fix patterns
+  # Auto-fix patterns (fallback when Claude Code unavailable)
   fixable_patterns:
     - name: lockfile_mismatch
       pattern: "lockfile|package-lock|npm ERR!"
@@ -128,11 +146,9 @@ exclude:
   - "**/vendor/**"
   - "**/.git/**"
 
-# AI model settings
-model:
-  # Anthropic model to use
-  name: claude-sonnet-4-20250514
-  # Max tokens for review response
-  max_tokens: 4096
-  # Temperature for responses
-  temperature: 0.3
+# Claude Code CLI settings
+claude_code:
+  # Use --print flag for non-interactive mode
+  non_interactive: true
+  # Timeout for Claude Code operations (seconds)
+  timeout: 300
