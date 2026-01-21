@@ -2,56 +2,30 @@ name: Self-Healing Pipeline
 
 on:
   workflow_run:
-    workflows: ["CI", "Build", "Test"]  # Adjust to match your CI workflow names
+    workflows: ["CI"]
     types:
       - completed
 
-# Minimal permissions by default
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+  actions: read
 
 jobs:
-  analyze-failure:
-    name: Analyze CI Failure
+  check-failure:
+    name: Check if healing needed
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: read
-
     outputs:
-      should_attempt_fix: ${{ steps.check-attempts.outputs.should_attempt }}
-      attempt_count: ${{ steps.check-attempts.outputs.attempt_count }}
-      branch: ${{ steps.get-branch.outputs.branch }}
-
+      should_heal: ${{ steps.check.outputs.should_heal }}
+      branch: ${{ steps.check.outputs.branch }}
     steps:
-      - name: Get branch information
-        id: get-branch
+      - name: Check healing attempts
+        id: check
         uses: actions/github-script@v7
         with:
           script: |
-            const runId = context.payload.workflow_run.id;
-            const headBranch = context.payload.workflow_run.head_branch;
-            const headSha = context.payload.workflow_run.head_sha;
-
-            console.log(`Failed workflow run: ${runId}`);
-            console.log(`Branch: ${headBranch}`);
-            console.log(`Commit: ${headSha}`);
-
-            core.setOutput('branch', headBranch);
-            core.setOutput('sha', headSha);
-            core.setOutput('run_id', runId);
-
-      - name: Check self-healing attempts
-        id: check-attempts
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const branch = '${{ steps.get-branch.outputs.branch }}';
-            const maxAttempts = 3;
-
-            // Check for self-healing commit markers in recent commits
+            const branch = context.payload.workflow_run.head_branch;
             const { data: commits } = await github.rest.repos.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -59,376 +33,68 @@ jobs:
               per_page: 10
             });
 
-            // Count recent self-healing attempts
-            let attemptCount = 0;
-            for (const commit of commits) {
-              if (commit.commit.message.includes('[self-healing]')) {
-                attemptCount++;
-              }
-            }
+            const healingAttempts = commits.filter(c =>
+              c.commit.message.includes('[self-healing]')
+            ).length;
 
-            console.log(`Self-healing attempts on ${branch}: ${attemptCount}/${maxAttempts}`);
+            core.setOutput('should_heal', healingAttempts < 3);
+            core.setOutput('branch', branch);
 
-            const shouldAttempt = attemptCount < maxAttempts;
-            core.setOutput('should_attempt', shouldAttempt);
-            core.setOutput('attempt_count', attemptCount);
-
-            if (!shouldAttempt) {
-              console.log('Max self-healing attempts reached. Manual intervention required.');
-            }
-
-  fetch-logs:
-    name: Fetch Build Logs
+  heal:
+    name: Jules Self-Healing
+    needs: check-failure
+    if: needs.check-failure.outputs.should_heal == 'true'
     runs-on: ubuntu-latest
-    needs: analyze-failure
-    if: needs.analyze-failure.outputs.should_attempt_fix == 'true'
-    permissions:
-      actions: read
-
-    outputs:
-      error_logs: ${{ steps.get-logs.outputs.logs }}
-      error_summary: ${{ steps.get-logs.outputs.summary }}
-
-    steps:
-      - name: Download workflow logs
-        id: get-logs
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const runId = context.payload.workflow_run.id;
-
-            try {
-              // Get workflow run jobs
-              const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: runId
-              });
-
-              // Find failed jobs
-              const failedJobs = jobs.jobs.filter(job => job.conclusion === 'failure');
-
-              let errorLogs = [];
-              let errorSummary = [];
-
-              for (const job of failedJobs) {
-                console.log(`Failed job: ${job.name}`);
-
-                // Get job logs
-                try {
-                  const { data: logs } = await github.rest.actions.downloadJobLogsForWorkflowRun({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    job_id: job.id
-                  });
-
-                  // Extract error lines
-                  const logLines = logs.split('\n');
-                  const errorLines = logLines.filter(line =>
-                    line.toLowerCase().includes('error') ||
-                    line.toLowerCase().includes('failed') ||
-                    line.toLowerCase().includes('exception')
-                  ).slice(-50);  // Last 50 error lines
-
-                  errorLogs.push({
-                    job: job.name,
-                    errors: errorLines
-                  });
-
-                  errorSummary.push(`Job "${job.name}": ${errorLines.length} error lines found`);
-                } catch (e) {
-                  console.log(`Could not fetch logs for job ${job.id}: ${e.message}`);
-                }
-              }
-
-              core.setOutput('logs', JSON.stringify(errorLogs));
-              core.setOutput('summary', errorSummary.join('\n'));
-
-            } catch (e) {
-              console.log(`Error fetching logs: ${e.message}`);
-              core.setOutput('logs', '[]');
-              core.setOutput('summary', 'Could not fetch error logs');
-            }
-
-  attempt-fix:
-    name: Attempt Automatic Fix
-    runs-on: ubuntu-latest
-    needs: [analyze-failure, fetch-logs]
-    if: needs.analyze-failure.outputs.should_attempt_fix == 'true'
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.analyze-failure.outputs.branch }}
+          ref: ${{ needs.check-failure.outputs.branch }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Run Jules to fix CI failure
+        uses: google/jules-invoke@v1
         with:
-          node-version: '20'
+          task: |
+            The CI pipeline failed. Analyze the errors and fix them.
 
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+            Focus on:
+            - Linting errors (run auto-fix)
+            - Formatting issues
+            - Simple type errors
 
-      - name: Save error logs to file
-        env:
-          ERROR_LOGS: ${{ needs.fetch-logs.outputs.error_logs }}
-        run: |
-          echo "$ERROR_LOGS" > /tmp/error-logs.json
+            Do NOT fix:
+            - Failing tests
+            - Complex architectural issues
 
-      - name: Analyze and fix with Claude Code
-        id: fix-errors
-        env:
-          CLAUDE_CODE_USE_BEDROCK: ${{ secrets.CLAUDE_CODE_USE_BEDROCK }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
-          ATTEMPT_COUNT: ${{ needs.analyze-failure.outputs.attempt_count }}
-        run: |
-          ATTEMPT=$((ATTEMPT_COUNT + 1))
-          echo "Self-healing attempt ${ATTEMPT}/3"
+            Make minimal changes.
 
-          # Read error logs
-          ERROR_LOGS=$(cat /tmp/error-logs.json)
-
-          # Create prompt for Claude Code
-          cat > /tmp/fix-prompt.md << 'PROMPT_EOF'
-          The CI pipeline failed. Analyze these error logs and fix the issues:
-
-          ## Error Logs
-          PROMPT_EOF
-
-          echo "$ERROR_LOGS" >> /tmp/fix-prompt.md
-
-          cat >> /tmp/fix-prompt.md << 'PROMPT_EOF'
-
-          ## Instructions
-          1. Identify the root cause of each failure
-          2. Fix issues that can be automatically resolved:
-             - Linting errors: run linter with --fix
-             - Formatting errors: run formatter
-             - Missing dependencies: update package.json
-             - Type errors: fix type issues if straightforward
-          3. Do NOT fix:
-             - Failing tests (requires understanding business logic)
-             - Complex type errors
-             - Issues requiring architectural changes
-
-          Make minimal, focused changes. Explain what you fixed.
-          PROMPT_EOF
-
-          # Run Claude Code to analyze and fix
-          FIX_OUTPUT=$(claude-code --print "$(cat /tmp/fix-prompt.md)" 2>/dev/null || echo "CLAUDE_CODE_SKIPPED")
-
-          echo "$FIX_OUTPUT" > /tmp/fix-output.txt
-
-          # Try common automatic fixes as fallback
-          FIX_APPLIED=false
-          FIX_DESCRIPTION=""
-
-          # Check error patterns and apply fixes
-          if echo "$ERROR_LOGS" | grep -qi "eslint\|lint"; then
-            echo "Attempting ESLint fix..."
-            if npm run lint -- --fix 2>/dev/null; then
-              FIX_APPLIED=true
-              FIX_DESCRIPTION="Applied ESLint auto-fixes"
-            fi
-          fi
-
-          if echo "$ERROR_LOGS" | grep -qi "prettier\|format"; then
-            echo "Attempting Prettier fix..."
-            if npm run format 2>/dev/null; then
-              FIX_APPLIED=true
-              FIX_DESCRIPTION="${FIX_DESCRIPTION:+$FIX_DESCRIPTION, }Applied code formatting"
-            fi
-          fi
-
-          if echo "$ERROR_LOGS" | grep -qi "lockfile\|package-lock"; then
-            echo "Regenerating lockfile..."
-            if npm install 2>/dev/null; then
-              FIX_APPLIED=true
-              FIX_DESCRIPTION="${FIX_DESCRIPTION:+$FIX_DESCRIPTION, }Regenerated package-lock.json"
-            fi
-          fi
-
-          # Check if there are actual changes
-          if ! git diff --quiet || ! git diff --staged --quiet; then
-            FIX_APPLIED=true
-            if [ -z "$FIX_DESCRIPTION" ]; then
-              FIX_DESCRIPTION="Applied automatic fixes via Claude Code"
-            fi
-          fi
-
-          echo "fix_applied=$FIX_APPLIED" >> $GITHUB_OUTPUT
-          echo "fix_description=$FIX_DESCRIPTION" >> $GITHUB_OUTPUT
-
-      - name: Commit and push fix
-        if: steps.fix-errors.outputs.fix_applied == 'true'
-        env:
-          ATTEMPT_COUNT: ${{ needs.analyze-failure.outputs.attempt_count }}
-          FIX_DESCRIPTION: ${{ steps.fix-errors.outputs.fix_description }}
+      - name: Commit fixes
         run: |
           git config user.name "Jules Bot"
           git config user.email "jules-bot@users.noreply.github.com"
 
-          # Check if there are changes to commit
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "[self-healing] Auto-fix CI errors"
+            git push origin ${{ needs.check-failure.outputs.branch }}
           fi
-
-          ATTEMPT=$((ATTEMPT_COUNT + 1))
-
-          git add -A
-          git commit -m "[self-healing] ${FIX_DESCRIPTION}
-
-          Automatic fix attempt ${ATTEMPT}/3
-          Triggered by failed CI workflow
-          Powered by Claude Code CLI"
-
-          git push origin ${{ needs.analyze-failure.outputs.branch }}
-          echo "Fix committed and pushed"
-
-      - name: Post status comment
-        uses: actions/github-script@v7
-        env:
-          FIX_APPLIED: ${{ steps.fix-errors.outputs.fix_applied }}
-          FIX_DESCRIPTION: ${{ steps.fix-errors.outputs.fix_description }}
-        with:
-          script: |
-            const branch = '${{ needs.analyze-failure.outputs.branch }}';
-            const fixApplied = process.env.FIX_APPLIED === 'true';
-            const fixDescription = process.env.FIX_DESCRIPTION || 'No description';
-            const attemptCount = parseInt('${{ needs.analyze-failure.outputs.attempt_count }}') + 1;
-
-            // Find associated PR
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
-
-            if (prs.length === 0) {
-              console.log('No open PR found for this branch');
-              return;
-            }
-
-            const pr = prs[0];
-            let body;
-
-            if (fixApplied) {
-              body = `## Self-Healing Pipeline
-
-            **Attempt:** ${attemptCount}/3
-            **Status:** Fix Applied
-
-            **Description:** ${fixDescription}
-
-            A new commit has been pushed with automatic fixes. The CI will re-run shortly.
-
-            ---
-            *Powered by Claude Code CLI*
-            *If this fix doesn't resolve the issue, manual intervention may be required.*`;
-            } else {
-              body = `## Self-Healing Pipeline
-
-            **Attempt:** ${attemptCount}/3
-            **Status:** Could not auto-fix
-
-            The self-healing pipeline analyzed the failure but could not determine an automatic fix.
-
-            **Manual intervention required.**
-
-            Please review the [failed workflow run](${context.payload.workflow_run.html_url}) for details.
-
-            ---
-            *Remaining auto-fix attempts: ${3 - attemptCount}*`;
-            }
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pr.number,
-              body
-            });
 
   escalate:
     name: Escalate to Human
+    needs: check-failure
+    if: needs.check-failure.outputs.should_heal == 'false'
     runs-on: ubuntu-latest
-    needs: analyze-failure
-    if: needs.analyze-failure.outputs.should_attempt_fix == 'false'
-    permissions:
-      issues: write
-      pull-requests: write
-
     steps:
-      - name: Create escalation issue
+      - name: Create issue
         uses: actions/github-script@v7
         with:
           script: |
-            const branch = '${{ needs.analyze-failure.outputs.branch }}';
-            const attemptCount = '${{ needs.analyze-failure.outputs.attempt_count }}';
-
-            // Find associated PR
-            const { data: prs } = await github.rest.pulls.list({
+            const branch = '${{ needs.check-failure.outputs.branch }}';
+            await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
-
-            // Create an issue for tracking
-            const { data: issue } = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `CI Failure requires manual intervention: ${branch}`,
-              body: `## Self-Healing Limit Reached
-
-            The self-healing pipeline has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
-
-            **Manual intervention is required.**
-
-            ### Details
-            - **Branch:** \`${branch}\`
-            - **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})
-            - **Auto-fix Attempts:** ${attemptCount}/3
-
-            ### Next Steps
-            1. Review the failed workflow logs
-            2. Identify the root cause
-            3. Apply manual fixes
-            4. Push changes to trigger CI
-
-            ${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
-
-            ---
-            *This issue was automatically created by the self-healing pipeline.*
-            *Powered by Claude Code CLI*`,
+              title: `CI failure needs manual fix: ${branch}`,
+              body: `Self-healing failed after 3 attempts.\n\nBranch: \`${branch}\``,
               labels: ['ci-failure', 'needs-attention']
             });
-
-            console.log(`Created escalation issue #${issue.number}`);
-
-            // Comment on PR if exists
-            if (prs.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prs[0].number,
-                body: `## Self-Healing Limit Reached
-
-            The automatic fix pipeline has exhausted all attempts (${attemptCount}/3).
-
-            **Manual intervention is required.**
-
-            An issue has been created for tracking: #${issue.number}
-
-            Please review the [failed workflow run](${context.payload.workflow_run.html_url}) and apply manual fixes.`
-              });
-            }
