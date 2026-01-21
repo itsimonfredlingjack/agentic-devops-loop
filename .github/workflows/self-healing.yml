@@ -2,11 +2,10 @@ name: Self-Healing Pipeline
 
 on:
   workflow_run:
-    workflows: ["CI", "Build", "Test"]  # Adjust to match your CI workflow names
+    workflows: ["CI"]
     types:
       - completed
 
-# Minimal permissions by default
 permissions:
   contents: read
 
@@ -51,7 +50,6 @@ jobs:
             const branch = '${{ steps.get-branch.outputs.branch }}';
             const maxAttempts = 3;
 
-            // Check for self-healing commit markers in recent commits
             const { data: commits } = await github.rest.repos.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -59,10 +57,10 @@ jobs:
               per_page: 10
             });
 
-            // Count recent self-healing attempts
             let attemptCount = 0;
             for (const commit of commits) {
-              if (commit.commit.message.includes('[self-healing]')) {
+              if (commit.commit.message.includes('[jules-fix]') ||
+                  commit.commit.message.includes('[self-healing]')) {
                 attemptCount++;
               }
             }
@@ -72,10 +70,6 @@ jobs:
             const shouldAttempt = attemptCount < maxAttempts;
             core.setOutput('should_attempt', shouldAttempt);
             core.setOutput('attempt_count', attemptCount);
-
-            if (!shouldAttempt) {
-              console.log('⚠️ Max self-healing attempts reached. Manual intervention required.');
-            }
 
   fetch-logs:
     name: Fetch Build Logs
@@ -98,23 +92,19 @@ jobs:
             const runId = context.payload.workflow_run.id;
 
             try {
-              // Get workflow run jobs
               const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 run_id: runId
               });
 
-              // Find failed jobs
               const failedJobs = jobs.jobs.filter(job => job.conclusion === 'failure');
-
               let errorLogs = [];
               let errorSummary = [];
 
               for (const job of failedJobs) {
                 console.log(`Failed job: ${job.name}`);
 
-                // Get job logs
                 try {
                   const { data: logs } = await github.rest.actions.downloadJobLogsForWorkflowRun({
                     owner: context.repo.owner,
@@ -122,20 +112,19 @@ jobs:
                     job_id: job.id
                   });
 
-                  // Extract error lines (simplified)
                   const logLines = logs.split('\n');
                   const errorLines = logLines.filter(line =>
                     line.toLowerCase().includes('error') ||
                     line.toLowerCase().includes('failed') ||
                     line.toLowerCase().includes('exception')
-                  ).slice(-50);  // Last 50 error lines
+                  ).slice(-100);
 
                   errorLogs.push({
                     job: job.name,
                     errors: errorLines
                   });
 
-                  errorSummary.push(`Job "${job.name}": ${errorLines.length} error lines found`);
+                  errorSummary.push(`Job "${job.name}": ${errorLines.length} error lines`);
                 } catch (e) {
                   console.log(`Could not fetch logs for job ${job.id}: ${e.message}`);
                 }
@@ -150,8 +139,8 @@ jobs:
               core.setOutput('summary', 'Could not fetch error logs');
             }
 
-  attempt-fix:
-    name: Attempt Automatic Fix
+  jules-fix:
+    name: Jules Auto-Fix
     runs-on: ubuntu-latest
     needs: [analyze-failure, fetch-logs]
     if: needs.analyze-failure.outputs.should_attempt_fix == 'true'
@@ -160,154 +149,101 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.analyze-failure.outputs.branch }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Analyze and fix errors
-        id: fix-errors
-        uses: actions/github-script@v7
+      - name: Trigger Jules to fix CI failure
+        id: jules-fix
         env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
           ERROR_LOGS: ${{ needs.fetch-logs.outputs.error_logs }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ATTEMPT_COUNT: ${{ needs.analyze-failure.outputs.attempt_count }}
-        with:
-          script: |
-            const fs = require('fs');
-            const { execSync } = require('child_process');
-
-            const errorLogs = JSON.parse(process.env.ERROR_LOGS || '[]');
-            const attemptCount = parseInt(process.env.ATTEMPT_COUNT) + 1;
-
-            console.log(`Self-healing attempt ${attemptCount}/3`);
-            console.log('Error logs:', JSON.stringify(errorLogs, null, 2));
-
-            // Build analysis prompt for Jules
-            const analysisPrompt = `
-            You are Jules, an AI assistant helping to fix CI/CD failures.
-
-            ## Error Logs
-            ${errorLogs.map(log => `
-            ### Job: ${log.job}
-            \`\`\`
-            ${log.errors.join('\n')}
-            \`\`\`
-            `).join('\n')}
-
-            ## Task
-            Analyze the error logs and determine:
-            1. What is the root cause of the failure?
-            2. Can this be automatically fixed?
-            3. If yes, provide the exact fix.
-
-            Respond in JSON format:
-            {
-              "rootCause": "Description of the issue",
-              "canAutoFix": true|false,
-              "fixes": [
-                {
-                  "file": "path/to/file",
-                  "action": "modify|create|delete",
-                  "content": "new content or patch",
-                  "description": "what this fix does"
-                }
-              ],
-              "manualSteps": ["Step 1", "Step 2"] // if canAutoFix is false
-            }
-            `;
-
-            console.log('Analysis prompt prepared for Jules');
-
-            // Placeholder: In production, call Anthropic API here
-            // For now, attempt common fixes
-
-            let fixApplied = false;
-            let fixDescription = '';
-
-            // Common fix patterns
-            for (const log of errorLogs) {
-              const errorText = log.errors.join('\n').toLowerCase();
-
-              // Check for common fixable issues
-              if (errorText.includes('lockfile') || errorText.includes('package-lock')) {
-                console.log('Detected lockfile issue, attempting npm install');
-                try {
-                  execSync('npm install', { stdio: 'inherit' });
-                  fixApplied = true;
-                  fixDescription = 'Regenerated package-lock.json';
-                } catch (e) {
-                  console.log('npm install failed:', e.message);
-                }
-              }
-
-              if (errorText.includes('typescript') && errorText.includes('cannot find')) {
-                console.log('Detected TypeScript type error');
-                // Could attempt to add missing imports
-              }
-
-              if (errorText.includes('lint') || errorText.includes('eslint')) {
-                console.log('Detected linting error, attempting auto-fix');
-                try {
-                  execSync('npm run lint -- --fix', { stdio: 'inherit' });
-                  fixApplied = true;
-                  fixDescription = 'Applied ESLint auto-fixes';
-                } catch (e) {
-                  console.log('Lint fix failed:', e.message);
-                }
-              }
-
-              if (errorText.includes('prettier') || errorText.includes('formatting')) {
-                console.log('Detected formatting error');
-                try {
-                  execSync('npm run format', { stdio: 'inherit' });
-                  fixApplied = true;
-                  fixDescription = 'Applied code formatting';
-                } catch (e) {
-                  console.log('Format failed:', e.message);
-                }
-              }
-            }
-
-            core.setOutput('fix_applied', fixApplied);
-            core.setOutput('fix_description', fixDescription);
-
-      - name: Commit and push fix
-        if: steps.fix-errors.outputs.fix_applied == 'true'
+          ERROR_SUMMARY: ${{ needs.fetch-logs.outputs.error_summary }}
+          BRANCH: ${{ needs.analyze-failure.outputs.branch }}
+          ATTEMPT: ${{ needs.analyze-failure.outputs.attempt_count }}
         run: |
-          git config user.name "Jules Bot"
-          git config user.email "jules-bot@example.com"
+          echo "Triggering Jules to fix CI failure..."
+          echo "Branch: $BRANCH"
+          echo "Attempt: $((ATTEMPT + 1))/3"
+          echo "Error summary: $ERROR_SUMMARY"
 
-          # Check if there are changes to commit
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
+          # Build the fix prompt with error context
+          ERROR_CONTEXT=$(echo "$ERROR_LOGS" | jq -r '
+            .[] | "Job: \(.job)\nErrors:\n\(.errors | join("\n"))\n---"
+          ' 2>/dev/null || echo "Could not parse error logs")
+
+          RESPONSE=$(curl -s -X POST \
+            "https://jules.googleapis.com/v1alpha/sessions" \
+            -H "X-Goog-Api-Key: $JULES_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @- <<EOF
+          {
+            "prompt": "CI pipeline has failed. Fix the errors and make the build pass.\n\n## Error Context\n$ERROR_CONTEXT\n\n## Instructions\n1. Analyze the error logs\n2. Identify the root cause\n3. Fix the code\n4. Ensure tests pass\n5. Ensure linting passes\n\nFocus on:\n- Fixing the immediate error first\n- Not introducing new issues\n- Keeping changes minimal",
+            "sourceContext": {
+              "source": "sources/${{ github.repository }}",
+              "githubRepoContext": {
+                "startingBranch": "$BRANCH"
+              }
+            },
+            "automationMode": "AUTO_CREATE_PR",
+            "title": "[jules-fix] Fix CI failure (attempt $((ATTEMPT + 1))/3)",
+            "requirePlanApproval": false
+          }
+          EOF
+          )
+
+          echo "Jules response: $RESPONSE"
+
+          SESSION_ID=$(echo "$RESPONSE" | jq -r '.name // empty')
+
+          if [ -n "$SESSION_ID" ]; then
+            echo "session_id=$SESSION_ID" >> $GITHUB_OUTPUT
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "Jules session created: $SESSION_ID"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            ERROR=$(echo "$RESPONSE" | jq -r '.error.message // "Unknown error"')
+            echo "error=$ERROR" >> $GITHUB_OUTPUT
+            echo "Failed to create Jules session: $ERROR"
           fi
 
-          git add -A
-          git commit -m "[self-healing] ${{ steps.fix-errors.outputs.fix_description }}
+      - name: Wait for Jules
+        if: steps.jules-fix.outputs.success == 'true'
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          SESSION_ID: ${{ steps.jules-fix.outputs.session_id }}
+        run: |
+          echo "Waiting for Jules to complete fix..."
 
-          Automatic fix attempt ${{ needs.analyze-failure.outputs.attempt_count }}/3
-          Triggered by failed workflow run"
+          for i in {1..60}; do
+            RESPONSE=$(curl -s \
+              "https://jules.googleapis.com/v1alpha/$SESSION_ID" \
+              -H "X-Goog-Api-Key: $JULES_API_KEY")
 
-          git push origin ${{ needs.analyze-failure.outputs.branch }}
-          echo "✅ Fix committed and pushed"
+            STATUS=$(echo "$RESPONSE" | jq -r '.state // "UNKNOWN"')
+            echo "Status: $STATUS (check $i/60)"
+
+            if [ "$STATUS" = "COMPLETED" ]; then
+              echo "Jules completed the fix!"
+              break
+            elif [ "$STATUS" = "FAILED" ]; then
+              echo "Jules failed to fix the issue"
+              break
+            fi
+
+            sleep 10
+          done
 
       - name: Post status comment
         uses: actions/github-script@v7
+        env:
+          JULES_SUCCESS: ${{ steps.jules-fix.outputs.success }}
+          JULES_ERROR: ${{ steps.jules-fix.outputs.error }}
+          SESSION_ID: ${{ steps.jules-fix.outputs.session_id }}
+          ATTEMPT: ${{ needs.analyze-failure.outputs.attempt_count }}
         with:
           script: |
             const branch = '${{ needs.analyze-failure.outputs.branch }}';
-            const fixApplied = '${{ steps.fix-errors.outputs.fix_applied }}' === 'true';
-            const fixDescription = '${{ steps.fix-errors.outputs.fix_description }}';
-            const attemptCount = parseInt('${{ needs.analyze-failure.outputs.attempt_count }}') + 1;
+            const success = process.env.JULES_SUCCESS === 'true';
+            const sessionId = process.env.SESSION_ID;
+            const error = process.env.JULES_ERROR;
+            const attempt = parseInt(process.env.ATTEMPT) + 1;
 
             // Find associated PR
             const { data: prs } = await github.rest.pulls.list({
@@ -325,32 +261,35 @@ jobs:
             const pr = prs[0];
             let body;
 
-            if (fixApplied) {
-              body = `## 🔧 Self-Healing Pipeline
+            if (success) {
+              body = `## 🔧 Jules Self-Healing
 
-            **Attempt:** ${attemptCount}/3
-            **Status:** ✅ Fix Applied
+**Attempt:** ${attempt}/3
+**Status:** ✅ Jules is working on a fix
 
-            **Description:** ${fixDescription}
+**Session:** \`${sessionId}\`
 
-            A new commit has been pushed with automatic fixes. The CI will re-run shortly.
+Jules has analyzed the CI failure and is implementing a fix. A new PR or commit will be created shortly.
 
-            ---
-            *If this fix doesn't resolve the issue, manual intervention may be required.*`;
+[View Jules Session](https://jules.google/)
+
+---
+*Powered by [Google Jules](https://jules.google/)*`;
             } else {
-              body = `## 🔧 Self-Healing Pipeline
+              body = `## 🔧 Jules Self-Healing
 
-            **Attempt:** ${attemptCount}/3
-            **Status:** ⚠️ Could not auto-fix
+**Attempt:** ${attempt}/3
+**Status:** ⚠️ Could not start Jules
 
-            The self-healing pipeline analyzed the failure but could not determine an automatic fix.
+**Error:** ${error || 'Unknown error'}
 
-            **Manual intervention required.**
+Please check:
+1. Jules GitHub App is installed
+2. \`JULES_API_KEY\` secret is configured
+3. Repository is connected in Jules
 
-            Please review the [failed workflow run](${context.payload.workflow_run.html_url}) for details.
-
-            ---
-            *Remaining auto-fix attempts: ${3 - attemptCount}*`;
+---
+*Powered by [Google Jules](https://jules.google/)*`;
             }
 
             await github.rest.issues.createComment({
@@ -377,7 +316,6 @@ jobs:
             const branch = '${{ needs.analyze-failure.outputs.branch }}';
             const attemptCount = '${{ needs.analyze-failure.outputs.attempt_count }}';
 
-            // Find associated PR
             const { data: prs } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -385,51 +323,47 @@ jobs:
               state: 'open'
             });
 
-            // Create an issue for tracking
             const { data: issue } = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 CI Failure requires manual intervention: ${branch}`,
+              title: `🚨 CI Failure: Jules exhausted attempts on ${branch}`,
               body: `## Self-Healing Limit Reached
 
-            The self-healing pipeline has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
+Jules has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
 
-            **Manual intervention is required.**
+**Manual intervention required.**
 
-            ### Details
-            - **Branch:** \`${branch}\`
-            - **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})
-            - **Auto-fix Attempts:** ${attemptCount}/3
+### Details
+- **Branch:** \`${branch}\`
+- **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})
+- **Jules Attempts:** ${attemptCount}/3
 
-            ### Next Steps
-            1. Review the failed workflow logs
-            2. Identify the root cause
-            3. Apply manual fixes
-            4. Push changes to trigger CI
+### Next Steps
+1. Review the failed workflow logs
+2. Check Jules sessions at https://jules.google/
+3. Apply manual fixes
+4. Push changes to trigger CI
 
-            ${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
+${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
 
-            ---
-            *This issue was automatically created by the self-healing pipeline.*`,
+---
+*Created by self-healing pipeline*`,
               labels: ['ci-failure', 'needs-attention']
             });
 
             console.log(`Created escalation issue #${issue.number}`);
 
-            // Comment on PR if exists
             if (prs.length > 0) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prs[0].number,
-                body: `## 🚨 Self-Healing Limit Reached
+                body: `## 🚨 Jules Self-Healing Exhausted
 
-            The automatic fix pipeline has exhausted all attempts (${attemptCount}/3).
+Jules has made ${attemptCount}/3 fix attempts without success.
 
-            **Manual intervention is required.**
+**Manual intervention required.**
 
-            An issue has been created for tracking: #${issue.number}
-
-            Please review the [failed workflow run](${context.payload.workflow_run.html_url}) and apply manual fixes.`
+Escalation issue: #${issue.number}`
               });
             }
