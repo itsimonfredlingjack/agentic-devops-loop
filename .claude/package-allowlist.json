@@ -1,0 +1,21 @@
+{
+  "$schema": "./package-allowlist.schema.json",
+  "description": "Project-specific package allowlist for agent installations",
+  "npm": [
+    "jest",
+    "vitest",
+    "@playwright/test",
+    "eslint",
+    "prettier",
+    "typescript",
+    "@types/*"
+  ],
+  "pip": [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "httpx"
+  ],
+  "notes": "Add packages here that the agent is allowed to install. Wildcards supported for npm scoped packages (@types/*)"
+}

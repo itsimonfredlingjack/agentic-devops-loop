@@ -3,6 +3,10 @@
   "hooks": {
     "enabled": true,
     "directory": ".claude/hooks",
+    "PreToolUse": {
+      "command": "python3 .claude/hooks/pre-tool-use.py",
+      "timeout": 3000
+    },
     "stop": {
       "command": "python3 .claude/hooks/stop-hook.py",
       "timeout": 5000
@@ -31,6 +35,10 @@
       "Bash(rm -rf /)",
       "Bash(git push --force*)",
       "Bash(git reset --hard*)",
+      "Bash(curl*|*bash*)",
+      "Bash(wget*|*bash*)",
+      "Bash(*eval*)",
+      "Bash(sudo *)",
       "Edit(.claude/hooks/*)",
       "Edit(.github/*)",
       "Write(.claude/hooks/*)",
