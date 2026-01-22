@@ -393,6 +393,57 @@
       opacity: 0.7;
     }
 
+    /* ════════════════════════════════════════════════════════════════
+       Unified Navigation
+       ════════════════════════════════════════════════════════════════ */
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .nav-tab {
+      position: relative;
+      padding: 8px 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    .nav-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-tab.active {
+      color: #58a6ff;
+    }
+
+    .nav-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: #58a6ff;
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform 150ms ease;
+    }
+
+    .nav-tab.active::after {
+      transform: scaleX(1);
+    }
+
+    .nav-tab:hover::after {
+      transform: scaleX(1);
+      opacity: 0.5;
+    }
+
     /* ========== SIDE PANEL ========== */
     .side-panel {
       display: flex;
@@ -630,6 +681,13 @@
       <div class="logo"></div>
       <h1>Agentic Loop Monitor</h1>
     </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <a href="../guide/" class="nav-tab" data-page="guide">Guide</a>
+      <a href="../monitor/" class="nav-tab active" data-page="monitor">Monitor</a>
+    </nav>
+
     <div class="status-indicator">
       <span class="status-dot" id="statusDot"></span>
       <span id="statusText">Running</span>
@@ -979,6 +1037,24 @@
 
     // Initial state
     updateStep(currentStep);
+
+    // ════════════════════════════════════════════════════════════════
+    // Active Tab Detection
+    // ════════════════════════════════════════════════════════════════
+    function initNavTabs() {
+      const currentPage = window.location.pathname.includes('/monitor/') ? 'monitor' : 'guide';
+      const navTabs = document.querySelectorAll('.nav-tab');
+      navTabs.forEach(tab => {
+        if (tab.dataset.page === currentPage) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+    }
+
+    // Initialize on load
+    initNavTabs();
   </script>
 </body>
 </html>
