@@ -73,11 +73,52 @@ def increment_iteration():
     return state["iterations"]
 
 
-def check_promise_in_transcript(transcript: str, promise: str, scan_length: int) -> bool:
-    """Check if the completion promise exists in the last N characters of transcript."""
-    # Scan the last N characters
-    search_area = transcript[-scan_length:] if len(transcript) > scan_length else transcript
-    return promise in search_area
+def check_promise_in_transcript(transcript: str, promise: str, scan_length: int = None) -> bool:
+    """Check if completion promise exists in entire transcript.
+
+    Args:
+        transcript: Full session transcript
+        promise: Promise string to search for
+        scan_length: Ignored (for backwards compatibility)
+
+    Returns:
+        True if promise found anywhere in transcript
+    """
+    if not transcript:
+        return False
+    # Search ENTIRE transcript, not just tail
+    return promise in transcript
+
+
+def check_promise_flag_file(promise: str) -> bool:
+    """Check if promise flag file exists and contains the correct promise.
+
+    Flag file location: .claude/.promise_done
+    Flag file contains: exact promise string
+
+    Returns:
+        True if flag file exists and contains correct promise
+    """
+    flag_file = Path.cwd() / ".claude" / ".promise_done"
+
+    if not flag_file.exists():
+        return False
+
+    try:
+        with open(flag_file, 'r') as f:
+            content = f.read().strip()
+        return content == promise
+    except Exception:
+        return False
+
+
+def write_promise_flag(promise: str) -> None:
+    """Write promise flag file for stop-hook to detect."""
+    flag_file = Path.cwd() / ".claude" / ".promise_done"
+    flag_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(flag_file, 'w') as f:
+        f.write(promise)
 
 
 def build_continue_message(reason: str, suggestions: list) -> dict:
@@ -127,10 +168,12 @@ def main():
             json.dump(response, sys.stderr)
             sys.exit(0)  # Allow exit on max iterations
 
-        # Check 2: Promise found in transcript
+        # Check 2: Promise found in transcript (search ENTIRE transcript)
         if check_promise_in_transcript(transcript, completion_promise, scan_length):
-            # Promise found - verify it's legitimate
-            # The promise should only appear when tests actually pass
+            sys.exit(0)  # Allow exit
+
+        # Check 3: Promise flag file exists and is valid
+        if check_promise_flag_file(completion_promise):
             sys.exit(0)  # Allow exit
 
         # Promise not found - block exit and provide guidance
