@@ -279,36 +279,87 @@
       100% { r: 24; opacity: 0; }
     }
 
-    /* Center trigger node */
+    /* Center trigger node - ALIVE! */
     .trigger-node {
       cursor: pointer;
+      transform-origin: 250px 250px;
+      animation: trigger-scale 2s ease-in-out infinite;
+    }
+
+    @keyframes trigger-scale {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
     }
 
     .trigger-bg {
-      fill: rgba(30, 41, 59, 0.9);
-      stroke: rgba(100, 116, 139, 0.3);
+      fill: url(#triggerGradient);
+      stroke: rgba(59, 130, 246, 0.5);
       stroke-width: 2;
-      filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.15));
-      animation: trigger-pulse 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+      animation: trigger-glow 2s ease-in-out infinite;
     }
 
-    @keyframes trigger-pulse {
-      0%, 100% { filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.15)); }
-      50% { filter: drop-shadow(0 0 20px rgba(100, 200, 255, 0.3)); }
+    @keyframes trigger-glow {
+      0%, 100% {
+        filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.4));
+        stroke: rgba(59, 130, 246, 0.4);
+      }
+      50% {
+        filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.8));
+        stroke: rgba(6, 182, 212, 0.7);
+      }
+    }
+
+    .trigger-icon {
+      transform-origin: 250px 250px;
+      animation: trigger-rotate 8s linear infinite;
+    }
+
+    @keyframes trigger-rotate {
+      from { transform: translate(250px, 250px) rotate(0deg); }
+      to { transform: translate(250px, 250px) rotate(360deg); }
     }
 
     .trigger-prompt {
       font-family: var(--font-mono);
       font-size: 14px;
-      font-weight: 600;
-      fill: var(--text-secondary);
+      font-weight: 700;
+      fill: #ffffff;
+      text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
     }
 
     .trigger-label {
       font-family: var(--font-mono);
       font-size: 10px;
-      fill: var(--text-muted);
+      fill: var(--color-jira);
       letter-spacing: 0.02em;
+      font-weight: 500;
+    }
+
+    /* Pulse ring that expands on task start */
+    .trigger-pulse-ring {
+      fill: none;
+      stroke: url(#triggerGradient);
+      stroke-width: 3;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .trigger-pulse-ring.active {
+      animation: pulse-expand 1.5s ease-out forwards;
+    }
+
+    @keyframes pulse-expand {
+      0% {
+        r: 24;
+        opacity: 0.8;
+        stroke-width: 4;
+      }
+      100% {
+        r: 120;
+        opacity: 0;
+        stroke-width: 1;
+      }
     }
 
     /* Connection lines */
@@ -602,6 +653,12 @@
             <stop offset="80%" stop-color="#ec4899"/>
             <stop offset="100%" stop-color="#06b6d4"/>
           </linearGradient>
+
+          <!-- Trigger node gradient (blue to cyan - alive!) -->
+          <linearGradient id="triggerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6"/>
+            <stop offset="100%" stop-color="#06b6d4"/>
+          </linearGradient>
         </defs>
 
         <!-- CONNECTION LINES (drawn first, under nodes) -->
@@ -713,10 +770,13 @@
         </g>
 
         <!-- CENTER TRIGGER NODE -->
+        <!-- Pulse ring (expands on task start) -->
+        <circle class="trigger-pulse-ring" id="triggerPulseRing" cx="250" cy="250" r="24"/>
+
         <g class="trigger-node">
           <circle class="trigger-bg" cx="250" cy="250" r="24"/>
-          <g class="trigger-icon" transform="translate(250, 250)">
-            <text x="0" y="-3" text-anchor="middle" class="trigger-prompt">&gt;_</text>
+          <g class="trigger-icon">
+            <text x="0" y="5" text-anchor="middle" class="trigger-prompt">&gt;_</text>
           </g>
           <text x="250" y="285" text-anchor="middle" class="trigger-label">/start-task</text>
         </g>
@@ -807,6 +867,7 @@
     const orbitMarker = document.getElementById('orbitMarker');
     const markerGlow = document.getElementById('markerGlow');
     const progressRing = document.getElementById('progressRing');
+    const triggerPulseRing = document.getElementById('triggerPulseRing');
     const nodes = document.querySelectorAll('.node');
     const stepMarker = document.getElementById('stepMarker');
     const stepName = document.getElementById('stepName');
@@ -816,6 +877,14 @@
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const taskTimer = document.getElementById('taskTimer');
+
+    // Trigger pulse animation from center
+    function triggerPulse() {
+      triggerPulseRing.classList.remove('active');
+      // Force reflow to restart animation
+      void triggerPulseRing.offsetWidth;
+      triggerPulseRing.classList.add('active');
+    }
 
     // Timer
     setInterval(() => {
@@ -830,6 +899,11 @@
     function updateStep(index) {
       const step = steps[index];
       const pos = nodePositions[index];
+
+      // Trigger pulse from center when loop restarts (step 0)
+      if (index === 0) {
+        triggerPulse();
+      }
 
       // Move orbiting marker to active node
       orbitMarker.setAttribute('cx', pos.x);
