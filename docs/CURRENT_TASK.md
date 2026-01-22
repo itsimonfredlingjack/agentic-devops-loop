@@ -12,11 +12,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Restore the start-task skill that was deleted
-- [ ] Restore the finish-task skill that was deleted
-- [ ] Skills properly initialize a Jira task with branch creation
-- [ ] Skills handle task completion and PR creation
-- [ ] All tests pass for skill functionality
+- [x] Restore the start-task skill that was deleted
+- [x] Restore the finish-task skill that was deleted
+- [x] Skills properly initialize a Jira task with branch creation
+- [x] Skills handle task completion and PR creation
+- [x] All tests pass for skill functionality (no test suite in this template project)
 
 ## Implementation Checklist
 
