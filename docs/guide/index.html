@@ -1,6 +1,78 @@
 <!DOCTYPE html>
 <html lang="sv" data-theme="dark">
 <head>
+  <!-- SVG Icon Definitions -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <rect x="8" y="2" width="8" height="4" rx="1"/>
+      <path d="M9 12h6M9 16h4"/>
+    </symbol>
+    <symbol id="icon-loop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+      <path d="M16 16h5v5"/>
+    </symbol>
+    <symbol id="icon-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    </symbol>
+    <symbol id="icon-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2"/>
+      <rect x="9" y="9" width="6" height="6"/>
+      <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+    </symbol>
+    <symbol id="icon-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="4 17 10 11 4 5"/>
+      <line x1="12" y1="19" x2="20" y2="19"/>
+    </symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3"/>
+    </symbol>
+    <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="M21 21l-4.35-4.35"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="icon-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </symbol>
+    <symbol id="icon-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+      <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+    </symbol>
+    <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v1m0 16v1m-8-9H3m18 0h-1M5.6 5.6l.7.7m12.1-.7-.7.7m-12.1 11.4.7-.7m12.1.7-.7-.7"/>
+      <path d="M12 8l1.5 3.5L17 13l-3.5 1.5L12 18l-1.5-3.5L7 13l3.5-1.5L12 8z"/>
+    </symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </symbol>
+    <symbol id="icon-git-merge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="18" r="3"/>
+      <circle cx="6" cy="6" r="3"/>
+      <path d="M6 21V9a9 9 0 0 0 9 9"/>
+    </symbol>
+  </svg>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Agentic Dev Loop - Automatiserad utveckling från idé till produktion med AI">
@@ -468,8 +540,28 @@
     }
 
     .block-icon {
-      font-size: 1rem;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
+
+    .block-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Icon utility classes */
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+    }
+
+    .icon-xs { width: 14px; height: 14px; }
+    .icon-sm { width: 18px; height: 18px; }
+    .icon-md { width: 24px; height: 24px; }
+    .icon-lg { width: 32px; height: 32px; }
 
     .block-name {
       font-weight: 500;
@@ -638,8 +730,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
       flex-shrink: 0;
+      color: white;
+    }
+
+    .step-icon svg {
+      width: 28px;
+      height: 28px;
     }
 
     .step-1 .step-icon { background: linear-gradient(135deg, #58a6ff, #388bfd); }
@@ -1018,7 +1115,7 @@
     </div>
     <div class="header-actions">
       <button class="theme-toggle" id="themeToggle" aria-label="Växla tema">
-        <span class="theme-icon">🌙</span>
+        <span class="theme-icon"><svg class="icon icon-sm"><use href="#icon-moon"/></svg></span>
         <span class="sr-only">Växla mellan mörkt och ljust tema</span>
       </button>
       <a href="https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions" class="github-link" target="_blank" rel="noopener noreferrer">
@@ -1078,19 +1175,19 @@
               <span class="terminal-cursor" aria-hidden="true"></span>
             </div>
             <div class="terminal-line info">
-              <span>🔍 Hämtar ticket från Jira...</span>
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-search"/></svg> Hämtar ticket från Jira...</span>
             </div>
             <div class="terminal-line success">
-              <span>✓ Skapar branch feature/PROJ-123</span>
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Skapar branch feature/PROJ-123</span>
             </div>
             <div class="terminal-line success">
-              <span>✓ Implementerar med TDD (test first!)</span>
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Implementerar med TDD (test first!)</span>
             </div>
             <div class="terminal-line success">
-              <span>✓ Skapar PR → Jules granskar</span>
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Skapar PR → Jules granskar</span>
             </div>
             <div class="terminal-line success">
-              <span>✓ Alla tester gröna → Merge! 🎉</span>
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Alla tester gröna → Merge!</span>
             </div>
           </div>
         </div>
@@ -1100,22 +1197,22 @@
           <div class="building-blocks-title">Byggstenar i arkitekturen</div>
           <div class="blocks-grid">
             <div class="block-item">
-              <span class="block-icon">📋</span>
+              <span class="block-icon"><svg><use href="#icon-clipboard"/></svg></span>
               <span class="block-name">Jira MCP</span>
               <span class="block-desc">– hämtar kontext</span>
             </div>
             <div class="block-item">
-              <span class="block-icon">🔄</span>
+              <span class="block-icon"><svg><use href="#icon-loop"/></svg></span>
               <span class="block-name">Ralph Wiggum</span>
               <span class="block-desc">– envis loop tills tester passerar</span>
             </div>
             <div class="block-item">
-              <span class="block-icon">⚡</span>
+              <span class="block-icon"><svg><use href="#icon-bolt"/></svg></span>
               <span class="block-name">GitHub Actions</span>
               <span class="block-desc">– CI/CD-triggers</span>
             </div>
             <div class="block-item">
-              <span class="block-icon">🤖</span>
+              <span class="block-icon"><svg><use href="#icon-cpu"/></svg></span>
               <span class="block-name">Google Jules</span>
               <span class="block-desc">– AI-granskning & self-healing</span>
             </div>
@@ -1124,7 +1221,7 @@
 
         <!-- Quick Start Commands -->
         <div class="building-blocks" style="margin-top: var(--space-2xl);">
-          <div class="building-blocks-title">⌨️ Så här startar du</div>
+          <div class="building-blocks-title"><svg class="icon icon-sm" style="margin-right: 6px; vertical-align: -2px;"><use href="#icon-terminal"/></svg> Så här startar du</div>
 
           <!-- Terminal showing how to start -->
           <div class="terminal" style="max-width: 600px; margin: var(--space-lg) auto;">
@@ -1146,12 +1243,12 @@
 
           <div class="blocks-grid" style="margin-top: var(--space-lg);">
             <div class="block-item" style="background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(163, 113, 247, 0.1)); border-color: var(--accent-blue);">
-              <span class="block-icon">▶️</span>
+              <span class="block-icon" style="color: var(--accent-blue);"><svg><use href="#icon-play"/></svg></span>
               <span class="block-name" style="font-family: var(--font-mono);">/start-task PROJ-123</span>
               <span class="block-desc">– startar hela loopen</span>
             </div>
             <div class="block-item" style="background: linear-gradient(135deg, rgba(63, 185, 80, 0.1), rgba(57, 197, 207, 0.1)); border-color: var(--accent-green);">
-              <span class="block-icon">✅</span>
+              <span class="block-icon" style="color: var(--accent-green);"><svg><use href="#icon-check-circle"/></svg></span>
               <span class="block-name" style="font-family: var(--font-mono);">/finish-task</span>
               <span class="block-desc">– avslutar och skapar PR</span>
             </div>
@@ -1197,7 +1294,7 @@
       <!-- Step 1: Create Jira Ticket -->
       <section id="steg-1" class="step-section step-1" aria-labelledby="step-1-title">
         <div class="step-header">
-          <div class="step-icon" aria-hidden="true">📋</div>
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-clipboard"/></svg></div>
           <div class="step-title-group">
             <div class="step-number">Steg 1</div>
             <h2 id="step-1-title" class="step-title">Skapa en Jira-ticket</h2>
@@ -1218,7 +1315,7 @@
           </ul>
 
           <div class="example-box good">
-            <div class="example-label">✓ Bra exempel</div>
+            <div class="example-label"><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Bra exempel</div>
             <p><strong>Titel:</strong> Lägg till "Exportera till CSV"-knapp på rapportsidan</p>
             <p><strong>Beskrivning:</strong> Som användare vill jag kunna exportera min månadsrapport till CSV-format så att jag kan öppna den i Excel.</p>
             <p><strong>Acceptance criteria:</strong></p>
@@ -1252,7 +1349,7 @@
       <!-- Step 2: AI Works -->
       <section id="steg-2" class="step-section step-2" aria-labelledby="step-2-title">
         <div class="step-header">
-          <div class="step-icon" aria-hidden="true">🤖</div>
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-cpu"/></svg></div>
           <div class="step-title-group">
             <div class="step-number">Steg 2</div>
             <h2 id="step-2-title" class="step-title">AI börjar jobba</h2>
@@ -1311,7 +1408,7 @@
       <!-- Step 3: Review PR -->
       <section id="steg-3" class="step-section step-3" aria-labelledby="step-3-title">
         <div class="step-header">
-          <div class="step-icon" aria-hidden="true">👀</div>
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-eye"/></svg></div>
           <div class="step-title-group">
             <div class="step-number">Steg 3</div>
             <h2 id="step-3-title" class="step-title">Granska PR</h2>
@@ -1354,7 +1451,7 @@
       <!-- Step 4: Jules Fixes Bugs -->
       <section id="steg-4" class="step-section step-4" aria-labelledby="step-4-title">
         <div class="step-header">
-          <div class="step-icon" aria-hidden="true">🔧</div>
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-wrench"/></svg></div>
           <div class="step-title-group">
             <div class="step-number">Steg 4</div>
             <h2 id="step-4-title" class="step-title">Jules fixar buggar</h2>
@@ -1407,7 +1504,7 @@
       <!-- Step 5: Merge & Done -->
       <section id="steg-5" class="step-section step-5" aria-labelledby="step-5-title">
         <div class="step-header">
-          <div class="step-icon" aria-hidden="true">🎉</div>
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-git-merge"/></svg></div>
           <div class="step-title-group">
             <div class="step-number">Steg 5</div>
             <h2 id="step-5-title" class="step-title">Merge & klart!</h2>
@@ -1438,17 +1535,21 @@
 <span class="code-keyword">$</span> <span class="code-function">/finish-task</span>
 
 <span class="code-comment"># Claude Code kommer:</span>
-<span class="code-string">✓ Commita alla ändringar</span>
-<span class="code-string">✓ Pusha till remote</span>
-<span class="code-string">✓ Skapa PR med beskrivning</span>
-<span class="code-string">✓ Länka till Jira-ticket</span>
+<span class="code-string">+ Commita alla ändringar</span>
+<span class="code-string">+ Pusha till remote</span>
+<span class="code-string">+ Skapa PR med beskrivning</span>
+<span class="code-string">+ Länka till Jira-ticket</span>
             </code>
           </div>
 
           <div class="example-box good">
-            <div class="example-label">✓ Resultat</div>
+            <div class="example-label"><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Resultat</div>
             <p>Din idé har gått från Jira-ticket till produktionskod – med minimal manuell insats!</p>
-            <p style="margin-top: 1rem; font-size: 2rem;">🚀 🎊 ✨</p>
+            <p style="margin-top: 1rem; display: flex; gap: 12px; justify-content: center;">
+              <svg class="icon" style="width: 28px; height: 28px; color: var(--accent-blue);"><use href="#icon-rocket"/></svg>
+              <svg class="icon" style="width: 28px; height: 28px; color: var(--accent-green);"><use href="#icon-sparkles"/></svg>
+              <svg class="icon" style="width: 28px; height: 28px; color: var(--accent-purple);"><use href="#icon-git-merge"/></svg>
+            </p>
           </div>
 
           <details class="tech-details">
@@ -1477,7 +1578,7 @@
         <a href="../monitor/" class="footer-link">Live Monitor</a>
       </nav>
       <p class="footer-credit">
-        Byggd med 💙 av <a href="https://www.linkedin.com/in/simon-fredling/" target="_blank" rel="noopener noreferrer">Simon Fredling</a>
+        Byggd med <svg class="icon icon-xs" style="color: var(--accent-blue); margin: 0 2px;"><use href="#icon-heart"/></svg> av <a href="https://www.linkedin.com/in/simon-fredling/" target="_blank" rel="noopener noreferrer">Simon Fredling</a>
       </p>
     </div>
   </footer>
@@ -1529,7 +1630,9 @@
     });
 
     function updateThemeIcon(theme) {
-      themeIcon.textContent = theme === 'dark' ? '🌙' : '☀️';
+      themeIcon.innerHTML = theme === 'dark'
+        ? '<svg class="icon icon-sm"><use href="#icon-moon"/></svg>'
+        : '<svg class="icon icon-sm"><use href="#icon-sun"/></svg>';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1664,7 +1767,7 @@
     // ═══════════════════════════════════════════════════════════════════════
     // Console Easter Egg
     // ═══════════════════════════════════════════════════════════════════════
-    console.log('%c🚀 Agentic Dev Loop', 'font-size: 24px; font-weight: bold; color: #58a6ff;');
+    console.log('%c→ Agentic Dev Loop', 'font-size: 24px; font-weight: bold; color: #58a6ff;');
     console.log('%cAutomatiserad utveckling från idé till produktion', 'font-size: 14px; color: #8b949e;');
     console.log('%c→ Vill du bidra? Kolla in vårt GitHub repo!', 'font-size: 12px; color: #3fb950;');
   </script>
