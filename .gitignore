@@ -44,3 +44,8 @@ htmlcov/
 *.log
 tmp/
 temp/
+
+# Local/temporary files
+.serena/
+.claude/settings-minimal.json
+docs/skills-reference/

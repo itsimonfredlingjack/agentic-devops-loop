@@ -61,14 +61,15 @@ def check_env_file() -> Tuple[bool, str]:
             content = f.read()
 
         has_jira_url = "JIRA_URL" in content
-        has_jira_token = "JIRA_TOKEN" in content
+        # Accept both JIRA_TOKEN and JIRA_API_TOKEN
+        has_jira_token = "JIRA_TOKEN" in content or "JIRA_API_TOKEN" in content
 
         if not (has_jira_url and has_jira_token):
             missing = []
             if not has_jira_url:
                 missing.append("JIRA_URL")
             if not has_jira_token:
-                missing.append("JIRA_TOKEN")
+                missing.append("JIRA_TOKEN or JIRA_API_TOKEN")
             return False, f"Missing in .env: {', '.join(missing)}"
 
         return True, ".env configured with Jira credentials"
