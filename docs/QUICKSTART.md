@@ -185,12 +185,24 @@ curl -u "$JIRA_USERNAME:$JIRA_API_TOKEN" "$JIRA_URL/rest/api/3/myself"
 
 ---
 
-## Kommandon
+## Commands (Slash Commands)
 
-| Kommando | Beskrivning |
-|----------|-------------|
-| `/start-task PROJ-123` | Starta nytt ärende |
-| `/finish-task` | Avsluta (om allt är klart) |
+These are **working slash commands** in Claude Code. Files are in `.claude/commands/`.
+
+| Command | Description |
+|---------|-------------|
+| `/start-task PROJ-123` | Initialize task from Jira ticket, create branch, setup CURRENT_TASK.md |
+| `/finish-task` | Verify tests/lint, commit, push, create PR, update Jira |
+
+### Usage
+
+```bash
+claude
+# In Claude:
+/start-task PROJ-123
+# ... work on the task ...
+/finish-task
+```
 
 ---
 
@@ -205,9 +217,9 @@ your-project/
 │   ├── plugins/
 │   │   └── agentic-loop/
 │   │       └── manifest.json  # Jira MCP
-│   ├── skills/
-│   │   ├── start-task.md      # Init workflow
-│   │   └── finish-task.md     # Complete workflow
+│   ├── commands/              # Working slash commands
+│   │   ├── start-task.md      # /start-task JIRA-ID
+│   │   └── finish-task.md     # /finish-task
 │   ├── utils/
 │   │   └── sanitize.py        # Prompt injection skydd
 │   ├── package-allowlist.json # Tillåtna paket
@@ -225,7 +237,10 @@ your-project/
 │   └── pre-push
 ├── docs/
 │   ├── CURRENT_TASK.md        # Agent memory
-│   └── GUIDELINES.md          # Agent hjälp
+│   ├── GUIDELINES.md          # Agent help
+│   └── skills-reference/      # Original skill docs (reference only)
+│       ├── start-task.md
+│       └── finish-task.md
 ├── scripts/
 │   ├── setup-hooks.sh
 │   ├── create-branch.sh

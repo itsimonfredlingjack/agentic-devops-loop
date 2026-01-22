@@ -1,20 +1,28 @@
 {
-  "$schema": "https://claude.ai/schemas/claude-code-settings.json",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
-    "enabled": true,
-    "directory": ".claude/hooks",
-    "PreToolUse": {
-      "command": "python3 .claude/hooks/pre-tool-use.py",
-      "timeout": 3000
-    },
-    "stop": {
-      "command": "python3 .claude/hooks/stop-hook.py",
-      "timeout": 5000
-    }
-  },
-  "plugins": {
-    "enabled": true,
-    "directory": ".claude/plugins"
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/pre-tool-use.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/stop-hook.py"
+          }
+        ]
+      }
+    ]
   },
   "permissions": {
     "allow": [
@@ -27,7 +35,7 @@
       "Bash(git log*)",
       "Bash(git add*)",
       "Bash(git commit*)",
-      "Bash(git checkout -b*)",
+      "Bash(git checkout*)",
       "Bash(git push*)",
       "Bash(gh pr*)"
     ],
@@ -35,8 +43,7 @@
       "Bash(rm -rf /)",
       "Bash(git push --force*)",
       "Bash(git reset --hard*)",
-      "Bash(curl*|*bash*)",
-      "Bash(wget*|*bash*)",
+      "Bash(*| bash*)",
       "Bash(*eval*)",
       "Bash(sudo *)",
       "Edit(.claude/hooks/*)",
@@ -44,10 +51,5 @@
       "Write(.claude/hooks/*)",
       "Write(.github/*)"
     ]
-  },
-  "ralph_loop": {
-    "enabled": true,
-    "config_file": ".claude/ralph-config.json",
-    "state_file": ".claude/ralph-state.json"
   }
 }
