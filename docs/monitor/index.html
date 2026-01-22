@@ -43,11 +43,6 @@
       /* Typography */
       --font-sans: 'Outfit', -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
-
-      /* Circle geometry */
-      --circle-radius: 180;
-      --center-x: 250;
-      --center-y: 250;
     }
 
     *, *::before, *::after {
@@ -187,45 +182,24 @@
     .orbital-svg {
       width: 500px;
       height: 500px;
-      filter: drop-shadow(0 0 60px rgba(59, 130, 246, 0.1));
     }
 
-    /* Background orbit ring - dashed */
-    .orbit-ring {
+    /* Single progress ring - track (subtle background) */
+    .progress-track-ring {
       fill: none;
-      stroke: rgba(100, 116, 139, 0.15);
-      stroke-width: 2;
-      stroke-dasharray: 12 8;
+      stroke: rgba(100, 116, 139, 0.12);
+      stroke-width: 4;
     }
 
-    /* Completion arc - fills progressively */
-    .completion-arc {
+    /* Single progress ring - fill (gradient, animates) */
+    .progress-ring {
       fill: none;
-      stroke: url(#completionGradient);
-      stroke-width: 8;
+      stroke: url(#progressGradient);
+      stroke-width: 4;
       stroke-linecap: round;
       transform-origin: center;
       transform: rotate(-90deg);
       transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* Arc connections between nodes */
-    .arc-connection {
-      fill: none;
-      stroke-width: 3;
-      stroke-linecap: round;
-      opacity: 0.4;
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .arc-connection.active {
-      opacity: 1;
-      stroke-width: 4;
-      filter: drop-shadow(0 0 8px currentColor);
-    }
-
-    .arc-connection.done {
-      opacity: 0.7;
     }
 
     /* Node base styling */
@@ -235,7 +209,7 @@
     }
 
     .node:hover {
-      transform: scale(1.05);
+      transform: scale(1.08);
     }
 
     .node-bg {
@@ -259,11 +233,11 @@
       transition: all 0.4s;
     }
 
-    /* Active node - 18% larger */
+    /* Active node - 18% larger with glow */
     .node.active .node-bg {
       fill: var(--node-color);
       stroke: var(--node-color);
-      filter: drop-shadow(0 0 30px var(--node-glow));
+      filter: drop-shadow(0 0 24px var(--node-glow));
     }
 
     .node.active .node-icon {
@@ -279,54 +253,30 @@
     .node.done .node-bg {
       fill: var(--node-color);
       stroke: var(--node-color);
-      opacity: 0.6;
+      opacity: 0.65;
     }
 
     .node.done .node-icon {
       color: var(--bg-deep);
-      opacity: 0.8;
+      opacity: 0.85;
     }
 
     /* Orbiting progress marker */
     .orbit-marker {
-      fill: var(--color-claude);
-      filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.8));
-      transition: fill 0.4s, filter 0.4s;
+      filter: drop-shadow(0 0 16px currentColor);
+      transition: fill 0.4s, cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .orbit-marker-glow {
       fill: none;
-      stroke: var(--color-claude);
       stroke-width: 2;
       opacity: 0.5;
       animation: marker-ring-pulse 2s ease-out infinite;
     }
 
     @keyframes marker-ring-pulse {
-      0% { r: 10; opacity: 0.6; }
-      100% { r: 28; opacity: 0; }
-    }
-
-    /* Center info */
-    .center-info {
-      text-anchor: middle;
-      dominant-baseline: middle;
-    }
-
-    .center-step-num {
-      font-family: var(--font-sans);
-      font-size: 48px;
-      font-weight: 700;
-      fill: var(--text-primary);
-      opacity: 0.15;
-    }
-
-    .center-label {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      fill: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
+      0% { r: 8; opacity: 0.6; }
+      100% { r: 24; opacity: 0; }
     }
 
     /* Click hint */
@@ -592,49 +542,24 @@
     <section class="orbital-container" id="orbitalContainer">
       <svg class="orbital-svg" viewBox="0 0 500 500">
         <defs>
-          <!-- Completion gradient -->
-          <linearGradient id="completionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="var(--color-jira)"/>
-            <stop offset="25%" stop-color="var(--color-claude)"/>
-            <stop offset="50%" stop-color="var(--color-ci)"/>
-            <stop offset="75%" stop-color="var(--color-jules)"/>
-            <stop offset="100%" stop-color="var(--color-merge)"/>
-          </linearGradient>
-
-          <!-- Arc gradients -->
-          <linearGradient id="arc-grad-0" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="var(--color-jira)"/>
-            <stop offset="100%" stop-color="var(--color-claude)"/>
-          </linearGradient>
-          <linearGradient id="arc-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="var(--color-claude)"/>
-            <stop offset="100%" stop-color="var(--color-github)"/>
-          </linearGradient>
-          <linearGradient id="arc-grad-2" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="var(--color-github)"/>
-            <stop offset="100%" stop-color="var(--color-ci)"/>
-          </linearGradient>
-          <linearGradient id="arc-grad-3" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="var(--color-ci)"/>
-            <stop offset="100%" stop-color="var(--color-jules)"/>
-          </linearGradient>
-          <linearGradient id="arc-grad-4" x1="100%" y1="0%" x2="0%" y2="0%">
-            <stop offset="0%" stop-color="var(--color-jules)"/>
-            <stop offset="100%" stop-color="var(--color-merge)"/>
-          </linearGradient>
-          <linearGradient id="arc-grad-5" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stop-color="var(--color-merge)"/>
-            <stop offset="100%" stop-color="var(--color-jira)"/>
+          <!-- Progress gradient (follows the loop colors) -->
+          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6"/>
+            <stop offset="20%" stop-color="#f59e0b"/>
+            <stop offset="40%" stop-color="#a78bfa"/>
+            <stop offset="60%" stop-color="#10b981"/>
+            <stop offset="80%" stop-color="#ec4899"/>
+            <stop offset="100%" stop-color="#06b6d4"/>
           </linearGradient>
         </defs>
 
-        <!-- Background orbit ring (dashed) -->
-        <circle class="orbit-ring" cx="250" cy="250" r="180"/>
+        <!-- SINGLE progress ring: subtle track -->
+        <circle class="progress-track-ring" cx="250" cy="250" r="180"/>
 
-        <!-- Completion arc -->
+        <!-- SINGLE progress ring: colored fill (animates clockwise) -->
         <circle
-          class="completion-arc"
-          id="completionArc"
+          class="progress-ring"
+          id="progressRing"
           cx="250"
           cy="250"
           r="180"
@@ -642,98 +567,91 @@
           stroke-dashoffset="1131"
         />
 
-        <!-- Arc connections between nodes -->
-        <path class="arc-connection" id="arc-0" stroke="url(#arc-grad-0)" d="M 250,70 A 180,180 0 0,1 405.88,115"/>
-        <path class="arc-connection" id="arc-1" stroke="url(#arc-grad-1)" d="M 405.88,115 A 180,180 0 0,1 405.88,385"/>
-        <path class="arc-connection" id="arc-2" stroke="url(#arc-grad-2)" d="M 405.88,385 A 180,180 0 0,1 250,430"/>
-        <path class="arc-connection" id="arc-3" stroke="url(#arc-grad-3)" d="M 250,430 A 180,180 0 0,1 94.12,385"/>
-        <path class="arc-connection" id="arc-4" stroke="url(#arc-grad-4)" d="M 94.12,385 A 180,180 0 0,1 94.12,115"/>
-        <path class="arc-connection" id="arc-5" stroke="url(#arc-grad-5)" d="M 94.12,115 A 180,180 0 0,1 250,70"/>
-
-        <!-- Center display -->
-        <text class="center-step-num" id="centerStepNum" x="250" y="245">1</text>
-        <text class="center-label" x="250" y="275">STEP</text>
-
-        <!-- NODE 0: Jira (12 o'clock - top) -->
+        <!-- NODE 0: Jira (0° - top, 12 o'clock) -->
+        <!-- Math: x = 250 + 180*sin(0°) = 250, y = 250 - 180*cos(0°) = 70 -->
         <g class="node" data-step="0" style="--node-color: var(--color-jira); --node-glow: rgba(59, 130, 246, 0.5)">
-          <circle class="node-bg" cx="250" cy="70" r="36"/>
+          <circle class="node-bg" cx="250" cy="70" r="32"/>
           <g class="node-icon" transform="translate(250, 70)">
-            <rect x="-10" y="-13" width="20" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <rect x="-6" y="-17" width="12" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-6" y1="-2" x2="6" y2="-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="-6" y1="4" x2="4" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="-6" y1="10" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="-9" y="-11" width="18" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <rect x="-5" y="-15" width="10" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-5" y1="-1" x2="5" y2="-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="-5" y1="4" x2="3" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </g>
-          <text x="250" y="28" text-anchor="middle" class="node-label">JIRA</text>
+          <text x="250" y="26" text-anchor="middle" class="node-label">JIRA</text>
         </g>
 
-        <!-- NODE 1: Claude Code (2 o'clock - 60°) -->
+        <!-- NODE 1: Claude Code (60° - 2 o'clock) -->
+        <!-- Math: x = 250 + 180*sin(60°) = 250 + 155.88 = 405.88, y = 250 - 180*cos(60°) = 250 - 90 = 160 -->
         <g class="node" data-step="1" style="--node-color: var(--color-claude); --node-glow: rgba(245, 158, 11, 0.5)">
-          <circle class="node-bg" cx="405.88" cy="160" r="36"/>
+          <circle class="node-bg" cx="405.88" cy="160" r="32"/>
           <g class="node-icon" transform="translate(405.88, 160)">
-            <path d="M -12 -10 L -5 0 L -12 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="-1" y1="10" x2="10" y2="10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="7" cy="-3" r="3.5" fill="currentColor"/>
+            <path d="M -10 -8 L -4 0 L -10 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="0" y1="8" x2="9" y2="8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="6" cy="-2" r="3" fill="currentColor"/>
           </g>
-          <text x="455" y="165" text-anchor="start" class="node-label">CLAUDE</text>
+          <text x="452" y="165" text-anchor="start" class="node-label">CLAUDE</text>
         </g>
 
-        <!-- NODE 2: GitHub (4 o'clock - 120°) -->
+        <!-- NODE 2: GitHub (120° - 4 o'clock) -->
+        <!-- Math: x = 250 + 180*sin(120°) = 405.88, y = 250 - 180*cos(120°) = 250 + 90 = 340 -->
         <g class="node" data-step="2" style="--node-color: var(--color-github); --node-glow: rgba(167, 139, 250, 0.5)">
-          <circle class="node-bg" cx="405.88" cy="340" r="36"/>
+          <circle class="node-bg" cx="405.88" cy="340" r="32"/>
           <g class="node-icon" transform="translate(405.88, 340)">
-            <circle cx="-6" cy="-9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="6" cy="-3" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="-6" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-6" y1="-5.5" x2="-6" y2="5.5" stroke="currentColor" stroke-width="2"/>
-            <path d="M -6 -3 Q 0 -3 6 0.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="-5" cy="-7" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="5" cy="-2" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="-5" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-5" y1="-4" x2="-5" y2="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M -5 -2 Q 0 -2 5 1" fill="none" stroke="currentColor" stroke-width="2"/>
           </g>
-          <text x="455" y="345" text-anchor="start" class="node-label">GITHUB</text>
+          <text x="452" y="345" text-anchor="start" class="node-label">GITHUB</text>
         </g>
 
-        <!-- NODE 3: CI/CD (6 o'clock - bottom) -->
+        <!-- NODE 3: CI/CD (180° - bottom, 6 o'clock) -->
+        <!-- Math: x = 250 + 180*sin(180°) = 250, y = 250 - 180*cos(180°) = 250 + 180 = 430 -->
         <g class="node" data-step="3" style="--node-color: var(--color-ci); --node-glow: rgba(16, 185, 129, 0.5)">
-          <circle class="node-bg" cx="250" cy="430" r="36"/>
+          <circle class="node-bg" cx="250" cy="430" r="32"/>
           <g class="node-icon" transform="translate(250, 430)">
-            <circle cx="0" cy="0" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
             <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="0" y1="-12" x2="0" y2="-8"/>
-              <line x1="0" y1="8" x2="0" y2="12"/>
-              <line x1="-12" y1="0" x2="-8" y2="0"/>
-              <line x1="8" y1="0" x2="12" y2="0"/>
+              <line x1="0" y1="-11" x2="0" y2="-7"/>
+              <line x1="0" y1="7" x2="0" y2="11"/>
+              <line x1="-11" y1="0" x2="-7" y2="0"/>
+              <line x1="7" y1="0" x2="11" y2="0"/>
             </g>
-            <polygon points="-2.5,-4 -2.5,4 4,0" fill="currentColor"/>
+            <polygon points="-2,-3 -2,3 3,0" fill="currentColor"/>
           </g>
-          <text x="250" y="480" text-anchor="middle" class="node-label">CI/CD</text>
+          <text x="250" y="476" text-anchor="middle" class="node-label">CI/CD</text>
         </g>
 
-        <!-- NODE 4: Jules Review (8 o'clock - 240°) -->
+        <!-- NODE 4: Jules Review (240° - 8 o'clock) -->
+        <!-- Math: x = 250 + 180*sin(240°) = 250 - 155.88 = 94.12, y = 250 - 180*cos(240°) = 250 + 90 = 340 -->
         <g class="node" data-step="4" style="--node-color: var(--color-jules); --node-glow: rgba(236, 72, 153, 0.5)">
-          <circle class="node-bg" cx="94.12" cy="340" r="36"/>
+          <circle class="node-bg" cx="94.12" cy="340" r="32"/>
           <g class="node-icon" transform="translate(94.12, 340)">
-            <path d="M -14 0 Q 0 -12 14 0 Q 0 12 -14 0" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="0" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="0" r="2" fill="currentColor"/>
+            <path d="M -12 0 Q 0 -10 12 0 Q 0 10 -12 0" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="1.5" fill="currentColor"/>
           </g>
-          <text x="45" y="345" text-anchor="end" class="node-label">JULES</text>
+          <text x="48" y="345" text-anchor="end" class="node-label">JULES</text>
         </g>
 
-        <!-- NODE 5: Merge (10 o'clock - 300°) -->
+        <!-- NODE 5: Merge (300° - 10 o'clock) -->
+        <!-- Math: x = 250 + 180*sin(300°) = 250 - 155.88 = 94.12, y = 250 - 180*cos(300°) = 250 - 90 = 160 -->
         <g class="node" data-step="5" style="--node-color: var(--color-merge); --node-glow: rgba(6, 182, 212, 0.5)">
-          <circle class="node-bg" cx="94.12" cy="160" r="36"/>
+          <circle class="node-bg" cx="94.12" cy="160" r="32"/>
           <g class="node-icon" transform="translate(94.12, 160)">
-            <circle cx="-6" cy="-9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="6" cy="-9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M -6 -5.5 L -6 0 Q -6 4 0 6.5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M 6 -5.5 L 6 0 Q 6 4 0 6.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="-5" cy="-7" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="5" cy="-7" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M -5 -4 L -5 0 Q -5 3 0 5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M 5 -4 L 5 0 Q 5 3 0 5" fill="none" stroke="currentColor" stroke-width="2"/>
           </g>
-          <text x="45" y="165" text-anchor="end" class="node-label">MERGE</text>
+          <text x="48" y="165" text-anchor="end" class="node-label">MERGE</text>
         </g>
 
-        <!-- Orbiting marker -->
-        <circle class="orbit-marker-glow" id="markerGlow" cx="250" cy="70" r="10"/>
-        <circle class="orbit-marker" id="orbitMarker" cx="250" cy="70" r="8"/>
+        <!-- Orbiting marker (moves to active node) -->
+        <circle class="orbit-marker-glow" id="markerGlow" cx="250" cy="70" r="8" stroke="var(--color-jira)"/>
+        <circle class="orbit-marker" id="orbitMarker" cx="250" cy="70" r="6" fill="var(--color-jira)"/>
       </svg>
       <div class="click-hint">Click or Space to pause</div>
     </section>
@@ -784,25 +702,28 @@
 
   <script>
     const STEP_INTERVAL = 4000;
-    const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 180; // ~1131
+    const RADIUS = 180;
+    const CENTER = 250;
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ~1131
 
-    // Node positions on circle (calculated from 60° intervals)
-    // 0° = top, going clockwise
+    // Mathematically precise node positions
+    // Formula: x = CENTER + RADIUS * sin(angle), y = CENTER - RADIUS * cos(angle)
+    // Where 0° = top (12 o'clock), going clockwise
     const nodePositions = [
-      { x: 250, y: 70 },    // 0: Jira (top, 0°)
-      { x: 405.88, y: 160 }, // 1: Claude (60°)
-      { x: 405.88, y: 340 }, // 2: GitHub (120°)
-      { x: 250, y: 430 },    // 3: CI/CD (180°)
-      { x: 94.12, y: 340 },  // 4: Jules (240°)
-      { x: 94.12, y: 160 }   // 5: Merge (300°)
+      { x: 250, y: 70 },      // 0°   - Jira (top)
+      { x: 405.88, y: 160 },  // 60°  - Claude
+      { x: 405.88, y: 340 },  // 120° - GitHub
+      { x: 250, y: 430 },     // 180° - CI/CD (bottom)
+      { x: 94.12, y: 340 },   // 240° - Jules
+      { x: 94.12, y: 160 }    // 300° - Merge
     ];
 
     const steps = [
-      { name: 'Jira Ticket', desc: 'Reading ticket requirements...', color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)', progress: 10 },
-      { name: 'Claude Code', desc: 'Writing tests and implementation...', color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)', progress: 28 },
-      { name: 'GitHub PR', desc: 'Pushing code and creating PR...', color: '#a78bfa', shadow: 'rgba(167, 139, 250, 0.4)', progress: 45 },
-      { name: 'CI Pipeline', desc: 'Running tests and validation...', color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)', progress: 62 },
-      { name: 'Jules Review', desc: 'AI reviewing code changes...', color: '#ec4899', shadow: 'rgba(236, 72, 153, 0.4)', progress: 80 },
+      { name: 'Jira Ticket', desc: 'Reading ticket requirements...', color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)', progress: 16.67 },
+      { name: 'Claude Code', desc: 'Writing tests and implementation...', color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)', progress: 33.33 },
+      { name: 'GitHub PR', desc: 'Pushing code and creating PR...', color: '#a78bfa', shadow: 'rgba(167, 139, 250, 0.4)', progress: 50 },
+      { name: 'CI Pipeline', desc: 'Running tests and validation...', color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)', progress: 66.67 },
+      { name: 'Jules Review', desc: 'AI reviewing code changes...', color: '#ec4899', shadow: 'rgba(236, 72, 153, 0.4)', progress: 83.33 },
       { name: 'Merge', desc: 'Merging to main branch!', color: '#06b6d4', shadow: 'rgba(6, 182, 212, 0.4)', progress: 100 }
     ];
 
@@ -813,10 +734,8 @@
     // DOM elements
     const orbitMarker = document.getElementById('orbitMarker');
     const markerGlow = document.getElementById('markerGlow');
-    const completionArc = document.getElementById('completionArc');
-    const centerStepNum = document.getElementById('centerStepNum');
+    const progressRing = document.getElementById('progressRing');
     const nodes = document.querySelectorAll('.node');
-    const arcs = document.querySelectorAll('.arc-connection');
     const stepMarker = document.getElementById('stepMarker');
     const stepName = document.getElementById('stepName');
     const stepDesc = document.getElementById('stepDesc');
@@ -840,24 +759,18 @@
       const step = steps[index];
       const pos = nodePositions[index];
 
-      // Move orbiting marker
+      // Move orbiting marker to active node
       orbitMarker.setAttribute('cx', pos.x);
       orbitMarker.setAttribute('cy', pos.y);
+      orbitMarker.style.fill = step.color;
       markerGlow.setAttribute('cx', pos.x);
       markerGlow.setAttribute('cy', pos.y);
-
-      // Update marker color
-      orbitMarker.style.fill = step.color;
-      orbitMarker.style.filter = `drop-shadow(0 0 20px ${step.color})`;
       markerGlow.style.stroke = step.color;
 
-      // Update center display
-      centerStepNum.textContent = index + 1;
-
-      // Update completion arc (fills clockwise)
+      // Update progress ring (fills clockwise from top)
       const completedFraction = (index + 1) / steps.length;
-      const dashOffset = CIRCLE_CIRCUMFERENCE * (1 - completedFraction);
-      completionArc.style.strokeDashoffset = dashOffset;
+      const dashOffset = CIRCUMFERENCE * (1 - completedFraction);
+      progressRing.style.strokeDashoffset = dashOffset;
 
       // Update nodes
       nodes.forEach((node, i) => {
@@ -866,26 +779,16 @@
 
         if (i < index) {
           node.classList.add('done');
-          bg.setAttribute('r', '36');
+          bg.setAttribute('r', '32');
         } else if (i === index) {
           node.classList.add('active');
-          bg.setAttribute('r', '42'); // 18% larger when active
+          bg.setAttribute('r', '38'); // 18% larger when active
         } else {
-          bg.setAttribute('r', '36');
+          bg.setAttribute('r', '32');
         }
       });
 
-      // Update arc connections
-      arcs.forEach((arc, i) => {
-        arc.classList.remove('active', 'done');
-        if (i < index) {
-          arc.classList.add('done');
-        } else if (i === index) {
-          arc.classList.add('active');
-        }
-      });
-
-      // Update panel
+      // Update side panel
       stepMarker.style.background = step.color;
       stepMarker.style.setProperty('--step-shadow', step.shadow);
       stepMarker.textContent = index + 1;
