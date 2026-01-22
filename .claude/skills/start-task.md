@@ -211,13 +211,20 @@ _None_
 
 ## Exit Criteria
 
-Before outputting `<promise>DONE</promise>`, verify:
+Before outputting the completion promise, verify:
 
 1. [ ] All acceptance criteria are met
 2. [ ] All tests pass: `pytest` or `npm test`
 3. [ ] No linting errors: `ruff check .` or `npm run lint`
 4. [ ] Changes committed with proper message format: `{JIRA-ID}: {description}`
 5. [ ] Branch pushed to remote
+
+When complete, output EXACTLY:
+```
+<promise>DONE</promise>
+```
+
+No variations. This exact format is required for stop-hook detection.
 
 ## Notes
 
@@ -305,6 +312,40 @@ The stop-hook will block exit until criteria are met.
 
 Begin by reading docs/CURRENT_TASK.md
 ```
+
+### Promise Format - EXACT SPECIFICATION
+
+When your task is complete and ALL exit criteria are met:
+
+**Output EXACTLY this string:**
+
+```
+<promise>DONE</promise>
+```
+
+**NOT:**
+- ✗ `DONE`
+- ✗ `done`
+- ✗ `Task complete`
+- ✗ `<promise>Done</promise>` (wrong case)
+- ✗ `<PROMISE>DONE</PROMISE>` (wrong case)
+- ✗ Any other variation
+
+**The EXACT string is:**
+```
+<promise>DONE</promise>
+```
+
+This exact format is detected by the stop-hook. Any deviation and exit will be blocked.
+
+**Before outputting the promise, verify:**
+1. [ ] All acceptance criteria met
+2. [ ] All tests passing
+3. [ ] All linting passing
+4. [ ] Changes committed
+5. [ ] Branch pushed to remote
+
+Only then output the promise on its own line.
 
 ## Error Handling
 
