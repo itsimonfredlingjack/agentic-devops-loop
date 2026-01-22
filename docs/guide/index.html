@@ -1124,8 +1124,27 @@
 
         <!-- Quick Start Commands -->
         <div class="building-blocks" style="margin-top: var(--space-2xl);">
-          <div class="building-blocks-title">⌨️ Slash Commands i Claude Code</div>
-          <div class="blocks-grid">
+          <div class="building-blocks-title">⌨️ Så här startar du</div>
+
+          <!-- Terminal showing how to start -->
+          <div class="terminal" style="max-width: 600px; margin: var(--space-lg) auto;">
+            <div class="terminal-header">
+              <span class="terminal-dot red" aria-hidden="true"></span>
+              <span class="terminal-dot yellow" aria-hidden="true"></span>
+              <span class="terminal-dot green" aria-hidden="true"></span>
+              <span class="terminal-title">Terminal</span>
+            </div>
+            <div class="terminal-body" style="min-height: auto; padding: var(--space-md) var(--space-lg);">
+              <div style="color: var(--text-muted); font-size: 0.8125rem; margin-bottom: 0.5rem;"># 1. Gå till ditt projekt (exempel)</div>
+              <div style="color: var(--accent-cyan);"><span style="color: var(--accent-purple);">$</span> cd ~/my-project</div>
+              <div style="color: var(--text-muted); font-size: 0.8125rem; margin: 0.75rem 0 0.5rem;"># 2. Starta Claude Code</div>
+              <div style="color: var(--accent-cyan);"><span style="color: var(--accent-purple);">$</span> claude</div>
+              <div style="color: var(--text-muted); font-size: 0.8125rem; margin: 0.75rem 0 0.5rem;"># 3. Kör slash-kommandot med ditt Jira-ID</div>
+              <div style="color: var(--accent-green);"><span style="color: var(--accent-purple);">></span> /start-task DEV-123</div>
+            </div>
+          </div>
+
+          <div class="blocks-grid" style="margin-top: var(--space-lg);">
             <div class="block-item" style="background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(163, 113, 247, 0.1)); border-color: var(--accent-blue);">
               <span class="block-icon">▶️</span>
               <span class="block-name" style="font-family: var(--font-mono);">/start-task PROJ-123</span>
