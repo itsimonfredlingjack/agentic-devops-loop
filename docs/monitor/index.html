@@ -7,29 +7,44 @@
   <title>Agentic Loop Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-deep: #0a0c10;
-      --bg-primary: #0d1117;
-      --bg-secondary: #161b22;
-      --bg-elevated: #1c2128;
-      --border-subtle: #30363d;
-      --border-muted: #21262d;
-      --text-primary: #e6edf3;
-      --text-secondary: #8b949e;
-      --text-muted: #6e7681;
+      /* Background colors */
+      --bg-deep: #0a0e1a;
+      --bg-primary: #0f1420;
+      --bg-secondary: #161b2e;
+      --bg-elevated: #1c2235;
+      --bg-card: rgba(255, 255, 255, 0.03);
+
+      /* Border colors */
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-muted: rgba(255, 255, 255, 0.05);
+
+      /* Text colors - improved contrast */
+      --text-primary: #f0f2f5;
+      --text-secondary: #a8b0c5;
+      --text-label: #8b92a8;
+      --text-muted: #5c6478;
 
       /* Node colors */
-      --color-jira: #0052CC;
-      --color-claude: #D97706;
-      --color-github: #6e7681;
-      --color-ci: #2EA043;
-      --color-jules: #A371F7;
-      --color-merge: #3FB950;
+      --color-jira: #2684FF;
+      --color-claude: #F59E0B;
+      --color-github: #8B949E;
+      --color-ci: #10B981;
+      --color-jules: #A78BFA;
+      --color-merge: #34D399;
 
-      --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+      /* Status colors */
+      --status-done: #10b981;
+      --status-active: #f59e0b;
+      --status-pending: #4b5563;
+
+      /* Typography */
+      --font-sans: 'DM Sans', -apple-system, sans-serif;
       --font-mono: 'IBM Plex Mono', monospace;
+
+      /* Transitions */
       --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -42,139 +57,152 @@
     html {
       font-size: 16px;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     body {
       font-family: var(--font-sans);
-      background: var(--bg-deep);
+      background: linear-gradient(180deg, var(--bg-deep) 0%, #121825 100%);
       color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    /* Header */
+    /* ========== HEADER ========== */
     .header {
-      background: rgba(13, 17, 23, 0.85);
-      backdrop-filter: blur(12px);
+      background: linear-gradient(180deg, #0a0e1a 0%, #121825 100%);
       border-bottom: 1px solid var(--border-subtle);
-      padding: 1.25rem 2rem;
+      padding: 24px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: sticky;
       top: 0;
       z-index: 100;
+      backdrop-filter: blur(12px);
     }
 
     .header-left {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 16px;
     }
 
     .logo {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       background: linear-gradient(135deg, var(--color-claude), var(--color-jules));
-      border-radius: 8px;
+      border-radius: 10px;
       position: relative;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
     }
 
     .logo::after {
       content: '';
       position: absolute;
-      inset: 3px;
+      inset: 4px;
       background: var(--bg-primary);
-      border-radius: 5px;
+      border-radius: 6px;
     }
 
     .header h1 {
-      font-size: 1.125rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
     }
 
     .status-indicator {
       display: flex;
       align-items: center;
-      gap: 0.625rem;
-      background: var(--bg-elevated);
+      gap: 10px;
+      background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      padding: 0.5rem 1rem;
+      padding: 10px 20px;
       border-radius: 100px;
       font-family: var(--font-mono);
-      font-size: 0.8125rem;
+      font-size: 13px;
+      color: var(--text-secondary);
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--color-merge);
+      width: 10px;
+      height: 10px;
+      background: var(--status-done);
       border-radius: 50%;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
       animation: status-pulse 2s ease-in-out infinite;
     }
 
     .status-dot.paused {
-      background: var(--color-jira);
+      background: var(--status-active);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
       animation: none;
     }
 
     @keyframes status-pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.9); }
+      50% { opacity: 0.6; transform: scale(0.85); }
     }
 
-    /* Main Layout */
+    /* ========== MAIN LAYOUT ========== */
     .main {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 0;
-      max-width: 1600px;
+      grid-template-columns: 1fr 380px;
+      gap: 48px;
+      max-width: 1400px;
       width: 100%;
       margin: 0 auto;
+      padding: 32px;
     }
 
-    @media (max-width: 1024px) {
+    @media (max-width: 1100px) {
       .main {
         grid-template-columns: 1fr;
+        gap: 32px;
       }
     }
 
-    /* Loop Container */
+    /* ========== LOOP CONTAINER ========== */
     .loop-container {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 3rem;
-      min-height: calc(100vh - 140px);
+      padding: 48px;
+      min-height: 500px;
       position: relative;
-      background:
-        radial-gradient(ellipse at 30% 20%, rgba(217, 119, 6, 0.03) 0%, transparent 50%),
-        radial-gradient(ellipse at 70% 80%, rgba(163, 113, 247, 0.03) 0%, transparent 50%),
-        var(--bg-deep);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
       cursor: pointer;
+      transition: border-color 0.3s;
     }
 
-    /* SVG Loop Map */
+    .loop-container:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* ========== SVG LOOP MAP ========== */
     .loop-svg {
       width: 100%;
-      max-width: 600px;
+      max-width: 580px;
       height: auto;
     }
 
+    /* Gradient definitions for connections */
     .connection {
       stroke: var(--border-muted);
-      stroke-width: 2;
+      stroke-width: 3;
       fill: none;
       transition: all 0.4s var(--transition-smooth);
     }
 
     .connection.active {
-      stroke: var(--color-claude);
+      stroke-width: 3;
       stroke-dasharray: 8 4;
-      animation: edge-flow 0.8s linear infinite;
+      animation: edge-flow 0.6s linear infinite;
     }
 
     @keyframes edge-flow {
@@ -182,7 +210,8 @@
       100% { stroke-dashoffset: 0; }
     }
 
-    .node circle {
+    /* Node styling - 15% larger (r=40 instead of 35) */
+    .node circle.node-bg {
       fill: var(--bg-secondary);
       stroke: var(--border-subtle);
       stroke-width: 2;
@@ -191,248 +220,313 @@
 
     .node-icon {
       color: var(--text-muted);
-      transition: color 0.4s var(--transition-smooth);
+      transition: all 0.4s var(--transition-smooth);
     }
 
     .node-label {
       font-family: var(--font-mono);
       font-size: 11px;
-      fill: var(--text-muted);
+      fill: var(--text-label);
+      font-weight: 500;
       transition: fill 0.4s var(--transition-smooth);
     }
 
-    .node.active circle {
-      stroke-width: 3;
-      filter: drop-shadow(0 0 20px var(--node-color));
+    /* Active node state */
+    .node.active circle.node-bg {
+      fill: var(--node-color);
+      stroke: var(--node-color);
+      filter: drop-shadow(0 0 20px var(--node-glow));
+      transform-origin: center;
+      animation: node-pulse 2s ease-in-out infinite;
     }
 
     .node.active .node-icon {
-      color: var(--bg-primary);
+      color: var(--bg-deep);
     }
 
     .node.active .node-label {
       fill: var(--text-primary);
+      font-weight: 600;
     }
 
-    .node.done circle {
+    @keyframes node-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Done node state */
+    .node.done circle.node-bg {
       fill: var(--node-color);
       stroke: var(--node-color);
-      opacity: 0.8;
+      opacity: 0.7;
     }
 
     .node.done .node-icon {
-      color: var(--bg-primary);
+      color: var(--bg-deep);
     }
 
     .node.done .node-label {
       fill: var(--text-secondary);
     }
 
-    /* Claude Marker */
+    /* ========== CLAUDE MARKER ========== */
     .claude-marker {
       fill: var(--color-claude);
-      filter: drop-shadow(0 0 12px var(--color-claude));
-      transition: cx 0.6s var(--transition-smooth), cy 0.6s var(--transition-smooth);
+      filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6));
+      transition: cx 0.5s var(--transition-smooth), cy 0.5s var(--transition-smooth);
     }
 
     .marker-ring {
       fill: none;
       stroke: var(--color-claude);
       stroke-width: 2;
-      opacity: 0.4;
-      animation: ring-pulse 2s ease-out infinite;
+      opacity: 0.5;
+      animation: ring-expand 2s ease-out infinite;
     }
 
-    @keyframes ring-pulse {
-      0% { r: 12; opacity: 0.4; }
-      100% { r: 28; opacity: 0; }
+    @keyframes ring-expand {
+      0% { r: 14; opacity: 0.5; }
+      100% { r: 32; opacity: 0; }
     }
 
     /* Click hint */
     .click-hint {
       position: absolute;
-      bottom: 1.5rem;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 0.75rem;
+      font-size: 12px;
       color: var(--text-muted);
-      opacity: 0.6;
+      opacity: 0.5;
+      transition: opacity 0.3s;
     }
 
-    /* Side Panel */
+    .loop-container:hover .click-hint {
+      opacity: 0.8;
+    }
+
+    /* ========== SIDE PANEL ========== */
     .side-panel {
-      background: var(--bg-primary);
-      border-left: 1px solid var(--border-subtle);
-      padding: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
-      overflow-y: auto;
+      gap: 20px;
     }
 
-    @media (max-width: 1024px) {
-      .side-panel {
-        border-left: none;
-        border-top: 1px solid var(--border-subtle);
-      }
-    }
-
-    .panel-section {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-muted);
+    /* Card styling for all sections */
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
       border-radius: 12px;
-      padding: 1.25rem;
+      padding: 20px;
+      transition: border-color 0.3s;
+    }
+
+    .panel-card:hover {
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .section-label {
-      font-size: 0.6875rem;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--text-muted);
-      margin-bottom: 0.75rem;
+      color: var(--text-label);
+      margin-bottom: 16px;
     }
 
-    /* Current Task */
+    /* ========== CURRENT TASK ========== */
     .task-id {
       font-family: var(--font-mono);
-      font-size: 0.875rem;
+      font-size: 14px;
       color: var(--color-jira);
-      margin-bottom: 0.375rem;
+      margin-bottom: 8px;
+      font-weight: 500;
     }
 
     .task-title {
-      font-size: 0.9375rem;
-      font-weight: 500;
+      font-size: 18px;
+      font-weight: 600;
       line-height: 1.4;
-      margin-bottom: 0.75rem;
+      margin-bottom: 16px;
+      color: var(--text-primary);
     }
 
     .task-meta {
       display: flex;
       justify-content: space-between;
-      font-size: 0.8125rem;
+      align-items: center;
+      font-size: 13px;
       color: var(--text-secondary);
+    }
+
+    .task-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .task-status::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--status-active);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
     }
 
     .task-timer {
       font-family: var(--font-mono);
       font-variant-numeric: tabular-nums;
+      font-weight: 500;
     }
 
-    /* Active Step */
+    /* ========== ACTIVE STEP ========== */
     .active-step {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 16px;
+      margin-bottom: 16px;
     }
 
     .step-marker {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: var(--font-mono);
-      font-size: 0.875rem;
+      font-size: 16px;
       font-weight: 600;
-      color: var(--bg-primary);
-      transition: background 0.4s var(--transition-smooth);
+      color: var(--bg-deep);
+      transition: all 0.4s var(--transition-smooth);
+      box-shadow: 0 4px 12px var(--step-shadow);
     }
 
     .step-info h3 {
-      font-size: 0.9375rem;
-      font-weight: 500;
-      margin-bottom: 0.25rem;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-primary);
     }
 
     .step-info p {
-      font-size: 0.8125rem;
+      font-size: 13px;
       color: var(--text-secondary);
+      line-height: 1.4;
     }
 
-    /* Progress */
+    /* Progress bar - redesigned */
     .progress-track {
       height: 6px;
       background: var(--bg-elevated);
       border-radius: 3px;
       overflow: hidden;
-      margin-top: 0.75rem;
+      position: relative;
     }
 
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--color-jira), var(--color-merge));
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
       border-radius: 3px;
       transition: width 0.6s var(--transition-smooth);
+      position: relative;
     }
 
-    /* Event Log */
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: progress-shimmer 2s ease-in-out infinite;
+    }
+
+    @keyframes progress-shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* ========== EVENT LOG ========== */
     .event-log {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 0.125rem;
+      gap: 4px;
     }
 
     .event-item {
       display: flex;
       align-items: center;
-      gap: 0.625rem;
-      padding: 0.5rem 0;
-      font-size: 0.8125rem;
+      gap: 12px;
+      padding: 10px 0;
+      font-size: 13px;
       border-bottom: 1px solid var(--border-muted);
       transition: all 0.3s;
     }
 
     .event-item:last-child {
       border-bottom: none;
+      padding-bottom: 0;
     }
 
     .event-marker {
-      width: 18px;
-      height: 18px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      border: 2px solid var(--border-subtle);
+      flex-shrink: 0;
+      transition: all 0.3s;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.625rem;
-      flex-shrink: 0;
-      transition: all 0.3s;
+      font-size: 8px;
+      font-weight: bold;
     }
 
+    /* Color-coded status indicators */
     .event-item.done .event-marker {
-      background: var(--color-merge);
-      border-color: var(--color-merge);
-      color: var(--bg-primary);
+      background: var(--status-done);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+      color: var(--bg-deep);
+    }
+
+    .event-item.done {
+      color: var(--text-secondary);
     }
 
     .event-item.active .event-marker {
-      border-color: var(--color-claude);
-      background: var(--color-claude);
-      color: var(--bg-primary);
-      animation: marker-pulse 1.5s ease-in-out infinite;
+      background: var(--status-active);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+      animation: marker-glow 1.5s ease-in-out infinite;
     }
 
-    @keyframes marker-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
-      50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+    .event-item.active {
+      color: var(--text-primary);
+      font-weight: 500;
     }
 
-    .event-item.done { color: var(--text-secondary); }
-    .event-item.pending { color: var(--text-muted); }
+    @keyframes marker-glow {
+      0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+      50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.8); }
+    }
 
-    /* Footer */
+    .event-item.pending .event-marker {
+      background: var(--status-pending);
+      opacity: 0.5;
+    }
+
+    .event-item.pending {
+      color: var(--text-muted);
+    }
+
+    /* ========== FOOTER ========== */
     .footer {
       background: var(--bg-primary);
       border-top: 1px solid var(--border-subtle);
-      padding: 1rem 2rem;
+      padding: 20px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.8125rem;
+      font-size: 13px;
       color: var(--text-muted);
     }
 
@@ -444,6 +538,27 @@
 
     .footer a:hover {
       color: var(--text-primary);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .header {
+        padding: 16px 20px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .main {
+        padding: 20px;
+        gap: 24px;
+      }
+
+      .loop-container {
+        padding: 24px;
+        min-height: 400px;
+      }
     }
   </style>
 </head>
@@ -461,124 +576,150 @@
 
   <main class="main">
     <section class="loop-container" id="loopContainer">
-      <svg class="loop-svg" viewBox="0 0 550 420">
+      <svg class="loop-svg" viewBox="0 0 560 440">
         <defs>
+          <!-- Gradient definitions for connections -->
+          <linearGradient id="grad-0-1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#2684FF"/>
+            <stop offset="100%" style="stop-color:#F59E0B"/>
+          </linearGradient>
+          <linearGradient id="grad-1-2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#F59E0B"/>
+            <stop offset="100%" style="stop-color:#8B949E"/>
+          </linearGradient>
+          <linearGradient id="grad-2-3" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#8B949E"/>
+            <stop offset="100%" style="stop-color:#10B981"/>
+          </linearGradient>
+          <linearGradient id="grad-3-4" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#10B981"/>
+            <stop offset="100%" style="stop-color:#A78BFA"/>
+          </linearGradient>
+          <linearGradient id="grad-4-5" x1="100%" y1="0%" x2="0%" y2="0%">
+            <stop offset="0%" style="stop-color:#A78BFA"/>
+            <stop offset="100%" style="stop-color:#34D399"/>
+          </linearGradient>
+          <linearGradient id="grad-5-0" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" style="stop-color:#34D399"/>
+            <stop offset="100%" style="stop-color:#2684FF"/>
+          </linearGradient>
+
           <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="var(--border-subtle)" />
+            <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)" />
           </marker>
         </defs>
 
-        <!-- Connections -->
-        <path class="connection" id="conn-0" d="M 105 80 L 195 80" marker-end="url(#arrowhead)" />
-        <path class="connection" id="conn-1" d="M 265 80 L 355 80" marker-end="url(#arrowhead)" />
-        <path class="connection" id="conn-2" d="M 425 80 L 480 80 L 480 175" marker-end="url(#arrowhead)" />
-        <path class="connection" id="conn-3" d="M 480 245 L 480 295" marker-end="url(#arrowhead)" />
-        <path class="connection" id="conn-4" d="M 445 330 L 265 330" marker-end="url(#arrowhead)" />
-        <path class="connection" id="conn-5" d="M 195 330 L 70 330 L 70 115" marker-end="url(#arrowhead)" />
+        <!-- Connections with gradient strokes -->
+        <path class="connection" id="conn-0" d="M 115 90 L 195 90" stroke="url(#grad-0-1)" />
+        <path class="connection" id="conn-1" d="M 275 90 L 355 90" stroke="url(#grad-1-2)" />
+        <path class="connection" id="conn-2" d="M 435 90 L 490 90 L 490 180" stroke="url(#grad-2-3)" />
+        <path class="connection" id="conn-3" d="M 490 260 L 490 310" stroke="url(#grad-3-4)" />
+        <path class="connection" id="conn-4" d="M 450 350 L 275 350" stroke="url(#grad-4-5)" />
+        <path class="connection" id="conn-5" d="M 195 350 L 70 350 L 70 130" stroke="url(#grad-5-0)" />
 
-        <!-- JIRA -->
-        <g class="node" data-step="0" style="--node-color: var(--color-jira)">
-          <circle cx="70" cy="80" r="35" />
-          <g class="node-icon" transform="translate(70, 80)">
-            <rect x="-10" y="-14" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <rect x="-6" y="-18" width="12" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-6" y1="-4" x2="6" y2="-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="-6" y1="2" x2="4" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="-6" y1="8" x2="2" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- JIRA - Node 0 -->
+        <g class="node" data-step="0" style="--node-color: var(--color-jira); --node-glow: rgba(38, 132, 255, 0.4)">
+          <circle class="node-bg" cx="70" cy="90" r="40" />
+          <g class="node-icon" transform="translate(70, 90)">
+            <rect x="-11" y="-15" width="22" height="28" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <rect x="-7" y="-19" width="14" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-7" y1="-3" x2="7" y2="-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="-7" y1="4" x2="5" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="-7" y1="11" x2="3" y2="11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </g>
-          <text x="70" y="130" text-anchor="middle" class="node-label">Jira</text>
+          <text x="70" y="148" text-anchor="middle" class="node-label">Jira</text>
         </g>
 
-        <!-- CLAUDE CODE -->
-        <g class="node" data-step="1" style="--node-color: var(--color-claude)">
-          <circle cx="230" cy="80" r="35" />
-          <g class="node-icon" transform="translate(230, 80)">
-            <path d="M -12 -10 L -6 0 L -12 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="-2" y1="10" x2="10" y2="10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="6" cy="-4" r="3" fill="currentColor"/>
+        <!-- CLAUDE CODE - Node 1 -->
+        <g class="node" data-step="1" style="--node-color: var(--color-claude); --node-glow: rgba(245, 158, 11, 0.4)">
+          <circle class="node-bg" cx="235" cy="90" r="40" />
+          <g class="node-icon" transform="translate(235, 90)">
+            <path d="M -14 -12 L -7 0 L -14 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="-2" y1="12" x2="12" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="8" cy="-4" r="4" fill="currentColor"/>
           </g>
-          <text x="230" y="130" text-anchor="middle" class="node-label">Claude Code</text>
+          <text x="235" y="148" text-anchor="middle" class="node-label">Claude Code</text>
         </g>
 
-        <!-- GITHUB -->
-        <g class="node" data-step="2" style="--node-color: var(--color-github)">
-          <circle cx="390" cy="80" r="35" />
-          <g class="node-icon" transform="translate(390, 80)">
-            <circle cx="-6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="6" cy="-4" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="-6" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-6" y1="-7" x2="-6" y2="7" stroke="currentColor" stroke-width="2"/>
-            <path d="M -6 -4 Q 0 -4 6 -1" fill="none" stroke="currentColor" stroke-width="2"/>
+        <!-- GITHUB - Node 2 -->
+        <g class="node" data-step="2" style="--node-color: var(--color-github); --node-glow: rgba(139, 148, 158, 0.4)">
+          <circle class="node-bg" cx="395" cy="90" r="40" />
+          <g class="node-icon" transform="translate(395, 90)">
+            <circle cx="-7" cy="-11" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="7" cy="-4" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="-7" cy="11" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-7" y1="-7" x2="-7" y2="7" stroke="currentColor" stroke-width="2"/>
+            <path d="M -7 -4 Q 0 -4 7 0" fill="none" stroke="currentColor" stroke-width="2"/>
           </g>
-          <text x="390" y="130" text-anchor="middle" class="node-label">GitHub</text>
+          <text x="395" y="148" text-anchor="middle" class="node-label">GitHub</text>
         </g>
 
-        <!-- CI/CD -->
-        <g class="node" data-step="3" style="--node-color: var(--color-ci)">
-          <circle cx="480" cy="210" r="35" />
-          <g class="node-icon" transform="translate(480, 210)">
-            <circle cx="0" cy="0" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+        <!-- CI/CD - Node 3 -->
+        <g class="node" data-step="3" style="--node-color: var(--color-ci); --node-glow: rgba(16, 185, 129, 0.4)">
+          <circle class="node-bg" cx="490" cy="220" r="40" />
+          <g class="node-icon" transform="translate(490, 220)">
+            <circle cx="0" cy="0" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
             <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="0" y1="-12" x2="0" y2="-8"/>
-              <line x1="0" y1="8" x2="0" y2="12"/>
-              <line x1="-12" y1="0" x2="-8" y2="0"/>
-              <line x1="8" y1="0" x2="12" y2="0"/>
-              <line x1="-8.5" y1="-8.5" x2="-5.5" y2="-5.5"/>
-              <line x1="5.5" y1="5.5" x2="8.5" y2="8.5"/>
-              <line x1="-8.5" y1="8.5" x2="-5.5" y2="5.5"/>
-              <line x1="5.5" y1="-5.5" x2="8.5" y2="-8.5"/>
+              <line x1="0" y1="-14" x2="0" y2="-9"/>
+              <line x1="0" y1="9" x2="0" y2="14"/>
+              <line x1="-14" y1="0" x2="-9" y2="0"/>
+              <line x1="9" y1="0" x2="14" y2="0"/>
+              <line x1="-10" y1="-10" x2="-6" y2="-6"/>
+              <line x1="6" y1="6" x2="10" y2="10"/>
+              <line x1="-10" y1="10" x2="-6" y2="6"/>
+              <line x1="6" y1="-6" x2="10" y2="-10"/>
             </g>
-            <polygon points="-2,-4 -2,4 4,0" fill="currentColor"/>
+            <polygon points="-3,-5 -3,5 5,0" fill="currentColor"/>
           </g>
-          <text x="480" y="260" text-anchor="middle" class="node-label">CI/CD</text>
+          <text x="490" y="278" text-anchor="middle" class="node-label">CI/CD</text>
         </g>
 
-        <!-- JULES REVIEW -->
-        <g class="node" data-step="4" style="--node-color: var(--color-jules)">
-          <circle cx="480" cy="330" r="35" />
-          <g class="node-icon" transform="translate(480, 330)">
-            <path d="M -14 0 Q 0 -12 14 0 Q 0 12 -14 0" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="0" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="0" r="2" fill="currentColor"/>
+        <!-- JULES REVIEW - Node 4 -->
+        <g class="node" data-step="4" style="--node-color: var(--color-jules); --node-glow: rgba(167, 139, 250, 0.4)">
+          <circle class="node-bg" cx="490" cy="350" r="40" />
+          <g class="node-icon" transform="translate(490, 350)">
+            <path d="M -16 0 Q 0 -14 16 0 Q 0 14 -16 0" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="2.5" fill="currentColor"/>
           </g>
-          <text x="480" y="380" text-anchor="middle" class="node-label">Jules Review</text>
+          <text x="490" y="408" text-anchor="middle" class="node-label">Jules Review</text>
         </g>
 
-        <!-- MERGE -->
-        <g class="node" data-step="5" style="--node-color: var(--color-merge)">
-          <circle cx="230" cy="330" r="35" />
-          <g class="node-icon" transform="translate(230, 330)">
-            <circle cx="-6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M -6 -7 L -6 0 Q -6 4 0 7" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M 6 -7 L 6 0 Q 6 4 0 7" fill="none" stroke="currentColor" stroke-width="2"/>
+        <!-- MERGE - Node 5 -->
+        <g class="node" data-step="5" style="--node-color: var(--color-merge); --node-glow: rgba(52, 211, 153, 0.4)">
+          <circle class="node-bg" cx="235" cy="350" r="40" />
+          <g class="node-icon" transform="translate(235, 350)">
+            <circle cx="-7" cy="-11" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="7" cy="-11" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="11" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M -7 -7 L -7 0 Q -7 5 0 8" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M 7 -7 L 7 0 Q 7 5 0 8" fill="none" stroke="currentColor" stroke-width="2"/>
           </g>
-          <text x="230" y="380" text-anchor="middle" class="node-label">Merge</text>
+          <text x="235" y="408" text-anchor="middle" class="node-label">Merge</text>
         </g>
 
         <!-- Animated marker -->
-        <circle class="marker-ring" cx="70" cy="80" r="12" />
-        <circle class="claude-marker" id="marker" cx="70" cy="80" r="10" />
+        <circle class="marker-ring" cx="70" cy="90" r="14" />
+        <circle class="claude-marker" id="marker" cx="70" cy="90" r="12" />
       </svg>
       <div class="click-hint">Click to pause / Space to toggle</div>
     </section>
 
     <aside class="side-panel">
-      <div class="panel-section">
+      <div class="panel-card">
         <div class="section-label">Current Task</div>
         <div class="task-id">PROJ-123</div>
         <div class="task-title">Implement CSV export for report dashboard</div>
         <div class="task-meta">
-          <span>In Progress</span>
+          <span class="task-status">In Progress</span>
           <span class="task-timer" id="taskTimer">0:00</span>
         </div>
       </div>
 
-      <div class="panel-section">
+      <div class="panel-card">
         <div class="section-label">Active Step</div>
         <div class="active-step">
-          <div class="step-marker" id="stepMarker" style="background: var(--color-jira)">1</div>
+          <div class="step-marker" id="stepMarker" style="background: var(--color-jira); --step-shadow: rgba(38, 132, 255, 0.3)">1</div>
           <div class="step-info">
             <h3 id="stepName">Jira Ticket</h3>
             <p id="stepDesc">Reading ticket requirements...</p>
@@ -589,7 +730,7 @@
         </div>
       </div>
 
-      <div class="panel-section">
+      <div class="panel-card">
         <div class="section-label">Event Log</div>
         <ul class="event-log" id="eventLog">
           <li class="event-item" data-step="0"><span class="event-marker"></span><span>Fetch Jira ticket</span></li>
@@ -612,12 +753,12 @@
     const STEP_INTERVAL = 4000;
 
     const steps = [
-      { x: 70, y: 80, name: 'Jira Ticket', desc: 'Reading ticket requirements...', color: '#0052CC', progress: 10 },
-      { x: 230, y: 80, name: 'Claude Code', desc: 'Writing tests and implementation...', color: '#D97706', progress: 30 },
-      { x: 390, y: 80, name: 'GitHub PR', desc: 'Pushing code and creating PR...', color: '#6e7681', progress: 50 },
-      { x: 480, y: 210, name: 'CI Pipeline', desc: 'Running tests and validation...', color: '#2EA043', progress: 70 },
-      { x: 480, y: 330, name: 'Jules Review', desc: 'AI reviewing code changes...', color: '#A371F7', progress: 85 },
-      { x: 230, y: 330, name: 'Merge', desc: 'Merging to main branch!', color: '#3FB950', progress: 100 }
+      { x: 70, y: 90, name: 'Jira Ticket', desc: 'Reading ticket requirements...', color: '#2684FF', shadow: 'rgba(38, 132, 255, 0.3)', progress: 10 },
+      { x: 235, y: 90, name: 'Claude Code', desc: 'Writing tests and implementation...', color: '#F59E0B', shadow: 'rgba(245, 158, 11, 0.3)', progress: 30 },
+      { x: 395, y: 90, name: 'GitHub PR', desc: 'Pushing code and creating PR...', color: '#8B949E', shadow: 'rgba(139, 148, 158, 0.3)', progress: 50 },
+      { x: 490, y: 220, name: 'CI Pipeline', desc: 'Running tests and validation...', color: '#10B981', shadow: 'rgba(16, 185, 129, 0.3)', progress: 70 },
+      { x: 490, y: 350, name: 'Jules Review', desc: 'AI reviewing code changes...', color: '#A78BFA', shadow: 'rgba(167, 139, 250, 0.3)', progress: 85 },
+      { x: 235, y: 350, name: 'Merge', desc: 'Merging to main branch!', color: '#34D399', shadow: 'rgba(52, 211, 153, 0.3)', progress: 100 }
     ];
 
     let currentStep = 0;
@@ -658,26 +799,19 @@
 
       // Update nodes
       nodes.forEach((node, i) => {
-        const circle = node.querySelector('circle');
+        const circle = node.querySelector('circle.node-bg');
         node.classList.remove('active', 'done');
 
         if (i < index) {
           node.classList.add('done');
-          circle.style.fill = getComputedStyle(node).getPropertyValue('--node-color');
         } else if (i === index) {
           node.classList.add('active');
-          circle.style.fill = getComputedStyle(node).getPropertyValue('--node-color');
-        } else {
-          circle.style.fill = '';
         }
       });
 
-      // Update connections
+      // Update connections - activate the one leading TO current node
       connections.forEach((conn, i) => {
         conn.classList.remove('active');
-        if (i === index && index > 0) {
-          connections[i - 1].classList.add('active');
-        }
       });
       if (index > 0) {
         connections[index - 1].classList.add('active');
@@ -685,12 +819,13 @@
 
       // Update panel
       stepMarker.style.background = step.color;
+      stepMarker.style.setProperty('--step-shadow', step.shadow);
       stepMarker.textContent = index + 1;
       stepName.textContent = step.name;
       stepDesc.textContent = step.desc;
       progressFill.style.width = step.progress + '%';
 
-      // Update event log
+      // Update event log with color-coded markers
       const items = eventLog.querySelectorAll('.event-item');
       items.forEach((item, i) => {
         item.classList.remove('done', 'active', 'pending');
