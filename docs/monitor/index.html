@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="sv" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic Loop Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-yellow: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #a371f7;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--bg-tertiary);
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header h1::before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 6px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-tertiary);
+      padding: 0.5rem 1rem;
+      border-radius: 100px;
+      font-size: 0.875rem;
+      font-family: var(--font-mono);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Main Layout */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 2rem;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      .main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .loop-container {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 2rem;
+      min-height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .details-panel {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    /* SVG Loop Map */
+    .loop-svg {
+      width: 100%;
+      max-width: 600px;
+      height: auto;
+    }
+
+    .connection {
+      stroke: var(--bg-tertiary);
+      stroke-width: 3;
+      fill: none;
+    }
+
+    .connection-active {
+      stroke: var(--accent-purple);
+      stroke-width: 3;
+      fill: none;
+      opacity: 0.5;
+    }
+
+    .node circle {
+      fill: var(--bg-tertiary);
+      stroke: var(--text-secondary);
+      stroke-width: 2;
+      transition: all 0.3s ease;
+    }
+
+    .node text.emoji {
+      font-size: 24px;
+    }
+
+    .node-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      fill: var(--text-secondary);
+    }
+
+    .node.active circle {
+      fill: var(--accent-blue);
+      stroke: var(--accent-blue);
+      filter: drop-shadow(0 0 20px var(--accent-blue));
+    }
+
+    .node.active .node-label {
+      fill: var(--text-primary);
+    }
+
+    .node.done circle {
+      fill: var(--accent-green);
+      stroke: var(--accent-green);
+    }
+
+    .node.done .node-label {
+      fill: var(--accent-green);
+    }
+
+    /* Claude Marker */
+    .claude-marker {
+      fill: var(--accent-purple);
+      filter: drop-shadow(0 0 15px var(--accent-purple));
+      animation: marker-pulse 1.5s ease-in-out infinite;
+      transition: cx 0.8s ease-in-out, cy 0.8s ease-in-out;
+    }
+
+    @keyframes marker-pulse {
+      0%, 100% { r: 10; opacity: 1; }
+      50% { r: 14; opacity: 0.8; }
+    }
+
+    /* Details Panel */
+    .panel-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .current-task {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .task-id {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--accent-blue);
+    }
+
+    .task-time {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .task-title {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .step-info {
+      margin-bottom: 1.5rem;
+    }
+
+    .step-badge {
+      display: inline-block;
+      background: var(--accent-purple);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      transition: background 0.3s ease;
+    }
+
+    .step-desc {
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+      min-height: 2.5em;
+    }
+
+    .progress-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    .log-section h4 {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .log-list {
+      list-style: none;
+    }
+
+    .log-item {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--bg-tertiary);
+      transition: color 0.3s ease;
+    }
+
+    .log-item:last-child {
+      border-bottom: none;
+    }
+
+    .log-item.done { color: var(--accent-green); }
+    .log-item.active { color: var(--accent-blue); }
+    .log-item.pending { color: var(--text-secondary); }
+
+    /* Footer link */
+    .footer-link {
+      text-align: center;
+      margin-top: 2rem;
+      padding: 1rem;
+    }
+
+    .footer-link a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    .footer-link a:hover {
+      color: var(--accent-blue);
+    }
+
+    /* Confetti for merge */
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .confetti.active {
+      opacity: 1;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      animation: confetti-fall 3s ease-out forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Agentic Loop Monitor</h1>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>PROJ-123 pågår</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="loop-container">
+      <svg class="loop-svg" viewBox="0 0 550 420">
+        <!-- Connections (arrows) -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--text-secondary)" />
+          </marker>
+          <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--accent-purple)" />
+          </marker>
+        </defs>
+
+        <!-- Paths between nodes -->
+        <path class="connection" d="M 100 80 L 200 80" marker-end="url(#arrowhead)" />
+        <path class="connection" d="M 260 80 L 360 80" marker-end="url(#arrowhead)" />
+        <path class="connection" d="M 420 80 L 480 80 L 480 180" marker-end="url(#arrowhead)" />
+        <path class="connection" d="M 480 240 L 480 300" marker-end="url(#arrowhead)" />
+        <path class="connection" d="M 420 330 L 100 330 L 100 130" marker-end="url(#arrowhead)" />
+
+        <!-- Nodes -->
+        <g class="node" data-step="0">
+          <circle cx="70" cy="80" r="35" />
+          <text x="70" y="88" text-anchor="middle" class="emoji">📋</text>
+          <text x="70" y="130" text-anchor="middle" class="node-label">Jira</text>
+        </g>
+
+        <g class="node" data-step="1">
+          <circle cx="230" cy="80" r="35" />
+          <text x="230" y="88" text-anchor="middle" class="emoji">💻</text>
+          <text x="230" y="130" text-anchor="middle" class="node-label">Claude Code</text>
+        </g>
+
+        <g class="node" data-step="2">
+          <circle cx="390" cy="80" r="35" />
+          <text x="390" y="88" text-anchor="middle" class="emoji">🐙</text>
+          <text x="390" y="130" text-anchor="middle" class="node-label">GitHub</text>
+        </g>
+
+        <g class="node" data-step="3">
+          <circle cx="480" cy="210" r="35" />
+          <text x="480" y="218" text-anchor="middle" class="emoji">⚡</text>
+          <text x="480" y="260" text-anchor="middle" class="node-label">CI/CD</text>
+        </g>
+
+        <g class="node" data-step="4">
+          <circle cx="480" cy="330" r="35" />
+          <text x="480" y="338" text-anchor="middle" class="emoji">🤖</text>
+          <text x="480" y="380" text-anchor="middle" class="node-label">Jules Review</text>
+        </g>
+
+        <g class="node" data-step="5">
+          <circle cx="230" cy="330" r="35" />
+          <text x="230" y="338" text-anchor="middle" class="emoji">✅</text>
+          <text x="230" y="380" text-anchor="middle" class="node-label">Merge</text>
+        </g>
+
+        <!-- Animated marker -->
+        <circle class="claude-marker" cx="230" cy="80" r="12" />
+      </svg>
+    </section>
+
+    <aside class="details-panel">
+      <h2 class="panel-title">Pågående</h2>
+
+      <div class="current-task">
+        <div class="task-header">
+          <span class="task-id">PROJ-123</span>
+          <span class="task-time">⏱️ 0:00</span>
+        </div>
+        <h3 class="task-title">Lägg till CSV-export på rapportsidan</h3>
+      </div>
+
+      <div class="step-info">
+        <div class="step-badge" id="currentStepBadge">💻 Claude Code</div>
+        <p class="step-desc" id="currentStepDesc">Skriver enhetstester för export-funktionen...</p>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-header">
+          <span>Progress</span>
+          <span id="progressPercent">33%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 33%"></div>
+        </div>
+      </div>
+
+      <div class="log-section">
+        <h4>Senaste händelser</h4>
+        <ul class="log-list" id="logList">
+          <li class="log-item" data-step="0">Jira-ticket läst</li>
+          <li class="log-item" data-step="1">Skriver tester & kod</li>
+          <li class="log-item" data-step="2">Pushar till GitHub</li>
+          <li class="log-item" data-step="3">Kör CI-pipeline</li>
+          <li class="log-item" data-step="4">Jules granskar</li>
+          <li class="log-item" data-step="5">Merge till main</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer-link">
+    <a href="../">← Tillbaka till guiden</a>
+  </div>
+
+  <div class="confetti" id="confetti"></div>
+
+  <script>
+    // Step data
+    const stepData = [
+      { id: 'jira', x: 70, y: 80, badge: '📋 Jira', desc: 'Läser ticket och krav från Jira...', progress: 10, color: '#58a6ff' },
+      { id: 'coding', x: 230, y: 80, badge: '💻 Claude Code', desc: 'Skriver tester och implementation med TDD...', progress: 33, color: '#a371f7' },
+      { id: 'github', x: 390, y: 80, badge: '🐙 GitHub', desc: 'Pushar kod och skapar Pull Request...', progress: 50, color: '#8b949e' },
+      { id: 'ci', x: 480, y: 210, badge: '⚡ CI/CD', desc: 'Kör tester och validerar bygget...', progress: 66, color: '#d29922' },
+      { id: 'review', x: 480, y: 330, badge: '🤖 Jules', desc: 'AI-granskning av koden...', progress: 83, color: '#f85149' },
+      { id: 'merge', x: 230, y: 330, badge: '✅ Merge', desc: 'Mergar till main! 🎉', progress: 100, color: '#3fb950' }
+    ];
+
+    let currentStep = 0;
+    const marker = document.querySelector('.claude-marker');
+    const nodes = document.querySelectorAll('.node');
+    const logItems = document.querySelectorAll('.log-item');
+
+    // Timer
+    let seconds = 0;
+    setInterval(() => {
+      seconds++;
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      document.querySelector('.task-time').textContent =
+        `⏱️ ${mins}:${secs.toString().padStart(2, '0')}`;
+    }, 1000);
+
+    // Update loop visualization
+    function updateLoop(stepIndex) {
+      const step = stepData[stepIndex];
+
+      // Move marker with smooth transition
+      marker.setAttribute('cx', step.x);
+      marker.setAttribute('cy', step.y);
+
+      // Update nodes
+      nodes.forEach((node, i) => {
+        node.classList.remove('active', 'done');
+        if (i < stepIndex) node.classList.add('done');
+        if (i === stepIndex) node.classList.add('active');
+      });
+
+      // Update panel
+      const badge = document.getElementById('currentStepBadge');
+      badge.textContent = step.badge;
+      badge.style.background = step.color;
+
+      document.getElementById('currentStepDesc').textContent = step.desc;
+      document.getElementById('progressPercent').textContent = step.progress + '%';
+      document.getElementById('progressFill').style.width = step.progress + '%';
+
+      // Update log
+      logItems.forEach((item, i) => {
+        item.classList.remove('done', 'active', 'pending');
+        const baseText = item.getAttribute('data-text') || item.textContent;
+        item.setAttribute('data-text', baseText);
+
+        if (i < stepIndex) {
+          item.classList.add('done');
+          item.textContent = '✓ ' + baseText;
+        } else if (i === stepIndex) {
+          item.classList.add('active');
+          item.textContent = '⏳ ' + baseText;
+        } else {
+          item.classList.add('pending');
+          item.textContent = '○ ' + baseText;
+        }
+      });
+
+      // Confetti on merge
+      if (stepIndex === 5) {
+        triggerConfetti();
+      }
+    }
+
+    // Confetti effect
+    function triggerConfetti() {
+      const confetti = document.getElementById('confetti');
+      confetti.innerHTML = '';
+      confetti.classList.add('active');
+
+      const colors = ['#3fb950', '#58a6ff', '#a371f7', '#d29922', '#f85149'];
+
+      for (let i = 0; i < 50; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = Math.random() * 0.5 + 's';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        confetti.appendChild(piece);
+      }
+
+      setTimeout(() => {
+        confetti.classList.remove('active');
+      }, 3500);
+    }
+
+    // Demo: Move every 3 seconds
+    setInterval(() => {
+      currentStep = (currentStep + 1) % stepData.length;
+      updateLoop(currentStep);
+    }, 3000);
+
+    // Initial state
+    updateLoop(currentStep);
+  </script>
+</body>
+</html>
