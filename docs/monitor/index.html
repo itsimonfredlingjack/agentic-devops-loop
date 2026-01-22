@@ -199,7 +199,7 @@
       stroke-linecap: round;
       transform-origin: center;
       transform: rotate(-90deg);
-      transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: stroke-dashoffset 1.5s ease-in-out;
     }
 
     /* Node base styling */
@@ -216,7 +216,7 @@
       fill: var(--bg-secondary);
       stroke: var(--border-subtle);
       stroke-width: 2;
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.8s ease-in-out;
     }
 
     .node-icon {
@@ -261,10 +261,13 @@
       opacity: 0.85;
     }
 
-    /* Orbiting progress marker */
+    /* Orbiting progress marker - slow & smooth */
     .orbit-marker {
       filter: drop-shadow(0 0 16px currentColor);
-      transition: fill 0.4s, cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transition:
+        fill 0.6s ease-in-out,
+        cx 1.8s ease-in-out,
+        cy 1.8s ease-in-out;
     }
 
     .orbit-marker-glow {
@@ -272,6 +275,10 @@
       stroke-width: 2;
       opacity: 0.5;
       animation: marker-ring-pulse 2s ease-out infinite;
+      transition:
+        cx 1.8s ease-in-out,
+        cy 1.8s ease-in-out,
+        stroke 0.6s ease-in-out;
     }
 
     @keyframes marker-ring-pulse {
@@ -833,7 +840,7 @@
   </footer>
 
   <script>
-    const STEP_INTERVAL = 4000;
+    const STEP_INTERVAL = 5000; // 5s per step: 1.8s move + 3.2s pause at node
     const RADIUS = 180;
     const CENTER = 250;
     const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ~1131
