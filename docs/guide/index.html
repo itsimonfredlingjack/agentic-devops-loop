@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="sv" data-theme="dark">
+<head>
+  <!-- SVG Icon Definitions -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <rect x="8" y="2" width="8" height="4" rx="1"/>
+      <path d="M9 12h6M9 16h4"/>
+    </symbol>
+    <symbol id="icon-loop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+      <path d="M16 16h5v5"/>
+    </symbol>
+    <symbol id="icon-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    </symbol>
+    <symbol id="icon-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2"/>
+      <rect x="9" y="9" width="6" height="6"/>
+      <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+    </symbol>
+    <symbol id="icon-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="4 17 10 11 4 5"/>
+      <line x1="12" y1="19" x2="20" y2="19"/>
+    </symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3"/>
+    </symbol>
+    <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="M21 21l-4.35-4.35"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="icon-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </symbol>
+    <symbol id="icon-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+      <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+    </symbol>
+    <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v1m0 16v1m-8-9H3m18 0h-1M5.6 5.6l.7.7m12.1-.7-.7.7m-12.1 11.4.7-.7m12.1.7-.7-.7"/>
+      <path d="M12 8l1.5 3.5L17 13l-3.5 1.5L12 18l-1.5-3.5L7 13l3.5-1.5L12 8z"/>
+    </symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </symbol>
+    <symbol id="icon-git-merge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="18" r="3"/>
+      <circle cx="6" cy="6" r="3"/>
+      <path d="M6 21V9a9 9 0 0 0 9 9"/>
+    </symbol>
+  </svg>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Agentic Dev Loop - Automatiserad utveckling från idé till produktion med AI">
+  <meta name="theme-color" content="#0d1117">
+  <title>Agentic Dev Loop | AI-driven utveckling</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════════
+       CSS Custom Properties & Theme
+       ═══════════════════════════════════════════════════════════════════════ */
+    :root {
+      /* Dark theme (default) */
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-terminal: #0a0e13;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #a371f7;
+      --accent-cyan: #39c5cf;
+      --border-color: #30363d;
+      --glow-blue: rgba(88, 166, 255, 0.4);
+      --glow-green: rgba(63, 185, 80, 0.4);
+
+      /* Typography */
+      --font-display: 'Space Grotesk', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+      /* Spacing */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+      --space-3xl: 4rem;
+
+      /* Sizing */
+      --max-width: 1200px;
+      --header-height: 64px;
+      --stepper-height: 80px;
+
+      /* Transitions */
+      --transition-fast: 150ms ease;
+      --transition-base: 250ms ease;
+      --transition-slow: 400ms ease;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --bg-tertiary: #eaeef2;
+      --bg-terminal: #24292f;
+      --text-primary: #24292f;
+      --text-secondary: #57606a;
+      --text-muted: #8c959f;
+      --border-color: #d0d7de;
+      --glow-blue: rgba(9, 105, 218, 0.3);
+      --glow-green: rgba(26, 127, 55, 0.3);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Reset & Base
+       ═══════════════════════════════════════════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: calc(var(--header-height) + var(--stepper-height) + var(--space-xl));
+    }
+
+    body {
+      font-family: var(--font-display);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    a:hover {
+      color: var(--accent-cyan);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Header
+       ═══════════════════════════════════════════════════════════════════════ */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-xl);
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      background: rgba(22, 27, 34, 0.85);
+    }
+
+    [data-theme="light"] .header {
+      background: rgba(246, 248, 250, 0.85);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--text-primary);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: white;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .theme-toggle {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: var(--space-sm) var(--space-md);
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--accent-blue);
+    }
+
+    .github-link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      transition: all var(--transition-fast);
+    }
+
+    .github-link:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--accent-blue);
+    }
+
+    .github-link svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Hero Section
+       ═══════════════════════════════════════════════════════════════════════ */
+    .hero {
+      padding-top: calc(var(--header-height) + var(--space-3xl));
+      padding-bottom: var(--space-3xl);
+      background: radial-gradient(ellipse at top, rgba(88, 166, 255, 0.08) 0%, transparent 60%);
+    }
+
+    .hero-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 var(--space-xl);
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 100px;
+      padding: var(--space-sm) var(--space-md);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-lg);
+    }
+
+    .hero-badge-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: var(--space-lg);
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto var(--space-lg);
+    }
+
+    /* Creator Card */
+    .creator-card {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-md);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 100px;
+      padding: var(--space-sm) var(--space-lg) var(--space-sm) var(--space-sm);
+      margin-bottom: var(--space-2xl);
+      text-decoration: none;
+      transition: all var(--transition-base);
+    }
+
+    .creator-card:hover {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 20px var(--glow-blue);
+      transform: translateY(-2px);
+    }
+
+    .creator-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--accent-blue);
+    }
+
+    .creator-info {
+      text-align: left;
+    }
+
+    .creator-name {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--text-primary);
+    }
+
+    .creator-role {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .linkedin-icon {
+      width: 14px;
+      height: 14px;
+      fill: var(--accent-blue);
+    }
+
+    /* Terminal */
+    .terminal {
+      max-width: 700px;
+      margin: 0 auto;
+      background: var(--bg-terminal);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.1),
+        0 20px 40px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: var(--accent-red); }
+    .terminal-dot.yellow { background: var(--accent-yellow); }
+    .terminal-dot.green { background: var(--accent-green); }
+
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .terminal-body {
+      padding: var(--space-lg);
+      font-family: var(--font-mono);
+      font-size: 0.9375rem;
+      line-height: 1.8;
+      min-height: 240px;
+    }
+
+    .terminal-line {
+      display: flex;
+      gap: var(--space-sm);
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeInUp 0.4s ease forwards;
+    }
+
+    .terminal-line.command {
+      color: var(--accent-cyan);
+    }
+
+    .terminal-line.success {
+      color: var(--accent-green);
+    }
+
+    .terminal-line.info {
+      color: var(--text-secondary);
+    }
+
+    .terminal-prompt {
+      color: var(--accent-purple);
+      user-select: none;
+    }
+
+    .terminal-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 18px;
+      background: var(--accent-cyan);
+      animation: blink 1s step-end infinite;
+      vertical-align: text-bottom;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Stagger animation delays */
+    .terminal-line:nth-child(1) { animation-delay: 0.5s; }
+    .terminal-line:nth-child(2) { animation-delay: 1.2s; }
+    .terminal-line:nth-child(3) { animation-delay: 2.0s; }
+    .terminal-line:nth-child(4) { animation-delay: 2.8s; }
+    .terminal-line:nth-child(5) { animation-delay: 3.6s; }
+    .terminal-line:nth-child(6) { animation-delay: 4.4s; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Building Blocks Section
+       ═══════════════════════════════════════════════════════════════════════ */
+    .building-blocks {
+      max-width: var(--max-width);
+      margin: var(--space-2xl) auto 0;
+      padding: 0 var(--space-xl);
+    }
+
+    .building-blocks-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-align: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .blocks-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-md);
+    }
+
+    .block-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: var(--space-sm) var(--space-md);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .block-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .block-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Icon utility classes */
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+    }
+
+    .icon-xs { width: 14px; height: 14px; }
+    .icon-sm { width: 18px; height: 18px; }
+    .icon-md { width: 24px; height: 24px; }
+    .icon-lg { width: 32px; height: 32px; }
+
+    .block-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .block-desc {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+    }
+
+    @media (max-width: 768px) {
+      .blocks-grid {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Progress Stepper
+       ═══════════════════════════════════════════════════════════════════════ */
+    .stepper-wrapper {
+      position: sticky;
+      top: var(--header-height);
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 50;
+      backdrop-filter: blur(12px);
+      background: rgba(13, 17, 23, 0.9);
+    }
+
+    [data-theme="light"] .stepper-wrapper {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .stepper {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: var(--space-lg) var(--space-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .stepper-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      cursor: pointer;
+      padding: var(--space-sm) var(--space-md);
+      border-radius: 8px;
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .stepper-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .stepper-item.active .stepper-number {
+      background: var(--accent-blue);
+      color: white;
+      box-shadow: 0 0 20px var(--glow-blue);
+    }
+
+    .stepper-item.completed .stepper-number {
+      background: var(--accent-green);
+      color: white;
+    }
+
+    .stepper-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      border: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+    }
+
+    .stepper-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: color var(--transition-fast);
+    }
+
+    .stepper-item.active .stepper-label,
+    .stepper-item:hover .stepper-label {
+      color: var(--text-primary);
+    }
+
+    .stepper-connector {
+      width: 40px;
+      height: 2px;
+      background: var(--border-color);
+      transition: background var(--transition-fast);
+    }
+
+    .stepper-connector.completed {
+      background: var(--accent-green);
+    }
+
+    @media (max-width: 768px) {
+      .stepper-label {
+        display: none;
+      }
+      .stepper-connector {
+        width: 24px;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Step Sections
+       ═══════════════════════════════════════════════════════════════════════ */
+    .steps-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: var(--space-3xl) var(--space-xl);
+    }
+
+    .step-section {
+      margin-bottom: var(--space-3xl);
+      padding: var(--space-2xl);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      opacity: 0;
+      transition: opacity var(--transition-base);
+    }
+
+    .step-section.in-view::before {
+      opacity: 1;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+
+    .step-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: white;
+    }
+
+    .step-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .step-1 .step-icon { background: linear-gradient(135deg, #58a6ff, #388bfd); }
+    .step-2 .step-icon { background: linear-gradient(135deg, #a371f7, #8957e5); }
+    .step-3 .step-icon { background: linear-gradient(135deg, #39c5cf, #1f6feb); }
+    .step-4 .step-icon { background: linear-gradient(135deg, #f0883e, #d29922); }
+    .step-5 .step-icon { background: linear-gradient(135deg, #3fb950, #238636); }
+
+    .step-title-group {
+      flex: 1;
+    }
+
+    .step-number {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--space-xs);
+    }
+
+    .step-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .step-content {
+      color: var(--text-secondary);
+      font-size: 1.0625rem;
+      line-height: 1.7;
+    }
+
+    .step-content p {
+      margin-bottom: var(--space-md);
+    }
+
+    .step-content ul {
+      list-style: none;
+      margin: var(--space-lg) 0;
+    }
+
+    .step-content li {
+      position: relative;
+      padding-left: var(--space-xl);
+      margin-bottom: var(--space-sm);
+    }
+
+    .step-content li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg-terminal);
+      border-radius: 8px;
+      padding: var(--space-md) var(--space-lg);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      overflow-x: auto;
+      margin: var(--space-lg) 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .code-block code {
+      color: var(--text-primary);
+    }
+
+    .code-comment { color: var(--text-muted); }
+    .code-keyword { color: var(--accent-purple); }
+    .code-string { color: var(--accent-green); }
+    .code-function { color: var(--accent-blue); }
+
+    /* Example boxes */
+    .example-box {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: var(--space-lg);
+      margin: var(--space-lg) 0;
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    .example-box.good {
+      border-left-color: var(--accent-green);
+    }
+
+    .example-box.bad {
+      border-left-color: var(--accent-red);
+    }
+
+    .example-label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .example-box.good .example-label { color: var(--accent-green); }
+    .example-box.bad .example-label { color: var(--accent-red); }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Expandable Technical Details
+       ═══════════════════════════════════════════════════════════════════════ */
+    .tech-details {
+      margin-top: var(--space-xl);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tech-details summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+      list-style: none;
+    }
+
+    .tech-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .tech-details summary::before {
+      content: '▸';
+      color: var(--accent-purple);
+      transition: transform var(--transition-fast);
+    }
+
+    .tech-details[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .tech-details summary:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .tech-details-content {
+      padding: var(--space-lg);
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+    }
+
+    .tech-details-content ul {
+      list-style: none;
+      margin: var(--space-md) 0;
+    }
+
+    .tech-details-content li {
+      position: relative;
+      padding-left: var(--space-lg);
+      margin-bottom: var(--space-sm);
+    }
+
+    .tech-details-content li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--accent-purple);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Confetti Animation
+       ═══════════════════════════════════════════════════════════════════════ */
+    .confetti-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .confetti-container.active {
+      opacity: 1;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -10px;
+      animation: confetti-fall 3s ease-out forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    .confetti:nth-child(1) { left: 10%; background: var(--accent-blue); animation-delay: 0s; border-radius: 50%; }
+    .confetti:nth-child(2) { left: 20%; background: var(--accent-green); animation-delay: 0.1s; }
+    .confetti:nth-child(3) { left: 30%; background: var(--accent-purple); animation-delay: 0.2s; border-radius: 50%; }
+    .confetti:nth-child(4) { left: 40%; background: var(--accent-yellow); animation-delay: 0.3s; }
+    .confetti:nth-child(5) { left: 50%; background: var(--accent-red); animation-delay: 0.15s; border-radius: 50%; }
+    .confetti:nth-child(6) { left: 60%; background: var(--accent-cyan); animation-delay: 0.25s; }
+    .confetti:nth-child(7) { left: 70%; background: var(--accent-blue); animation-delay: 0.35s; border-radius: 50%; }
+    .confetti:nth-child(8) { left: 80%; background: var(--accent-green); animation-delay: 0.05s; }
+    .confetti:nth-child(9) { left: 90%; background: var(--accent-purple); animation-delay: 0.4s; border-radius: 50%; }
+    .confetti:nth-child(10) { left: 15%; background: var(--accent-yellow); animation-delay: 0.2s; }
+    .confetti:nth-child(11) { left: 25%; background: var(--accent-red); animation-delay: 0.3s; border-radius: 50%; }
+    .confetti:nth-child(12) { left: 35%; background: var(--accent-cyan); animation-delay: 0.1s; }
+    .confetti:nth-child(13) { left: 45%; background: var(--accent-blue); animation-delay: 0.25s; border-radius: 50%; }
+    .confetti:nth-child(14) { left: 55%; background: var(--accent-green); animation-delay: 0.35s; }
+    .confetti:nth-child(15) { left: 65%; background: var(--accent-purple); animation-delay: 0.15s; border-radius: 50%; }
+    .confetti:nth-child(16) { left: 75%; background: var(--accent-yellow); animation-delay: 0.05s; }
+    .confetti:nth-child(17) { left: 85%; background: var(--accent-red); animation-delay: 0.45s; border-radius: 50%; }
+    .confetti:nth-child(18) { left: 95%; background: var(--accent-cyan); animation-delay: 0.2s; }
+    .confetti:nth-child(19) { left: 5%; background: var(--accent-blue); animation-delay: 0.3s; border-radius: 50%; }
+    .confetti:nth-child(20) { left: 50%; background: var(--accent-green); animation-delay: 0.4s; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Footer
+       ═══════════════════════════════════════════════════════════════════════ */
+    .footer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      padding: var(--space-2xl) var(--space-xl);
+      margin-top: var(--space-3xl);
+    }
+
+    .footer-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-lg);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: var(--space-xl);
+    }
+
+    .footer-link {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-link:hover {
+      color: var(--accent-blue);
+    }
+
+    .footer-credit {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .footer-credit a {
+      color: var(--text-secondary);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Responsive
+       ═══════════════════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      :root {
+        --space-xl: 1.5rem;
+        --space-2xl: 2rem;
+        --space-3xl: 3rem;
+      }
+
+      .header {
+        padding: 0 var(--space-md);
+      }
+
+      .github-link span {
+        display: none;
+      }
+
+      .hero-container {
+        padding: 0 var(--space-md);
+      }
+
+      .terminal-body {
+        font-size: 0.8125rem;
+      }
+
+      .steps-container {
+        padding: var(--space-xl) var(--space-md);
+      }
+
+      .step-section {
+        padding: var(--space-lg);
+      }
+
+      .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .step-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+      }
+
+      .footer-container {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-direction: column;
+        gap: var(--space-md);
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Accessibility
+       ═══════════════════════════════════════════════════════════════════════ */
+    :focus-visible {
+      outline: 2px solid var(--accent-blue);
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      html {
+        scroll-behavior: auto;
+      }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       Unified Navigation
+       ═══════════════════════════════════════════════════════════════════════ */
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .nav-tab {
+      position: relative;
+      padding: 8px 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .nav-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-tab.active {
+      color: var(--accent-blue);
+    }
+
+    .nav-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: var(--accent-blue);
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform var(--transition-fast);
+    }
+
+    .nav-tab.active::after {
+      transform: scaleX(1);
+    }
+
+    .nav-tab:hover::after {
+      transform: scaleX(1);
+      opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+      .nav-tabs {
+        gap: 0;
+      }
+
+      .nav-tab {
+        padding: 6px 12px;
+        font-size: 0.8125rem;
+      }
+
+      .nav-tab::after {
+        left: 12px;
+        right: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" role="banner">
+    <div class="logo">
+      <div class="logo-icon">&lt;/&gt;</div>
+      <span>Agentic Dev Loop</span>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <a href="../guide/" class="nav-tab active" data-page="guide">Guide</a>
+      <a href="../monitor/" class="nav-tab" data-page="monitor">Monitor</a>
+    </nav>
+
+    <div class="header-actions">
+      <button class="theme-toggle" id="themeToggle" aria-label="Växla tema">
+        <span class="theme-icon"><svg class="icon icon-sm"><use href="#icon-moon"/></svg></span>
+        <span class="sr-only">Växla mellan mörkt och ljust tema</span>
+      </button>
+      <a href="https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions" class="github-link" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-container">
+        <div class="hero-badge">
+          <span class="hero-badge-dot" aria-hidden="true"></span>
+          <span>AI-powered automation</span>
+        </div>
+
+        <h1 id="hero-title" class="hero-title">
+          Automatiserad utveckling<br>från idé till produktion
+        </h1>
+
+        <p class="hero-subtitle">
+          Se hur AI-agenter tar hand om hela utvecklingsprocessen –
+          från din Jira-ticket till mergad kod.
+        </p>
+
+        <!-- Creator Card -->
+        <a href="https://www.linkedin.com/in/simon-fredling/" class="creator-card" target="_blank" rel="noopener noreferrer">
+          <img src="simon.jpg" alt="Simon Fredling" class="creator-avatar">
+          <div class="creator-info">
+            <div class="creator-name">Simon Fredling</div>
+            <div class="creator-role">
+              <svg class="linkedin-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+              Aspiring GenAI Solutions Architect
+            </div>
+          </div>
+        </a>
+
+        <!-- Animated Terminal -->
+        <div class="terminal" role="img" aria-label="Terminal som visar automatiserad utvecklingsprocess">
+          <div class="terminal-header">
+            <span class="terminal-dot red" aria-hidden="true"></span>
+            <span class="terminal-dot yellow" aria-hidden="true"></span>
+            <span class="terminal-dot green" aria-hidden="true"></span>
+            <span class="terminal-title">~/agentic-dev-loop</span>
+          </div>
+          <div class="terminal-body" id="terminalBody">
+            <div class="terminal-line command">
+              <span class="terminal-prompt">$</span>
+              <span>/start-task PROJ-123</span>
+              <span class="terminal-cursor" aria-hidden="true"></span>
+            </div>
+            <div class="terminal-line info">
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-search"/></svg> Hämtar ticket från Jira...</span>
+            </div>
+            <div class="terminal-line success">
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Skapar branch feature/PROJ-123</span>
+            </div>
+            <div class="terminal-line success">
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Implementerar med TDD (test first!)</span>
+            </div>
+            <div class="terminal-line success">
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Skapar PR → Jules granskar</span>
+            </div>
+            <div class="terminal-line success">
+              <span><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Alla tester gröna → Merge!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Building Blocks -->
+        <div class="building-blocks">
+          <div class="building-blocks-title">Byggstenar i arkitekturen</div>
+          <div class="blocks-grid">
+            <div class="block-item">
+              <span class="block-icon"><svg><use href="#icon-clipboard"/></svg></span>
+              <span class="block-name">Jira MCP</span>
+              <span class="block-desc">– hämtar kontext</span>
+            </div>
+            <div class="block-item">
+              <span class="block-icon"><svg><use href="#icon-loop"/></svg></span>
+              <span class="block-name">Ralph Wiggum</span>
+              <span class="block-desc">– envis loop tills tester passerar</span>
+            </div>
+            <div class="block-item">
+              <span class="block-icon"><svg><use href="#icon-bolt"/></svg></span>
+              <span class="block-name">GitHub Actions</span>
+              <span class="block-desc">– CI/CD-triggers</span>
+            </div>
+            <div class="block-item">
+              <span class="block-icon"><svg><use href="#icon-cpu"/></svg></span>
+              <span class="block-name">Google Jules</span>
+              <span class="block-desc">– AI-granskning & self-healing</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Start Commands -->
+        <div class="building-blocks" style="margin-top: var(--space-2xl);">
+          <div class="building-blocks-title"><svg class="icon icon-sm" style="margin-right: 6px; vertical-align: -2px;"><use href="#icon-terminal"/></svg> Så här startar du</div>
+
+          <!-- Terminal showing how to start -->
+          <div class="terminal" style="max-width: 600px; margin: var(--space-lg) auto;">
+            <div class="terminal-header">
+              <span class="terminal-dot red" aria-hidden="true"></span>
+              <span class="terminal-dot yellow" aria-hidden="true"></span>
+              <span class="terminal-dot green" aria-hidden="true"></span>
+              <span class="terminal-title">Terminal</span>
+            </div>
+            <div class="terminal-body" style="min-height: auto; padding: var(--space-md) var(--space-lg);">
+              <div style="color: var(--text-muted); font-size: 0.8125rem; margin-bottom: 0.5rem;"># 1. Gå till ditt projekt (exempel)</div>
+              <div style="color: var(--accent-cyan);"><span style="color: var(--accent-purple);">$</span> cd ~/my-project</div>
+              <div style="color: var(--text-muted); font-size: 0.8125rem; margin: 0.75rem 0 0.5rem;"># 2. Starta Claude Code</div>
+              <div style="color: var(--accent-cyan);"><span style="color: var(--accent-purple);">$</span> claude</div>
+              <div style="color: var(--text-muted); font-size: 0.8125rem; margin: 0.75rem 0 0.5rem;"># 3. Kör slash-kommandot med ditt Jira-ID</div>
+              <div style="color: var(--accent-green);"><span style="color: var(--accent-purple);">></span> /start-task DEV-123</div>
+            </div>
+          </div>
+
+          <div class="blocks-grid" style="margin-top: var(--space-lg);">
+            <div class="block-item" style="background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(163, 113, 247, 0.1)); border-color: var(--accent-blue);">
+              <span class="block-icon" style="color: var(--accent-blue);"><svg><use href="#icon-play"/></svg></span>
+              <span class="block-name" style="font-family: var(--font-mono);">/start-task PROJ-123</span>
+              <span class="block-desc">– startar hela loopen</span>
+            </div>
+            <div class="block-item" style="background: linear-gradient(135deg, rgba(63, 185, 80, 0.1), rgba(57, 197, 207, 0.1)); border-color: var(--accent-green);">
+              <span class="block-icon" style="color: var(--accent-green);"><svg><use href="#icon-check-circle"/></svg></span>
+              <span class="block-name" style="font-family: var(--font-mono);">/finish-task</span>
+              <span class="block-desc">– avslutar och skapar PR</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Progress Stepper -->
+    <nav class="stepper-wrapper" aria-label="Processöversikt">
+      <div class="stepper">
+        <a href="#steg-1" class="stepper-item active" data-step="1">
+          <span class="stepper-number">1</span>
+          <span class="stepper-label">Jira</span>
+        </a>
+        <div class="stepper-connector" aria-hidden="true"></div>
+        <a href="#steg-2" class="stepper-item" data-step="2">
+          <span class="stepper-number">2</span>
+          <span class="stepper-label">AI</span>
+        </a>
+        <div class="stepper-connector" aria-hidden="true"></div>
+        <a href="#steg-3" class="stepper-item" data-step="3">
+          <span class="stepper-number">3</span>
+          <span class="stepper-label">PR</span>
+        </a>
+        <div class="stepper-connector" aria-hidden="true"></div>
+        <a href="#steg-4" class="stepper-item" data-step="4">
+          <span class="stepper-number">4</span>
+          <span class="stepper-label">Jules</span>
+        </a>
+        <div class="stepper-connector" aria-hidden="true"></div>
+        <a href="#steg-5" class="stepper-item" data-step="5">
+          <span class="stepper-number">5</span>
+          <span class="stepper-label">Merge</span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Step Sections -->
+    <div class="steps-container">
+
+      <!-- Step 1: Create Jira Ticket -->
+      <section id="steg-1" class="step-section step-1" aria-labelledby="step-1-title">
+        <div class="step-header">
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-clipboard"/></svg></div>
+          <div class="step-title-group">
+            <div class="step-number">Steg 1</div>
+            <h2 id="step-1-title" class="step-title">Skapa en Jira-ticket</h2>
+          </div>
+        </div>
+
+        <div class="step-content">
+          <p>
+            Allt börjar med din idé. Skriv en tydlig Jira-ticket som beskriver
+            <strong>vad</strong> du vill uppnå – inte hur det ska implementeras.
+          </p>
+
+          <ul>
+            <li>Skriv en konkret och beskrivande titel</li>
+            <li>Beskriv användarens behov och önskat resultat</li>
+            <li>Lägg till acceptance criteria (villkor för godkännande)</li>
+            <li>Bifoga mockups eller screenshots om det hjälper</li>
+          </ul>
+
+          <div class="example-box good">
+            <div class="example-label"><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Bra exempel</div>
+            <p><strong>Titel:</strong> Lägg till "Exportera till CSV"-knapp på rapportsidan</p>
+            <p><strong>Beskrivning:</strong> Som användare vill jag kunna exportera min månadsrapport till CSV-format så att jag kan öppna den i Excel.</p>
+            <p><strong>Acceptance criteria:</strong></p>
+            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+              <li>Knappen syns på rapportsidan</li>
+              <li>CSV innehåller alla synliga kolumner</li>
+              <li>Filnamnet inkluderar datum</li>
+            </ul>
+          </div>
+
+          <div class="example-box bad">
+            <div class="example-label">✗ Undvik</div>
+            <p><strong>Titel:</strong> Fix rapport</p>
+            <p><strong>Beskrivning:</strong> Det funkar inte som det ska.</p>
+          </div>
+
+          <details class="tech-details">
+            <summary>▸ Teknisk info</summary>
+            <div class="tech-details-content">
+              <ul>
+                <li><strong>MCP-integration:</strong> Systemet läser automatiskt ticket-innehållet via Jira API</li>
+                <li><strong>Prompt injection-skydd:</strong> Ticket-texten saniteras innan den skickas till AI</li>
+                <li><strong>Traceability:</strong> Ticket-ID kopplas till branch, commits och PR för full spårbarhet</li>
+                <li><strong>Status-uppdatering:</strong> Jira-status uppdateras automatiskt genom processen</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Step 2: AI Works -->
+      <section id="steg-2" class="step-section step-2" aria-labelledby="step-2-title">
+        <div class="step-header">
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-cpu"/></svg></div>
+          <div class="step-title-group">
+            <div class="step-number">Steg 2</div>
+            <h2 id="step-2-title" class="step-title">AI börjar jobba</h2>
+          </div>
+        </div>
+
+        <div class="step-content">
+          <p>
+            Kör kommandot <code>/start-task PROJ-123</code> i Claude Code för att starta.
+            Då händer följande automatiskt:
+          </p>
+
+          <ul>
+            <li>Claude Code läser ärendet från Jira via MCP-protokollet</li>
+            <li>Skapar en git-branch med rätt namngivning (t.ex. <code>feature/PROJ-123</code>)</li>
+            <li>Skriver ner kraven i en fil som fungerar som agentens minne</li>
+            <li>Startar utvecklingsloopen med TDD-approach (tester först!)</li>
+          </ul>
+
+          <p>
+            Loopen använder <strong>Ralph Wiggum</strong>-funktionen – uppkallad efter
+            Simpsons-karaktären känd för sin envishet – för att fortsätta tills alla tester passerar.
+          </p>
+
+          <div class="code-block">
+            <code>
+<span class="code-comment"># Utvecklingsloopen med Ralph Wiggum-funktionen</span>
+<span class="code-keyword">while</span> <span class="code-function">tests_failing</span>() <span class="code-keyword">and</span> iterations < 25:
+    <span class="code-function">analyze_errors</span>()
+    <span class="code-function">fix_code</span>()
+    <span class="code-function">run_tests</span>()
+    iterations += 1
+
+<span class="code-keyword">if</span> <span class="code-function">tests_passing</span>():
+    <span class="code-function">create_pr</span>()
+<span class="code-keyword">else</span>:
+    <span class="code-function">escalate_to_human</span>()
+            </code>
+          </div>
+
+          <details class="tech-details">
+            <summary>▸ Teknisk info</summary>
+            <div class="tech-details-content">
+              <ul>
+                <li><strong>Claude Code + MCP:</strong> Läser Jira-ticket via MCP-protokollet och sparar kraven lokalt</li>
+                <li><strong>TDD-approach:</strong> Tester skrivs före implementation för bättre kodkvalitet</li>
+                <li><strong>Max 25 iterationer:</strong> Om AI:n inte lyckas efter 25 försök eskaleras ärendet</li>
+                <li><strong>Stop-hook:</strong> Förhindrar AI:n från att avsluta för tidigt utan att faktiskt lösa uppgiften</li>
+                <li><strong>Git-integration:</strong> Automatisk commit med meningsfulla meddelanden</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Step 3: Review PR -->
+      <section id="steg-3" class="step-section step-3" aria-labelledby="step-3-title">
+        <div class="step-header">
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-eye"/></svg></div>
+          <div class="step-title-group">
+            <div class="step-number">Steg 3</div>
+            <h2 id="step-3-title" class="step-title">Granska PR</h2>
+          </div>
+        </div>
+
+        <div class="step-content">
+          <p>
+            När AI:n är klar skapas en Pull Request automatiskt.
+            Du får en notis och kan granska ändringarna.
+          </p>
+
+          <ul>
+            <li>PR skapas med automatisk titel och beskrivning</li>
+            <li>Kopplas till ursprunglig Jira-ticket</li>
+            <li>CI-pipeline körs automatiskt</li>
+            <li>Du kan kommentera om något behöver justeras</li>
+          </ul>
+
+          <div class="example-box">
+            <div class="example-label">PR-format</div>
+            <p><strong>Titel:</strong> feat(PROJ-123): Add CSV export to reports</p>
+            <p><strong>Beskrivning:</strong> Implements CSV export functionality as specified in PROJ-123. Includes unit tests for export logic and integration test for the download flow.</p>
+          </div>
+
+          <details class="tech-details">
+            <summary>▸ Teknisk info</summary>
+            <div class="tech-details-content">
+              <ul>
+                <li><strong>Automatisk PR-titel:</strong> Följer conventional commits-format</li>
+                <li><strong>Jules AI gör första review:</strong> Googles AI-reviewer ger feedback</li>
+                <li><strong>GitHub Actions:</strong> Kör linting, tester och bygge automatiskt</li>
+                <li><strong>Checklist:</strong> PR-template säkerställer inget glöms</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Step 4: Jules Fixes Bugs -->
+      <section id="steg-4" class="step-section step-4" aria-labelledby="step-4-title">
+        <div class="step-header">
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-wrench"/></svg></div>
+          <div class="step-title-group">
+            <div class="step-number">Steg 4</div>
+            <h2 id="step-4-title" class="step-title">Jules fixar buggar</h2>
+          </div>
+        </div>
+
+        <div class="step-content">
+          <p>
+            Om CI-pipeline failar tar Jules vid. Den analyserar felen och
+            försöker automatiskt fixa dem – upp till 3 gånger.
+          </p>
+
+          <ul>
+            <li>Jules analyserar error-loggar från CI</li>
+            <li>Försöker automatiskt fixa identifierade problem</li>
+            <li>Pushar fixes med tydliga commit-meddelanden</li>
+            <li>Om det inte funkar efter 3 försök → manuell hjälp behövs</li>
+          </ul>
+
+          <div class="code-block">
+            <code>
+<span class="code-comment"># Jules self-healing flow</span>
+<span class="code-keyword">if</span> ci_failed:
+    <span class="code-keyword">for</span> attempt <span class="code-keyword">in</span> range(3):
+        errors = <span class="code-function">parse_ci_logs</span>()
+        fix = <span class="code-function">jules_analyze</span>(errors)
+        <span class="code-function">apply_fix</span>(fix)
+        <span class="code-function">commit</span>(<span class="code-string">"[jules-fix] {description}"</span>)
+
+        <span class="code-keyword">if</span> <span class="code-function">ci_passes</span>():
+            <span class="code-keyword">break</span>
+            </code>
+          </div>
+
+          <details class="tech-details">
+            <summary>▸ Teknisk info</summary>
+            <div class="tech-details-content">
+              <ul>
+                <li><strong>Self-healing pipeline:</strong> Automatisk felkorrigering utan mänsklig inblandning</li>
+                <li><strong>Google Jules API:</strong> Analyserar kodfel och föreslår lösningar</li>
+                <li><strong>Error log analysis:</strong> Parsar CI-output för att identifiera rotorsak</li>
+                <li><strong>Auto-commit:</strong> Commits märks med [jules-fix] för spårbarhet</li>
+                <li><strong>Fallback:</strong> Efter 3 misslyckade försök notifieras utvecklare</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Step 5: Merge & Done -->
+      <section id="steg-5" class="step-section step-5" aria-labelledby="step-5-title">
+        <div class="step-header">
+          <div class="step-icon" aria-hidden="true"><svg><use href="#icon-git-merge"/></svg></div>
+          <div class="step-title-group">
+            <div class="step-number">Steg 5</div>
+            <h2 id="step-5-title" class="step-title">Merge & klart!</h2>
+          </div>
+        </div>
+
+        <div class="step-content">
+          <p>
+            När alla tester passerar och review är godkänd – merga PR:en!
+            Jira-statusen uppdateras automatiskt till "Done".
+          </p>
+
+          <p>
+            Kör <code>/finish-task</code> i Claude Code för att avsluta arbetet och skapa PR:en,
+            eller gör det manuellt:
+          </p>
+
+          <ul>
+            <li>Godkänn PR:en efter granskning</li>
+            <li>Klicka Merge (squash and merge rekommenderas)</li>
+            <li>Feature-branch tas bort automatiskt</li>
+            <li>Jira-ticket markeras som klar via webhook</li>
+          </ul>
+
+          <div class="code-block">
+            <code>
+<span class="code-comment"># Avsluta och skapa PR</span>
+<span class="code-keyword">$</span> <span class="code-function">/finish-task</span>
+
+<span class="code-comment"># Claude Code kommer:</span>
+<span class="code-string">+ Commita alla ändringar</span>
+<span class="code-string">+ Pusha till remote</span>
+<span class="code-string">+ Skapa PR med beskrivning</span>
+<span class="code-string">+ Länka till Jira-ticket</span>
+            </code>
+          </div>
+
+          <div class="example-box good">
+            <div class="example-label"><svg class="icon icon-xs" style="margin-right: 4px;"><use href="#icon-check"/></svg> Resultat</div>
+            <p>Din idé har gått från Jira-ticket till produktionskod – med minimal manuell insats!</p>
+            <p style="margin-top: 1rem; display: flex; gap: 12px; justify-content: center;">
+              <svg class="icon" style="width: 28px; height: 28px; color: var(--accent-blue);"><use href="#icon-rocket"/></svg>
+              <svg class="icon" style="width: 28px; height: 28px; color: var(--accent-green);"><use href="#icon-sparkles"/></svg>
+              <svg class="icon" style="width: 28px; height: 28px; color: var(--accent-purple);"><use href="#icon-git-merge"/></svg>
+            </p>
+          </div>
+
+          <details class="tech-details">
+            <summary>▸ Teknisk info</summary>
+            <div class="tech-details-content">
+              <ul>
+                <li><strong>CODEOWNERS:</strong> Skyddade filer kräver godkännande från specifika personer</li>
+                <li><strong>Jira transition:</strong> Status uppdateras via webhook vid merge</li>
+                <li><strong>Branch cleanup:</strong> Merged branches tas bort automatiskt</li>
+                <li><strong>Release notes:</strong> Kan genereras automatiskt från PR-beskrivningar</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-container">
+      <nav class="footer-links" aria-label="Sidfotslänkar">
+        <a href="#steg-1" class="footer-link">Kom igång</a>
+        <a href="https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a href="../monitor/" class="footer-link">Live Monitor</a>
+      </nav>
+      <p class="footer-credit">
+        Byggd med <svg class="icon icon-xs" style="color: var(--accent-blue); margin: 0 2px;"><use href="#icon-heart"/></svg> av <a href="https://www.linkedin.com/in/simon-fredling/" target="_blank" rel="noopener noreferrer">Simon Fredling</a>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Confetti Container -->
+  <div class="confetti-container" id="confettiContainer" aria-hidden="true">
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════════
+    // Theme Toggle
+    // ═══════════════════════════════════════════════════════════════════════
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('.theme-icon');
+    const html = document.documentElement;
+
+    // Check for saved theme preference or default to dark
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    html.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    });
+
+    function updateThemeIcon(theme) {
+      themeIcon.innerHTML = theme === 'dark'
+        ? '<svg class="icon icon-sm"><use href="#icon-moon"/></svg>'
+        : '<svg class="icon icon-sm"><use href="#icon-sun"/></svg>';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Stepper & Scroll Tracking
+    // ═══════════════════════════════════════════════════════════════════════
+    const stepperItems = document.querySelectorAll('.stepper-item');
+    const stepSections = document.querySelectorAll('.step-section');
+    const connectors = document.querySelectorAll('.stepper-connector');
+
+    // Intersection Observer for step sections
+    const observerOptions = {
+      root: null,
+      rootMargin: '-30% 0px -60% 0px',
+      threshold: 0
+    };
+
+    const sectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const stepNumber = entry.target.id.replace('steg-', '');
+          updateStepper(parseInt(stepNumber));
+          entry.target.classList.add('in-view');
+        }
+      });
+    }, observerOptions);
+
+    stepSections.forEach(section => {
+      sectionObserver.observe(section);
+    });
+
+    function updateStepper(activeStep) {
+      stepperItems.forEach((item, index) => {
+        const stepNum = index + 1;
+        item.classList.remove('active', 'completed');
+
+        if (stepNum === activeStep) {
+          item.classList.add('active');
+        } else if (stepNum < activeStep) {
+          item.classList.add('completed');
+        }
+      });
+
+      connectors.forEach((connector, index) => {
+        const stepNum = index + 1;
+        connector.classList.toggle('completed', stepNum < activeStep);
+      });
+    }
+
+    // Smooth scroll for stepper clicks
+    stepperItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(item.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Confetti Animation (triggered on Step 5)
+    // ═══════════════════════════════════════════════════════════════════════
+    const step5Section = document.getElementById('steg-5');
+    const confettiContainer = document.getElementById('confettiContainer');
+    let confettiTriggered = false;
+
+    const confettiObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !confettiTriggered) {
+          confettiTriggered = true;
+          triggerConfetti();
+        }
+      });
+    }, { threshold: 0.5 });
+
+    confettiObserver.observe(step5Section);
+
+    function triggerConfetti() {
+      confettiContainer.classList.add('active');
+
+      // Reset animation by cloning confetti elements
+      const confettis = confettiContainer.querySelectorAll('.confetti');
+      confettis.forEach(confetti => {
+        const clone = confetti.cloneNode(true);
+        confetti.parentNode.replaceChild(clone, confetti);
+      });
+
+      // Hide after animation completes
+      setTimeout(() => {
+        confettiContainer.classList.remove('active');
+        // Allow retriggering after some time
+        setTimeout(() => {
+          confettiTriggered = false;
+        }, 5000);
+      }, 3500);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Terminal Animation - Typewriter Effect
+    // ═══════════════════════════════════════════════════════════════════════
+    const terminalBody = document.getElementById('terminalBody');
+
+    // Re-trigger animation when terminal comes into view
+    const terminalObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Reset animations by removing and re-adding the content
+          const lines = terminalBody.querySelectorAll('.terminal-line');
+          lines.forEach(line => {
+            line.style.animation = 'none';
+            line.offsetHeight; // Trigger reflow
+            line.style.animation = '';
+          });
+        }
+      });
+    }, { threshold: 0.3 });
+
+    terminalObserver.observe(terminalBody);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Keyboard Navigation for Expandable Sections
+    // ═══════════════════════════════════════════════════════════════════════
+    document.querySelectorAll('.tech-details summary').forEach(summary => {
+      summary.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          summary.click();
+        }
+      });
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Active Tab Detection
+    // ═══════════════════════════════════════════════════════════════════════
+    function initNavTabs() {
+      const currentPage = window.location.pathname.includes('/monitor/') ? 'monitor' : 'guide';
+      const navTabs = document.querySelectorAll('.nav-tab');
+      navTabs.forEach(tab => {
+        if (tab.dataset.page === currentPage) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+    }
+
+    // Initialize on load
+    initNavTabs();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Console Easter Egg
+    // ═══════════════════════════════════════════════════════════════════════
+    console.log('%c→ Agentic Dev Loop', 'font-size: 24px; font-weight: bold; color: #58a6ff;');
+    console.log('%cAutomatiserad utveckling från idé till produktion', 'font-size: 14px; color: #8b949e;');
+    console.log('%c→ Vill du bidra? Kolla in vårt GitHub repo!', 'font-size: 12px; color: #3fb950;');
+  </script>
+</body>
+</html>
