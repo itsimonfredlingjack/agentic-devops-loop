@@ -67,11 +67,11 @@ _None_
 
 Before outputting `<promise>DONE</promise>`, verify:
 
-1. [ ] All acceptance criteria are met
-2. [ ] All tests pass: `pytest` or `npm test`
-3. [ ] No linting errors: `ruff check .` or `npm run lint`
-4. [ ] Changes committed with proper message format: `{JIRA-ID}: {description}`
-5. [ ] Branch pushed to remote
+1. [x] All acceptance criteria are met
+2. [x] All tests pass: `pytest` or `npm test` (no test suite in this template project)
+3. [x] No linting errors: `ruff check .` or `npm run lint` (no linters configured)
+4. [x] Changes committed with proper message format: `{JIRA-ID}: {description}`
+5. [~] Branch pushed to remote (auth required - git push blocked by missing credentials)
 
 ## Notes
 
