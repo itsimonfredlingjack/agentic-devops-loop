@@ -1,636 +1,766 @@
 <!DOCTYPE html>
-<html lang="sv" data-theme="dark">
+<html lang="sv">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Visual representation of our AI-driven development workflow">
   <title>Agentic Loop Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
+      --bg-deep: #0a0c10;
       --bg-primary: #0d1117;
       --bg-secondary: #161b22;
-      --bg-tertiary: #21262d;
+      --bg-elevated: #1c2128;
+      --border-subtle: #30363d;
+      --border-muted: #21262d;
       --text-primary: #e6edf3;
       --text-secondary: #8b949e;
-      --accent-blue: #58a6ff;
-      --accent-green: #3fb950;
-      --accent-yellow: #d29922;
-      --accent-red: #f85149;
-      --accent-purple: #a371f7;
-      --font-display: 'Space Grotesk', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --text-muted: #6e7681;
+
+      /* Node colors */
+      --color-jira: #0052CC;
+      --color-claude: #D97706;
+      --color-github: #6e7681;
+      --color-ci: #2EA043;
+      --color-jules: #A371F7;
+      --color-merge: #3FB950;
+
+      /* Glow intensities */
+      --glow-active: 0 0 30px var(--active-color), 0 0 60px var(--active-color);
+
+      --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+
+      --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
     body {
-      font-family: var(--font-display);
-      background: var(--bg-primary);
+      font-family: var(--font-sans);
+      background: var(--bg-deep);
       color: var(--text-primary);
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
     }
 
     /* Header */
     .header {
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 1.25rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem 2rem;
-      background: var(--bg-secondary);
-      border-bottom: 1px solid var(--bg-tertiary);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      background: rgba(13, 17, 23, 0.85);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--color-claude), var(--color-jules));
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      background: var(--bg-primary);
+      border-radius: 5px;
     }
 
     .header h1 {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      letter-spacing: -0.02em;
     }
 
-    .header h1::before {
-      content: '';
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-      border-radius: 6px;
-    }
-
-    .status-badge {
+    .status-indicator {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      background: var(--bg-tertiary);
+      gap: 0.625rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
       padding: 0.5rem 1rem;
       border-radius: 100px;
-      font-size: 0.875rem;
       font-family: var(--font-mono);
+      font-size: 0.8125rem;
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
-      background: var(--accent-green);
+      background: var(--color-merge);
       border-radius: 50%;
-      animation: pulse 2s infinite;
+      animation: status-pulse 2s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    .status-dot.paused {
+      background: var(--color-jira);
+      animation: none;
+    }
+
+    @keyframes status-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.9); }
     }
 
     /* Main Layout */
     .main {
+      flex: 1;
       display: grid;
-      grid-template-columns: 1fr 350px;
-      gap: 2rem;
-      padding: 2rem;
-      max-width: 1400px;
+      grid-template-columns: 1fr 320px;
+      gap: 0;
+      max-width: 1600px;
+      width: 100%;
       margin: 0 auto;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1024px) {
       .main {
         grid-template-columns: 1fr;
       }
     }
 
-    .loop-container {
-      background: var(--bg-secondary);
-      border-radius: 16px;
-      padding: 2rem;
-      min-height: 500px;
+    /* Diagram Container */
+    .diagram-container {
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 3rem;
+      min-height: calc(100vh - 140px);
+      position: relative;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(217, 119, 6, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(163, 113, 247, 0.03) 0%, transparent 50%),
+        var(--bg-deep);
     }
 
-    .details-panel {
-      background: var(--bg-secondary);
-      border-radius: 16px;
-      padding: 1.5rem;
-    }
-
-    /* SVG Loop Map */
-    .loop-svg {
+    .diagram-wrapper {
       width: 100%;
-      max-width: 600px;
+      max-width: 900px;
+      position: relative;
+    }
+
+    /* Mermaid Overrides */
+    .mermaid {
+      width: 100%;
+    }
+
+    .mermaid svg {
+      width: 100%;
       height: auto;
+      max-height: 70vh;
     }
 
-    .connection {
-      stroke: var(--bg-tertiary);
-      stroke-width: 3;
-      fill: none;
+    /* Node styling via Mermaid theme + CSS overrides */
+    .node rect,
+    .node circle,
+    .node polygon {
+      transition: all 0.5s var(--transition-smooth);
     }
 
-    .connection-active {
-      stroke: var(--accent-purple);
-      stroke-width: 3;
-      fill: none;
-      opacity: 0.5;
+    .node.active rect,
+    .node.active circle,
+    .node.active polygon {
+      filter: drop-shadow(0 0 20px currentColor);
     }
 
-    .node circle {
-      fill: var(--bg-tertiary);
-      stroke: var(--text-secondary);
-      stroke-width: 2;
-      transition: all 0.3s ease;
+    .edgePath path {
+      stroke-width: 2px;
+      transition: all 0.4s var(--transition-smooth);
     }
 
-    .node-icon {
-      color: var(--text-secondary);
-      transition: color 0.3s ease;
+    .edgePath.active path {
+      stroke-width: 3px;
+      filter: drop-shadow(0 0 8px currentColor);
     }
 
-    .node-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      fill: var(--text-secondary);
-      transition: fill 0.3s ease;
-    }
-
-    .node.active circle {
-      fill: var(--accent-blue);
-      stroke: var(--accent-blue);
-      filter: drop-shadow(0 0 20px var(--accent-blue));
-    }
-
-    .node.active .node-icon {
-      color: var(--bg-primary);
-    }
-
-    .node.active .node-label {
-      fill: var(--text-primary);
-    }
-
-    .node.done circle {
-      fill: var(--accent-green);
-      stroke: var(--accent-green);
-    }
-
-    .node.done .node-icon {
-      color: var(--bg-primary);
-    }
-
-    .node.done .node-label {
-      fill: var(--accent-green);
-    }
-
-    /* Claude Marker */
-    .claude-marker {
-      fill: var(--accent-purple);
-      filter: drop-shadow(0 0 15px var(--accent-purple));
-      animation: marker-pulse 1.5s ease-in-out infinite;
-      transition: cx 0.8s ease-in-out, cy 0.8s ease-in-out;
-    }
-
-    @keyframes marker-pulse {
-      0%, 100% { r: 10; opacity: 1; }
-      50% { r: 14; opacity: 0.8; }
-    }
-
-    /* Details Panel */
-    .panel-title {
+    /* Click hint */
+    .click-hint {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-      margin-bottom: 1rem;
-    }
-
-    .current-task {
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .task-header {
+      color: var(--text-muted);
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 0.5rem;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0.7;
+      transition: opacity 0.3s;
     }
 
+    .click-hint:hover {
+      opacity: 1;
+    }
+
+    /* Side Panel */
+    .side-panel {
+      background: var(--bg-primary);
+      border-left: 1px solid var(--border-subtle);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 1024px) {
+      .side-panel {
+        border-left: none;
+        border-top: 1px solid var(--border-subtle);
+      }
+    }
+
+    .panel-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-muted);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+
+    .section-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Current Task */
     .task-id {
       font-family: var(--font-mono);
       font-size: 0.875rem;
-      color: var(--accent-blue);
-    }
-
-    .task-time {
-      font-family: var(--font-mono);
-      font-size: 0.875rem;
-      color: var(--text-secondary);
+      color: var(--color-jira);
+      margin-bottom: 0.375rem;
     }
 
     .task-title {
-      font-size: 1rem;
-      font-weight: 500;
-    }
-
-    .step-info {
-      margin-bottom: 1.5rem;
-    }
-
-    .step-badge {
-      display: inline-block;
-      background: var(--accent-purple);
-      color: white;
-      padding: 0.25rem 0.75rem;
-      border-radius: 100px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-      transition: background 0.3s ease;
-    }
-
-    .step-desc {
-      color: var(--text-secondary);
       font-size: 0.9375rem;
-      min-height: 2.5em;
+      font-weight: 500;
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
     }
 
-    .progress-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .progress-header {
+    .task-meta {
       display: flex;
       justify-content: space-between;
-      font-size: 0.875rem;
-      margin-bottom: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
     }
 
-    .progress-bar {
-      height: 8px;
-      background: var(--bg-tertiary);
-      border-radius: 4px;
+    .task-timer {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Active Step */
+    .active-step {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .step-marker {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--bg-primary);
+      transition: background 0.4s var(--transition-smooth);
+    }
+
+    .step-info h3 {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .step-info p {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+
+    /* Progress */
+    .progress-track {
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
       overflow: hidden;
+      margin-top: 0.5rem;
     }
 
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
-      border-radius: 4px;
-      transition: width 0.5s ease;
+      background: linear-gradient(90deg, var(--color-jira), var(--color-merge));
+      border-radius: 3px;
+      transition: width 0.6s var(--transition-smooth);
     }
 
-    .log-section h4 {
-      font-size: 0.875rem;
-      margin-bottom: 0.75rem;
-      color: var(--text-secondary);
-    }
-
-    .log-list {
+    /* Event Log */
+    .event-log {
       list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
     }
 
-    .log-item {
-      font-family: var(--font-mono);
-      font-size: 0.8125rem;
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
       padding: 0.5rem 0;
-      border-bottom: 1px solid var(--bg-tertiary);
-      transition: color 0.3s ease;
+      font-size: 0.8125rem;
+      border-bottom: 1px solid var(--border-muted);
+      transition: all 0.3s;
     }
 
-    .log-item:last-child {
+    .event-item:last-child {
       border-bottom: none;
     }
 
-    .log-item.done { color: var(--accent-green); }
-    .log-item.active { color: var(--accent-blue); }
-    .log-item.pending { color: var(--text-secondary); }
-
-    /* Footer link */
-    .footer-link {
-      text-align: center;
-      margin-top: 2rem;
-      padding: 1rem;
+    .event-marker {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.625rem;
+      flex-shrink: 0;
+      transition: all 0.3s;
     }
 
-    .footer-link a {
+    .event-item.done .event-marker {
+      background: var(--color-merge);
+      border-color: var(--color-merge);
+      color: var(--bg-primary);
+    }
+
+    .event-item.active .event-marker {
+      border-color: var(--color-claude);
+      background: var(--color-claude);
+      color: var(--bg-primary);
+      animation: marker-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes marker-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+    }
+
+    .event-item.done {
+      color: var(--text-secondary);
+    }
+
+    .event-item.pending {
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-subtle);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .footer a {
       color: var(--text-secondary);
       text-decoration: none;
-      font-size: 0.875rem;
       transition: color 0.2s;
     }
 
-    .footer-link a:hover {
-      color: var(--accent-blue);
+    .footer a:hover {
+      color: var(--text-primary);
     }
 
-    /* Confetti for merge */
-    .confetti {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.3s;
+    /* Animations for diagram elements */
+    @keyframes node-glow {
+      0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+      50% { filter: drop-shadow(0 0 15px var(--glow-color)); }
     }
 
-    .confetti.active {
-      opacity: 1;
+    @keyframes edge-flow {
+      0% { stroke-dashoffset: 24; }
+      100% { stroke-dashoffset: 0; }
     }
 
-    .confetti-piece {
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      animation: confetti-fall 3s ease-out forwards;
+    .edge-animated path {
+      stroke-dasharray: 8 4;
+      animation: edge-flow 0.8s linear infinite;
     }
 
-    @keyframes confetti-fall {
-      0% {
-        transform: translateY(-100vh) rotate(0deg);
-        opacity: 1;
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header {
+        padding: 1rem;
       }
-      100% {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
+
+      .header h1 {
+        font-size: 1rem;
+      }
+
+      .diagram-container {
+        padding: 1.5rem;
+        min-height: 50vh;
+      }
+
+      .side-panel {
+        padding: 1rem;
       }
     }
   </style>
 </head>
 <body>
   <header class="header">
-    <h1>Agentic Loop Monitor</h1>
-    <div class="status-badge">
-      <span class="status-dot"></span>
-      <span>PROJ-123 pågår</span>
+    <div class="header-left">
+      <div class="logo"></div>
+      <h1>Agentic Loop Monitor</h1>
+    </div>
+    <div class="status-indicator">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Running</span>
     </div>
   </header>
 
   <main class="main">
-    <section class="loop-container">
-      <svg class="loop-svg" viewBox="0 0 550 420">
-        <!-- Connections (arrows) -->
-        <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="var(--text-secondary)" />
-          </marker>
-          <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="var(--accent-purple)" />
-          </marker>
-        </defs>
+    <section class="diagram-container" id="diagramContainer">
+      <div class="diagram-wrapper">
+        <pre class="mermaid" id="mermaidDiagram">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#161b22',
+    'primaryTextColor': '#e6edf3',
+    'primaryBorderColor': '#30363d',
+    'lineColor': '#6e7681',
+    'secondaryColor': '#1c2128',
+    'tertiaryColor': '#0d1117',
+    'fontFamily': 'IBM Plex Sans',
+    'fontSize': '14px'
+  }
+}}%%
+flowchart LR
+    subgraph LOOP["Development Loop"]
+        direction LR
+        A[Jira Ticket]
+        B[Claude Code]
+        C[GitHub PR]
+        D[CI Pipeline]
+        E[Jules Review]
+        F[Merge]
+    end
 
-        <!-- Paths between nodes -->
-        <path class="connection" d="M 100 80 L 200 80" marker-end="url(#arrowhead)" />
-        <path class="connection" d="M 260 80 L 360 80" marker-end="url(#arrowhead)" />
-        <path class="connection" d="M 420 80 L 480 80 L 480 180" marker-end="url(#arrowhead)" />
-        <path class="connection" d="M 480 240 L 480 300" marker-end="url(#arrowhead)" />
-        <path class="connection" d="M 420 330 L 100 330 L 100 130" marker-end="url(#arrowhead)" />
+    A -->|fetch| B
+    B -->|push| C
+    C -->|trigger| D
+    D -->|request| E
+    E -->|approve| F
+    F -.->|next ticket| A
 
-        <!-- Nodes with custom icons -->
+    classDef jira fill:#0052CC,stroke:#0052CC,color:#fff
+    classDef claude fill:#D97706,stroke:#D97706,color:#fff
+    classDef github fill:#6e7681,stroke:#6e7681,color:#fff
+    classDef ci fill:#2EA043,stroke:#2EA043,color:#fff
+    classDef jules fill:#A371F7,stroke:#A371F7,color:#fff
+    classDef merge fill:#3FB950,stroke:#3FB950,color:#000
 
-        <!-- JIRA: Ticket/clipboard icon -->
-        <g class="node" data-step="0">
-          <circle cx="70" cy="80" r="35" />
-          <g class="node-icon" transform="translate(70, 80)">
-            <rect x="-10" y="-14" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <rect x="-6" y="-18" width="12" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-6" y1="-4" x2="6" y2="-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="-6" y1="2" x2="4" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="-6" y1="8" x2="2" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </g>
-          <text x="70" y="130" text-anchor="middle" class="node-label">Jira</text>
-        </g>
-
-        <!-- CLAUDE CODE: Terminal/bracket icon -->
-        <g class="node" data-step="1">
-          <circle cx="230" cy="80" r="35" />
-          <g class="node-icon" transform="translate(230, 80)">
-            <path d="M -12 -10 L -6 0 L -12 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="-2" y1="10" x2="10" y2="10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="6" cy="-4" r="3" fill="currentColor"/>
-          </g>
-          <text x="230" y="130" text-anchor="middle" class="node-label">Claude Code</text>
-        </g>
-
-        <!-- GITHUB: Git branch icon -->
-        <g class="node" data-step="2">
-          <circle cx="390" cy="80" r="35" />
-          <g class="node-icon" transform="translate(390, 80)">
-            <circle cx="-6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="6" cy="-4" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="-6" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-6" y1="-7" x2="-6" y2="7" stroke="currentColor" stroke-width="2"/>
-            <path d="M -6 -4 Q 0 -4 6 -1" fill="none" stroke="currentColor" stroke-width="2"/>
-          </g>
-          <text x="390" y="130" text-anchor="middle" class="node-label">GitHub</text>
-        </g>
-
-        <!-- CI/CD: Gear/cog with play icon -->
-        <g class="node" data-step="3">
-          <circle cx="480" cy="210" r="35" />
-          <g class="node-icon" transform="translate(480, 210)">
-            <circle cx="0" cy="0" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
-            <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="0" y1="-12" x2="0" y2="-8"/>
-              <line x1="0" y1="8" x2="0" y2="12"/>
-              <line x1="-12" y1="0" x2="-8" y2="0"/>
-              <line x1="8" y1="0" x2="12" y2="0"/>
-              <line x1="-8.5" y1="-8.5" x2="-5.5" y2="-5.5"/>
-              <line x1="5.5" y1="5.5" x2="8.5" y2="8.5"/>
-              <line x1="-8.5" y1="8.5" x2="-5.5" y2="5.5"/>
-              <line x1="5.5" y1="-5.5" x2="8.5" y2="-8.5"/>
-            </g>
-            <polygon points="-2,-4 -2,4 4,0" fill="currentColor"/>
-          </g>
-          <text x="480" y="260" text-anchor="middle" class="node-label">CI/CD</text>
-        </g>
-
-        <!-- JULES REVIEW: Eye/scan icon -->
-        <g class="node" data-step="4">
-          <circle cx="480" cy="330" r="35" />
-          <g class="node-icon" transform="translate(480, 330)">
-            <path d="M -14 0 Q 0 -12 14 0 Q 0 12 -14 0" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="0" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="0" r="2" fill="currentColor"/>
-            <line x1="-4" y1="-10" x2="-2" y2="-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="4" y1="-10" x2="2" y2="-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </g>
-          <text x="480" y="380" text-anchor="middle" class="node-label">Jules Review</text>
-        </g>
-
-        <!-- MERGE: Git merge icon -->
-        <g class="node" data-step="5">
-          <circle cx="230" cy="330" r="35" />
-          <g class="node-icon" transform="translate(230, 330)">
-            <circle cx="-6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="0" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M -6 -7 L -6 0 Q -6 4 0 7" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M 6 -7 L 6 0 Q 6 4 0 7" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="-2" y1="4" x2="2" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </g>
-          <text x="230" y="380" text-anchor="middle" class="node-label">Merge</text>
-        </g>
-
-        <!-- Animated marker -->
-        <circle class="claude-marker" cx="230" cy="80" r="12" />
-      </svg>
+    class A jira
+    class B claude
+    class C github
+    class D ci
+    class E jules
+    class F merge
+        </pre>
+      </div>
+      <div class="click-hint">Click diagram to pause/resume animation</div>
     </section>
 
-    <aside class="details-panel">
-      <h2 class="panel-title">Pågående</h2>
-
-      <div class="current-task">
-        <div class="task-header">
-          <span class="task-id">PROJ-123</span>
-          <span class="task-time">0:00</span>
-        </div>
-        <h3 class="task-title">Lägg till CSV-export på rapportsidan</h3>
-      </div>
-
-      <div class="step-info">
-        <div class="step-badge" id="currentStepBadge">Jira</div>
-        <p class="step-desc" id="currentStepDesc">Skriver enhetstester för export-funktionen...</p>
-      </div>
-
-      <div class="progress-section">
-        <div class="progress-header">
-          <span>Progress</span>
-          <span id="progressPercent">33%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width: 33%"></div>
+    <aside class="side-panel">
+      <div class="panel-section">
+        <div class="section-label">Current Task</div>
+        <div class="task-id">PROJ-123</div>
+        <div class="task-title">Implement CSV export for report dashboard</div>
+        <div class="task-meta">
+          <span>In Progress</span>
+          <span class="task-timer" id="taskTimer">0:00</span>
         </div>
       </div>
 
-      <div class="log-section">
-        <h4>Senaste händelser</h4>
-        <ul class="log-list" id="logList">
-          <li class="log-item" data-step="0">Jira-ticket läst</li>
-          <li class="log-item" data-step="1">Skriver tester & kod</li>
-          <li class="log-item" data-step="2">Pushar till GitHub</li>
-          <li class="log-item" data-step="3">Kör CI-pipeline</li>
-          <li class="log-item" data-step="4">Jules granskar</li>
-          <li class="log-item" data-step="5">Merge till main</li>
+      <div class="panel-section">
+        <div class="section-label">Active Step</div>
+        <div class="active-step">
+          <div class="step-marker" id="stepMarker" style="background: var(--color-jira)">1</div>
+          <div class="step-info">
+            <h3 id="stepName">Jira Ticket</h3>
+            <p id="stepDesc">Reading ticket requirements...</p>
+          </div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill" style="width: 10%"></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-label">Event Log</div>
+        <ul class="event-log" id="eventLog">
+          <li class="event-item" data-step="0">
+            <span class="event-marker"></span>
+            <span>Fetch Jira ticket</span>
+          </li>
+          <li class="event-item" data-step="1">
+            <span class="event-marker"></span>
+            <span>Claude writes code</span>
+          </li>
+          <li class="event-item" data-step="2">
+            <span class="event-marker"></span>
+            <span>Push to GitHub</span>
+          </li>
+          <li class="event-item" data-step="3">
+            <span class="event-marker"></span>
+            <span>Run CI pipeline</span>
+          </li>
+          <li class="event-item" data-step="4">
+            <span class="event-marker"></span>
+            <span>Jules code review</span>
+          </li>
+          <li class="event-item" data-step="5">
+            <span class="event-marker"></span>
+            <span>Merge to main</span>
+          </li>
         </ul>
       </div>
     </aside>
   </main>
 
-  <div class="footer-link">
-    <a href="../">← Tillbaka till guiden</a>
-  </div>
-
-  <div class="confetti" id="confetti"></div>
+  <footer class="footer">
+    <a href="../guide/">Back to Guide</a>
+    <span>Hosted on GitHub Pages</span>
+  </footer>
 
   <script>
-    // Step data
-    const stepData = [
-      { id: 'jira', x: 70, y: 80, badge: 'Jira', desc: 'Läser ticket och krav från Jira...', progress: 10, color: '#58a6ff' },
-      { id: 'coding', x: 230, y: 80, badge: 'Claude Code', desc: 'Skriver tester och implementation med TDD...', progress: 33, color: '#a371f7' },
-      { id: 'github', x: 390, y: 80, badge: 'GitHub', desc: 'Pushar kod och skapar Pull Request...', progress: 50, color: '#8b949e' },
-      { id: 'ci', x: 480, y: 210, badge: 'CI/CD', desc: 'Kör tester och validerar bygget...', progress: 66, color: '#d29922' },
-      { id: 'review', x: 480, y: 330, badge: 'Jules Review', desc: 'AI-granskning av koden...', progress: 83, color: '#f85149' },
-      { id: 'merge', x: 230, y: 330, badge: 'Merge', desc: 'Mergar till main!', progress: 100, color: '#3fb950' }
+    // Configuration
+    const STEP_INTERVAL = 4000; // 4 seconds per step
+    const COLORS = {
+      jira: '#0052CC',
+      claude: '#D97706',
+      github: '#6e7681',
+      ci: '#2EA043',
+      jules: '#A371F7',
+      merge: '#3FB950'
+    };
+
+    const steps = [
+      { id: 'jira', name: 'Jira Ticket', desc: 'Reading ticket requirements...', color: COLORS.jira, progress: 10 },
+      { id: 'claude', name: 'Claude Code', desc: 'Writing tests and implementation...', color: COLORS.claude, progress: 30 },
+      { id: 'github', name: 'GitHub PR', desc: 'Pushing code and creating PR...', color: COLORS.github, progress: 50 },
+      { id: 'ci', name: 'CI Pipeline', desc: 'Running tests and validation...', color: COLORS.ci, progress: 70 },
+      { id: 'jules', name: 'Jules Review', desc: 'AI reviewing code changes...', color: COLORS.jules, progress: 85 },
+      { id: 'merge', name: 'Merge', desc: 'Merging to main branch!', color: COLORS.merge, progress: 100 }
     ];
 
     let currentStep = 0;
-    const marker = document.querySelector('.claude-marker');
-    const nodes = document.querySelectorAll('.node');
-    const logItems = document.querySelectorAll('.log-item');
+    let isPaused = false;
+    let animationInterval;
+    let seconds = 0;
+    let timerInterval;
+
+    // Initialize Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+
+    // DOM elements
+    const stepMarker = document.getElementById('stepMarker');
+    const stepName = document.getElementById('stepName');
+    const stepDesc = document.getElementById('stepDesc');
+    const progressFill = document.getElementById('progressFill');
+    const eventLog = document.getElementById('eventLog');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const taskTimer = document.getElementById('taskTimer');
+    const diagramContainer = document.getElementById('diagramContainer');
 
     // Timer
-    let seconds = 0;
-    setInterval(() => {
-      seconds++;
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      document.querySelector('.task-time').textContent =
-        `${mins}:${secs.toString().padStart(2, '0')}`;
+    timerInterval = setInterval(() => {
+      if (!isPaused) {
+        seconds++;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        taskTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
     }, 1000);
 
-    // Update loop visualization
-    function updateLoop(stepIndex) {
-      const step = stepData[stepIndex];
+    // Update UI for current step
+    function updateStep(index) {
+      const step = steps[index];
 
-      // Move marker with smooth transition
-      marker.setAttribute('cx', step.x);
-      marker.setAttribute('cy', step.y);
+      // Update marker
+      stepMarker.style.background = step.color;
+      stepMarker.textContent = index + 1;
 
-      // Update nodes
-      nodes.forEach((node, i) => {
-        node.classList.remove('active', 'done');
-        if (i < stepIndex) node.classList.add('done');
-        if (i === stepIndex) node.classList.add('active');
-      });
+      // Update info
+      stepName.textContent = step.name;
+      stepDesc.textContent = step.desc;
 
-      // Update panel
-      const badge = document.getElementById('currentStepBadge');
-      badge.textContent = step.badge;
-      badge.style.background = step.color;
+      // Update progress
+      progressFill.style.width = step.progress + '%';
 
-      document.getElementById('currentStepDesc').textContent = step.desc;
-      document.getElementById('progressPercent').textContent = step.progress + '%';
-      document.getElementById('progressFill').style.width = step.progress + '%';
-
-      // Update log
-      logItems.forEach((item, i) => {
+      // Update event log
+      const items = eventLog.querySelectorAll('.event-item');
+      items.forEach((item, i) => {
         item.classList.remove('done', 'active', 'pending');
-        const baseText = item.getAttribute('data-text') || item.textContent;
-        item.setAttribute('data-text', baseText);
+        const marker = item.querySelector('.event-marker');
 
-        if (i < stepIndex) {
+        if (i < index) {
           item.classList.add('done');
-          item.textContent = '✓ ' + baseText;
-        } else if (i === stepIndex) {
+          marker.textContent = '✓';
+        } else if (i === index) {
           item.classList.add('active');
-          item.textContent = '⏳ ' + baseText;
+          marker.textContent = '';
         } else {
           item.classList.add('pending');
-          item.textContent = '○ ' + baseText;
+          marker.textContent = '';
         }
       });
 
-      // Confetti on merge
-      if (stepIndex === 5) {
-        triggerConfetti();
-      }
+      // Highlight diagram nodes
+      highlightNode(index);
     }
 
-    // Confetti effect
-    function triggerConfetti() {
-      const confetti = document.getElementById('confetti');
-      confetti.innerHTML = '';
-      confetti.classList.add('active');
-
-      const colors = ['#3fb950', '#58a6ff', '#a371f7', '#d29922', '#f85149'];
-
-      for (let i = 0; i < 50; i++) {
-        const piece = document.createElement('div');
-        piece.className = 'confetti-piece';
-        piece.style.left = Math.random() * 100 + '%';
-        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.animationDelay = Math.random() * 0.5 + 's';
-        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
-        confetti.appendChild(piece);
-      }
-
+    // Highlight active node in diagram
+    function highlightNode(index) {
+      // Wait for Mermaid to render
       setTimeout(() => {
-        confetti.classList.remove('active');
-      }, 3500);
+        const svg = document.querySelector('.mermaid svg');
+        if (!svg) return;
+
+        // Reset all nodes
+        const nodes = svg.querySelectorAll('.node');
+        nodes.forEach(node => {
+          node.style.filter = '';
+          node.style.opacity = '0.6';
+        });
+
+        // Reset all edges
+        const edges = svg.querySelectorAll('.edgePath');
+        edges.forEach(edge => {
+          edge.classList.remove('edge-animated');
+          const path = edge.querySelector('path');
+          if (path) {
+            path.style.strokeWidth = '2px';
+            path.style.filter = '';
+          }
+        });
+
+        // Highlight active node
+        if (nodes[index]) {
+          nodes[index].style.filter = `drop-shadow(0 0 20px ${steps[index].color})`;
+          nodes[index].style.opacity = '1';
+        }
+
+        // Highlight completed nodes
+        for (let i = 0; i < index; i++) {
+          if (nodes[i]) {
+            nodes[i].style.opacity = '1';
+          }
+        }
+
+        // Animate edge leading to active node
+        if (index > 0 && edges[index - 1]) {
+          edges[index - 1].classList.add('edge-animated');
+          const path = edges[index - 1].querySelector('path');
+          if (path) {
+            path.style.strokeWidth = '3px';
+            path.style.filter = `drop-shadow(0 0 8px ${steps[index].color})`;
+          }
+        }
+      }, 100);
     }
 
-    // Demo: Move every 3 seconds
-    setInterval(() => {
-      currentStep = (currentStep + 1) % stepData.length;
-      updateLoop(currentStep);
-    }, 3000);
+    // Animation loop
+    function startAnimation() {
+      animationInterval = setInterval(() => {
+        if (!isPaused) {
+          currentStep = (currentStep + 1) % steps.length;
+          updateStep(currentStep);
+        }
+      }, STEP_INTERVAL);
+    }
 
-    // Initial state
-    updateLoop(currentStep);
+    // Toggle pause
+    function togglePause() {
+      isPaused = !isPaused;
+      statusDot.classList.toggle('paused', isPaused);
+      statusText.textContent = isPaused ? 'Paused' : 'Running';
+    }
+
+    // Click to pause
+    diagramContainer.addEventListener('click', togglePause);
+
+    // Keyboard shortcut
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      }
+    });
+
+    // Initialize
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        updateStep(currentStep);
+        startAnimation();
+      }, 500);
+    });
   </script>
 </body>
 </html>
