@@ -1138,20 +1138,25 @@
 
         <div class="step-content">
           <p>
-            Nu tar AI-agenten över! Den läser din ticket, förstår uppgiften och börjar
-            implementera – med <strong>tester först</strong>. Du behöver inte göra något.
+            Kör kommandot <code>/start-task PROJ-123</code> i Claude Code för att starta.
+            Då händer följande automatiskt:
           </p>
 
           <ul>
-            <li>AI:n läser och analyserar din ticket automatiskt</li>
-            <li>Skapar en feature-branch kopplad till ticket-ID</li>
-            <li>Skriver tester innan implementation (TDD)</li>
-            <li>Itererar tills alla tester passerar</li>
+            <li>Claude Code läser ärendet från Jira via MCP-protokollet</li>
+            <li>Skapar en git-branch med rätt namngivning (t.ex. <code>feature/PROJ-123</code>)</li>
+            <li>Skriver ner kraven i en fil som fungerar som agentens minne</li>
+            <li>Startar utvecklingsloopen med TDD-approach (tester först!)</li>
           </ul>
+
+          <p>
+            Loopen använder <strong>Ralph Wiggum</strong>-funktionen – uppkallad efter
+            Simpsons-karaktären känd för sin envishet – för att fortsätta tills alla tester passerar.
+          </p>
 
           <div class="code-block">
             <code>
-<span class="code-comment"># Ralph Loop - AI:ns arbetsflöde</span>
+<span class="code-comment"># Utvecklingsloopen med Ralph Wiggum-funktionen</span>
 <span class="code-keyword">while</span> <span class="code-function">tests_failing</span>() <span class="code-keyword">and</span> iterations < 25:
     <span class="code-function">analyze_errors</span>()
     <span class="code-function">fix_code</span>()
@@ -1169,7 +1174,7 @@
             <summary>▸ Teknisk info</summary>
             <div class="tech-details-content">
               <ul>
-                <li><strong>Claude Code + Ralph Loop:</strong> En iterativ process som fortsätter tills testerna passerar</li>
+                <li><strong>Claude Code + MCP:</strong> Läser Jira-ticket via MCP-protokollet och sparar kraven lokalt</li>
                 <li><strong>TDD-approach:</strong> Tester skrivs före implementation för bättre kodkvalitet</li>
                 <li><strong>Max 25 iterationer:</strong> Om AI:n inte lyckas efter 25 försök eskaleras ärendet</li>
                 <li><strong>Stop-hook:</strong> Förhindrar AI:n från att avsluta för tidigt utan att faktiskt lösa uppgiften</li>
