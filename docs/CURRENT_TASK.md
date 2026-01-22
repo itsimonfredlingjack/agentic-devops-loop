@@ -5,16 +5,18 @@
 
 ## Active Task
 
-**Jira ID:** _None_
-**Status:** No active task
-**Branch:** _None_
-**Started:** _Not started_
+**Jira ID:** DEV-9
+**Status:** In Progress
+**Branch:** feature/DEV-9-restore-start-task-skill
+**Started:** 2026-01-22T07:23
 
 ## Acceptance Criteria
 
-<!-- Copy acceptance criteria from Jira ticket here -->
-
-- [ ] _No criteria defined_
+- [ ] Restore the start-task skill that was deleted
+- [ ] Restore the finish-task skill that was deleted
+- [ ] Skills properly initialize a Jira task with branch creation
+- [ ] Skills handle task completion and PR creation
+- [ ] All tests pass for skill functionality
 
 ## Implementation Checklist
 
@@ -33,7 +35,9 @@
 
 | # | Action | Result | Next Step |
 |---|--------|--------|-----------|
-| - | - | - | - |
+| 1 | Restored start-task.md from git history | ✅ File created successfully | Restore finish-task.md |
+| 2 | Restored finish-task.md from git history | ✅ File created successfully | Verify no tests fail |
+| 3 | Verify all skills present and functional | ✅ Both skills restored | Update CURRENT_TASK.md |
 
 ### Blockers
 
@@ -41,7 +45,9 @@ _None_
 
 ### Decisions Made
 
-_None_
+- Project has no automated test suite (template/documentation project)
+- Skills are markdown documentation files, not executable scripts
+- Exit criteria requires linting only, no tests to pass
 
 ## Technical Context
 
