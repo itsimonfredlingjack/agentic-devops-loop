@@ -128,6 +128,16 @@ Only after ALL steps are verified:
 <promise>DONE</promise>
 ```
 
+### Step 10: Deactivate Ralph Loop
+
+Remove the loop flag file to allow normal exit:
+
+```bash
+rm -f .claude/.ralph_loop_active
+```
+
+This signals to the stop-hook that we're no longer in an active task loop.
+
 ## Error Handling
 
 - **Tests fail:** Do not proceed, fix tests first

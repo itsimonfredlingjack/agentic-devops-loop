@@ -20,6 +20,15 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+# Flag file that indicates we're in an active Ralph loop
+# Only /start-task creates this file, utility commands don't
+LOOP_FLAG = Path.cwd() / ".claude" / ".ralph_loop_active"
+
+# CRITICAL: If not in active Ralph loop, allow exit immediately
+# This prevents utility commands (/preflight, /finish-task) from being blocked
+if not LOOP_FLAG.exists():
+    sys.exit(0)  # Allow exit, no enforcement
+
 
 def load_config():
     """Load Ralph Loop configuration with profile support."""

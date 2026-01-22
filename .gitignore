@@ -6,6 +6,8 @@
 # Claude Code state
 .claude/ralph-state.json
 .claude/ralph-loop.log
+.claude/.ralph_loop_active
+.claude/.promise_done
 
 # Node
 node_modules/

@@ -54,6 +54,16 @@ git branch --show-current
 
 **After both checks pass:**
 - Output: "✅ Pre-flight checks passed"
+
+**Activate Ralph Loop:**
+
+```bash
+# Create flag file to signal stop-hook that we're in an active task
+touch .claude/.ralph_loop_active
+```
+
+This tells the stop-hook to enforce exit criteria. Without this file, the stop-hook allows immediate exit (for utility commands like /preflight).
+
 - Continue to Step 1A
 
 ### Step 1A: Validate Jira Connection (SAFETY)
