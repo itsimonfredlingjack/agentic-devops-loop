@@ -279,6 +279,57 @@
       100% { r: 24; opacity: 0; }
     }
 
+    /* Center trigger node */
+    .trigger-node {
+      cursor: pointer;
+    }
+
+    .trigger-bg {
+      fill: rgba(30, 41, 59, 0.9);
+      stroke: rgba(100, 116, 139, 0.3);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.15));
+      animation: trigger-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes trigger-pulse {
+      0%, 100% { filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.15)); }
+      50% { filter: drop-shadow(0 0 20px rgba(100, 200, 255, 0.3)); }
+    }
+
+    .trigger-prompt {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      fill: var(--text-secondary);
+    }
+
+    .trigger-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* Connection lines */
+    .trigger-line, .fetch-line, .return-line {
+      pointer-events: none;
+    }
+
+    .connection-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .connection-label-small {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-style: italic;
+      letter-spacing: 0.02em;
+    }
+
     /* Click hint */
     .click-hint {
       position: absolute;
@@ -553,6 +604,18 @@
           </linearGradient>
         </defs>
 
+        <!-- CONNECTION LINES (drawn first, under nodes) -->
+        <!-- Line: Center → Claude (trigger initiates to AI) -->
+        <line class="trigger-line" x1="250" y1="250" x2="405.88" y2="160" stroke="rgba(245, 158, 11, 0.4)" stroke-width="2"/>
+        <text x="328" y="195" class="connection-label" fill="var(--color-claude)">PROJ-123</text>
+
+        <!-- Dashed line: Claude → Jira (fetch ticket data) -->
+        <line class="fetch-line" x1="405.88" y1="160" x2="250" y2="70" stroke="rgba(59, 130, 246, 0.3)" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="340" y="100" class="connection-label-small" fill="var(--text-muted)">fetch</text>
+
+        <!-- Return line: Merge → Center (loop complete) -->
+        <line class="return-line" x1="94.12" y1="160" x2="250" y2="250" stroke="rgba(6, 182, 212, 0.3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+
         <!-- SINGLE progress ring: subtle track -->
         <circle class="progress-track-ring" cx="250" cy="250" r="180"/>
 
@@ -647,6 +710,15 @@
             <path d="M 5 -4 L 5 0 Q 5 3 0 5" fill="none" stroke="currentColor" stroke-width="2"/>
           </g>
           <text x="48" y="165" text-anchor="end" class="node-label">MERGE</text>
+        </g>
+
+        <!-- CENTER TRIGGER NODE -->
+        <g class="trigger-node">
+          <circle class="trigger-bg" cx="250" cy="250" r="24"/>
+          <g class="trigger-icon" transform="translate(250, 250)">
+            <text x="0" y="-3" text-anchor="middle" class="trigger-prompt">&gt;_</text>
+          </g>
+          <text x="250" y="285" text-anchor="middle" class="trigger-label">/start-task</text>
         </g>
 
         <!-- Orbiting marker (moves to active node) -->
