@@ -430,6 +430,65 @@
     .terminal-line:nth-child(6) { animation-delay: 4.4s; }
 
     /* ═══════════════════════════════════════════════════════════════════════
+       Building Blocks Section
+       ═══════════════════════════════════════════════════════════════════════ */
+    .building-blocks {
+      max-width: var(--max-width);
+      margin: var(--space-2xl) auto 0;
+      padding: 0 var(--space-xl);
+    }
+
+    .building-blocks-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-align: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .blocks-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-md);
+    }
+
+    .block-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: var(--space-sm) var(--space-md);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .block-icon {
+      font-size: 1rem;
+    }
+
+    .block-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .block-desc {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+    }
+
+    @media (max-width: 768px) {
+      .blocks-grid {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
        Progress Stepper
        ═══════════════════════════════════════════════════════════════════════ */
     .stepper-wrapper {
@@ -1035,6 +1094,34 @@
             </div>
           </div>
         </div>
+
+        <!-- Building Blocks -->
+        <div class="building-blocks">
+          <div class="building-blocks-title">Byggstenar i arkitekturen</div>
+          <div class="blocks-grid">
+            <div class="block-item">
+              <span class="block-icon">📋</span>
+              <span class="block-name">Jira MCP</span>
+              <span class="block-desc">– hämtar kontext</span>
+            </div>
+            <div class="block-item">
+              <span class="block-icon">🔄</span>
+              <span class="block-name">Ralph Wiggum</span>
+              <span class="block-desc">– envis loop tills tester passerar</span>
+            </div>
+            <div class="block-item">
+              <span class="block-icon">⚡</span>
+              <span class="block-name">GitHub Actions</span>
+              <span class="block-desc">– CI/CD-triggers</span>
+            </div>
+            <div class="block-item">
+              <span class="block-icon">🤖</span>
+              <span class="block-name">Google Jules</span>
+              <span class="block-desc">– AI-granskning & self-healing</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
