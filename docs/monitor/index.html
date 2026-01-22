@@ -142,20 +142,26 @@
       transition: all 0.3s ease;
     }
 
-    .node text.emoji {
-      font-size: 24px;
+    .node-icon {
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
     }
 
     .node-label {
       font-family: var(--font-mono);
       font-size: 11px;
       fill: var(--text-secondary);
+      transition: fill 0.3s ease;
     }
 
     .node.active circle {
       fill: var(--accent-blue);
       stroke: var(--accent-blue);
       filter: drop-shadow(0 0 20px var(--accent-blue));
+    }
+
+    .node.active .node-icon {
+      color: var(--bg-primary);
     }
 
     .node.active .node-label {
@@ -165,6 +171,10 @@
     .node.done circle {
       fill: var(--accent-green);
       stroke: var(--accent-green);
+    }
+
+    .node.done .node-icon {
+      color: var(--bg-primary);
     }
 
     .node.done .node-label {
@@ -379,40 +389,89 @@
         <path class="connection" d="M 480 240 L 480 300" marker-end="url(#arrowhead)" />
         <path class="connection" d="M 420 330 L 100 330 L 100 130" marker-end="url(#arrowhead)" />
 
-        <!-- Nodes -->
+        <!-- Nodes with custom icons -->
+
+        <!-- JIRA: Ticket/clipboard icon -->
         <g class="node" data-step="0">
           <circle cx="70" cy="80" r="35" />
-          <text x="70" y="88" text-anchor="middle" class="emoji">📋</text>
+          <g class="node-icon" transform="translate(70, 80)">
+            <rect x="-10" y="-14" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <rect x="-6" y="-18" width="12" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-6" y1="-4" x2="6" y2="-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="-6" y1="2" x2="4" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="-6" y1="8" x2="2" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </g>
           <text x="70" y="130" text-anchor="middle" class="node-label">Jira</text>
         </g>
 
+        <!-- CLAUDE CODE: Terminal/bracket icon -->
         <g class="node" data-step="1">
           <circle cx="230" cy="80" r="35" />
-          <text x="230" y="88" text-anchor="middle" class="emoji">💻</text>
+          <g class="node-icon" transform="translate(230, 80)">
+            <path d="M -12 -10 L -6 0 L -12 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="-2" y1="10" x2="10" y2="10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="6" cy="-4" r="3" fill="currentColor"/>
+          </g>
           <text x="230" y="130" text-anchor="middle" class="node-label">Claude Code</text>
         </g>
 
+        <!-- GITHUB: Git branch icon -->
         <g class="node" data-step="2">
           <circle cx="390" cy="80" r="35" />
-          <text x="390" y="88" text-anchor="middle" class="emoji">🐙</text>
+          <g class="node-icon" transform="translate(390, 80)">
+            <circle cx="-6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="6" cy="-4" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="-6" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-6" y1="-7" x2="-6" y2="7" stroke="currentColor" stroke-width="2"/>
+            <path d="M -6 -4 Q 0 -4 6 -1" fill="none" stroke="currentColor" stroke-width="2"/>
+          </g>
           <text x="390" y="130" text-anchor="middle" class="node-label">GitHub</text>
         </g>
 
+        <!-- CI/CD: Gear/cog with play icon -->
         <g class="node" data-step="3">
           <circle cx="480" cy="210" r="35" />
-          <text x="480" y="218" text-anchor="middle" class="emoji">⚡</text>
+          <g class="node-icon" transform="translate(480, 210)">
+            <circle cx="0" cy="0" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+            <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="0" y1="-12" x2="0" y2="-8"/>
+              <line x1="0" y1="8" x2="0" y2="12"/>
+              <line x1="-12" y1="0" x2="-8" y2="0"/>
+              <line x1="8" y1="0" x2="12" y2="0"/>
+              <line x1="-8.5" y1="-8.5" x2="-5.5" y2="-5.5"/>
+              <line x1="5.5" y1="5.5" x2="8.5" y2="8.5"/>
+              <line x1="-8.5" y1="8.5" x2="-5.5" y2="5.5"/>
+              <line x1="5.5" y1="-5.5" x2="8.5" y2="-8.5"/>
+            </g>
+            <polygon points="-2,-4 -2,4 4,0" fill="currentColor"/>
+          </g>
           <text x="480" y="260" text-anchor="middle" class="node-label">CI/CD</text>
         </g>
 
+        <!-- JULES REVIEW: Eye/scan icon -->
         <g class="node" data-step="4">
           <circle cx="480" cy="330" r="35" />
-          <text x="480" y="338" text-anchor="middle" class="emoji">🤖</text>
+          <g class="node-icon" transform="translate(480, 330)">
+            <path d="M -14 0 Q 0 -12 14 0 Q 0 12 -14 0" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="0" r="2" fill="currentColor"/>
+            <line x1="-4" y1="-10" x2="-2" y2="-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="4" y1="-10" x2="2" y2="-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </g>
           <text x="480" y="380" text-anchor="middle" class="node-label">Jules Review</text>
         </g>
 
+        <!-- MERGE: Git merge icon -->
         <g class="node" data-step="5">
           <circle cx="230" cy="330" r="35" />
-          <text x="230" y="338" text-anchor="middle" class="emoji">✅</text>
+          <g class="node-icon" transform="translate(230, 330)">
+            <circle cx="-6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="6" cy="-10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="0" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M -6 -7 L -6 0 Q -6 4 0 7" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M 6 -7 L 6 0 Q 6 4 0 7" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="-2" y1="4" x2="2" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </g>
           <text x="230" y="380" text-anchor="middle" class="node-label">Merge</text>
         </g>
 
@@ -427,13 +486,13 @@
       <div class="current-task">
         <div class="task-header">
           <span class="task-id">PROJ-123</span>
-          <span class="task-time">⏱️ 0:00</span>
+          <span class="task-time">0:00</span>
         </div>
         <h3 class="task-title">Lägg till CSV-export på rapportsidan</h3>
       </div>
 
       <div class="step-info">
-        <div class="step-badge" id="currentStepBadge">💻 Claude Code</div>
+        <div class="step-badge" id="currentStepBadge">Jira</div>
         <p class="step-desc" id="currentStepDesc">Skriver enhetstester för export-funktionen...</p>
       </div>
 
@@ -470,12 +529,12 @@
   <script>
     // Step data
     const stepData = [
-      { id: 'jira', x: 70, y: 80, badge: '📋 Jira', desc: 'Läser ticket och krav från Jira...', progress: 10, color: '#58a6ff' },
-      { id: 'coding', x: 230, y: 80, badge: '💻 Claude Code', desc: 'Skriver tester och implementation med TDD...', progress: 33, color: '#a371f7' },
-      { id: 'github', x: 390, y: 80, badge: '🐙 GitHub', desc: 'Pushar kod och skapar Pull Request...', progress: 50, color: '#8b949e' },
-      { id: 'ci', x: 480, y: 210, badge: '⚡ CI/CD', desc: 'Kör tester och validerar bygget...', progress: 66, color: '#d29922' },
-      { id: 'review', x: 480, y: 330, badge: '🤖 Jules', desc: 'AI-granskning av koden...', progress: 83, color: '#f85149' },
-      { id: 'merge', x: 230, y: 330, badge: '✅ Merge', desc: 'Mergar till main! 🎉', progress: 100, color: '#3fb950' }
+      { id: 'jira', x: 70, y: 80, badge: 'Jira', desc: 'Läser ticket och krav från Jira...', progress: 10, color: '#58a6ff' },
+      { id: 'coding', x: 230, y: 80, badge: 'Claude Code', desc: 'Skriver tester och implementation med TDD...', progress: 33, color: '#a371f7' },
+      { id: 'github', x: 390, y: 80, badge: 'GitHub', desc: 'Pushar kod och skapar Pull Request...', progress: 50, color: '#8b949e' },
+      { id: 'ci', x: 480, y: 210, badge: 'CI/CD', desc: 'Kör tester och validerar bygget...', progress: 66, color: '#d29922' },
+      { id: 'review', x: 480, y: 330, badge: 'Jules Review', desc: 'AI-granskning av koden...', progress: 83, color: '#f85149' },
+      { id: 'merge', x: 230, y: 330, badge: 'Merge', desc: 'Mergar till main!', progress: 100, color: '#3fb950' }
     ];
 
     let currentStep = 0;
@@ -490,7 +549,7 @@
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
       document.querySelector('.task-time').textContent =
-        `⏱️ ${mins}:${secs.toString().padStart(2, '0')}`;
+        `${mins}:${secs.toString().padStart(2, '0')}`;
     }, 1000);
 
     // Update loop visualization
