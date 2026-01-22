@@ -16,6 +16,46 @@ This skill initializes the Ralph Loop for a new Jira task.
 
 ## Workflow
 
+### Step 0: Pre-Flight Checks (REQUIRED)
+
+Before attempting to start a task, verify the working environment:
+
+**Check 1: Git working tree is clean**
+
+```bash
+# See uncommitted changes
+git status --porcelain
+
+# Expected output: empty (no output = clean)
+# If there IS output (files listed), STOP
+```
+
+**If git status shows changes:**
+- **STOP immediately**
+- Output: "❌ Working tree is not clean. Commit or stash changes first."
+- Ask user to run: `git add . && git commit -m "WIP: stash before new task"`
+- Or run: `git stash`
+- **DO NOT PROCEED** with dirty working tree
+
+**Check 2: Currently on main/master branch**
+
+```bash
+# Check current branch
+git branch --show-current
+
+# Expected: main or master
+# If different, STOP
+```
+
+**If not on main:**
+- Output: "❌ Not on main/master branch. Switch first."
+- Run: `git checkout main`
+- Then start task again
+
+**After both checks pass:**
+- Output: "✅ Pre-flight checks passed"
+- Continue to Step 1A
+
 ### Step 1A: Validate Jira Connection (SAFETY)
 
 Before attempting to fetch, validate Jira MCP is available.
