@@ -317,22 +317,11 @@
       }
     }
 
-    .trigger-icon {
-      transform-origin: 250px 250px;
-      animation: trigger-rotate 8s linear infinite;
-    }
-
-    @keyframes trigger-rotate {
-      from { transform: translate(250px, 250px) rotate(0deg); }
-      to { transform: translate(250px, 250px) rotate(360deg); }
-    }
-
     .trigger-prompt {
       font-family: var(--font-mono);
       font-size: 14px;
       font-weight: 700;
       fill: #ffffff;
-      text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
     }
 
     .trigger-label {
@@ -782,9 +771,7 @@
 
         <g class="trigger-node">
           <circle class="trigger-bg" cx="250" cy="250" r="24"/>
-          <g class="trigger-icon">
-            <text x="0" y="5" text-anchor="middle" class="trigger-prompt">&gt;_</text>
-          </g>
+          <text x="250" y="255" text-anchor="middle" class="trigger-prompt">&gt;_</text>
           <text x="250" y="285" text-anchor="middle" class="trigger-label">/start-task</text>
         </g>
 
