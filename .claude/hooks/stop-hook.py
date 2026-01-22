@@ -22,7 +22,7 @@ from datetime import datetime
 
 
 def load_config():
-    """Load Ralph Loop configuration."""
+    """Load Ralph Loop configuration with profile support."""
     config_paths = [
         Path(__file__).parent.parent / "ralph-config.json",
         Path.cwd() / ".claude" / "ralph-config.json",
@@ -32,15 +32,28 @@ def load_config():
     for config_path in config_paths:
         if config_path.exists():
             with open(config_path) as f:
-                return json.load(f)
+                config = json.load(f)
+
+            # Check if this is a profile-based config
+            if "profiles" in config:
+                active_profile = config.get("active_profile", "template_repo")
+                profiles = config.get("profiles", {})
+                profile = profiles.get(active_profile, {})
+                exit_policy = profile.get("exit_policy", {})
+                return exit_policy
+            else:
+                # Legacy format - return as-is (for backwards compatibility)
+                return config.get("exit_policy", config)
 
     # Default configuration
     return {
         "completion_promise": "<promise>DONE</promise>",
         "max_iterations": 25,
         "scan_length": 5000,
-        "require_tests_pass": True,
-        "require_lint_pass": True
+        "requirements": {
+            "tests_must_pass": False,
+            "lint_must_pass": True
+        }
     }
 
 

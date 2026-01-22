@@ -1,25 +1,39 @@
 {
   "$schema": "./ralph-config.schema.json",
   "version": "1.0.0",
-  "description": "Ralph Loop exit policy configuration",
+  "description": "Ralph Loop exit policy configuration with profile support",
 
-  "exit_policy": {
-    "completion_promise": "<promise>DONE</promise>",
-    "max_iterations": 25,
-    "scan_length": 5000,
+  "active_profile": "template_repo",
 
-    "requirements": {
-      "tests_must_pass": true,
-      "lint_must_pass": true,
-      "coverage_threshold": null
+  "profiles": {
+    "template_repo": {
+      "description": "For documentation and template repos (no code tests)",
+      "exit_policy": {
+        "completion_promise": "<promise>DONE</promise>",
+        "max_iterations": 25,
+        "scan_length": 5000,
+        "requirements": {
+          "tests_must_pass": false,
+          "lint_must_pass": true,
+          "markdown_lint": true,
+          "structure_validation": true
+        }
+      }
     },
 
-    "allowed_exit_reasons": [
-      "all_tests_pass",
-      "max_iterations_reached",
-      "user_interrupt",
-      "fatal_error"
-    ]
+    "code_repo": {
+      "description": "For code repos with test frameworks",
+      "exit_policy": {
+        "completion_promise": "<promise>DONE</promise>",
+        "max_iterations": 25,
+        "scan_length": 5000,
+        "requirements": {
+          "tests_must_pass": true,
+          "lint_must_pass": true,
+          "coverage_threshold": 80
+        }
+      }
+    }
   },
 
   "task_memory": {
