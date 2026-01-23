@@ -65,6 +65,134 @@
       flex-direction: column;
     }
 
+    /* ========== POWERED BY BADGE ========== */
+    .powered-badge {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 101;
+    }
+
+    .powered-label {
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .powered-stack {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      max-width: 180px;
+    }
+
+    .tech-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .tech-chip:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border-glow);
+      transform: translateY(-1px);
+    }
+
+    .tech-chip[data-tech="claude"]:hover {
+      border-color: rgba(245, 158, 11, 0.4);
+      box-shadow: 0 2px 12px rgba(245, 158, 11, 0.15);
+    }
+
+    .tech-chip[data-tech="github"]:hover {
+      border-color: rgba(167, 139, 250, 0.4);
+      box-shadow: 0 2px 12px rgba(167, 139, 250, 0.15);
+    }
+
+    .tech-chip[data-tech="jira"]:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    .tech-chip[data-tech="jules"]:hover {
+      border-color: rgba(236, 72, 153, 0.4);
+      box-shadow: 0 2px 12px rgba(236, 72, 153, 0.15);
+    }
+
+    .tech-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tech-chip[data-tech="claude"] .tech-dot {
+      background: var(--color-claude);
+      box-shadow: 0 0 6px var(--color-claude);
+    }
+
+    .tech-chip[data-tech="github"] .tech-dot {
+      background: var(--color-github);
+      box-shadow: 0 0 6px var(--color-github);
+    }
+
+    .tech-chip[data-tech="jira"] .tech-dot {
+      background: var(--color-jira);
+      box-shadow: 0 0 6px var(--color-jira);
+    }
+
+    .tech-chip[data-tech="jules"] .tech-dot {
+      background: var(--color-jules);
+      box-shadow: 0 0 6px var(--color-jules);
+    }
+
+    /* Staggered pulse animation for tech dots */
+    .tech-chip[data-tech="claude"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0s; }
+    .tech-chip[data-tech="github"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0.5s; }
+    .tech-chip[data-tech="jira"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1s; }
+    .tech-chip[data-tech="jules"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1.5s; }
+
+    @keyframes dot-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.8; }
+    }
+
+    .tech-name {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .tech-chip:hover .tech-name {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .powered-badge {
+        position: static;
+        margin-bottom: 12px;
+        order: -1;
+      }
+      
+      .header {
+        flex-wrap: wrap;
+      }
+    }
+
     /* ========== HEADER ========== */
     .header {
       background: linear-gradient(180deg, rgba(10, 15, 26, 0.95) 0%, rgba(10, 15, 26, 0.8) 100%);
@@ -677,6 +805,29 @@
 </head>
 <body>
   <header class="header">
+    <!-- Powered By Badge -->
+    <div class="powered-badge">
+      <span class="powered-label">Powered by</span>
+      <div class="powered-stack">
+        <a href="https://www.anthropic.com/claude-code" target="_blank" rel="noopener" class="tech-chip" data-tech="claude" title="Claude Code">
+          <span class="tech-dot"></span>
+          <span class="tech-name">Claude</span>
+        </a>
+        <a href="https://github.com/features/actions" target="_blank" rel="noopener" class="tech-chip" data-tech="github" title="GitHub Actions">
+          <span class="tech-dot"></span>
+          <span class="tech-name">Actions</span>
+        </a>
+        <a href="https://www.atlassian.com/software/jira" target="_blank" rel="noopener" class="tech-chip" data-tech="jira" title="Jira">
+          <span class="tech-dot"></span>
+          <span class="tech-name">Jira</span>
+        </a>
+        <a href="https://githubnext.com/projects/jules" target="_blank" rel="noopener" class="tech-chip" data-tech="jules" title="Jules AI">
+          <span class="tech-dot"></span>
+          <span class="tech-name">Jules</span>
+        </a>
+      </div>
+    </div>
+
     <div class="header-left">
       <div class="logo"></div>
       <h1>Agentic Loop Monitor</h1>
