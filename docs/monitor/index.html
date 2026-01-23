@@ -80,11 +80,10 @@
 
     .powered-label {
       font-size: 9px;
-      font-weight: 500;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--text-muted);
-      opacity: 0.5;
+      color: var(--text-secondary);
     }
 
     .powered-stack {
@@ -132,6 +131,11 @@
       box-shadow: 0 2px 12px rgba(236, 72, 153, 0.15);
     }
 
+    .tech-chip[data-tech="n8n"]:hover {
+      border-color: rgba(255, 107, 107, 0.4);
+      box-shadow: 0 2px 12px rgba(255, 107, 107, 0.15);
+    }
+
     .tech-dot {
       width: 6px;
       height: 6px;
@@ -159,11 +163,17 @@
       box-shadow: 0 0 6px var(--color-jules);
     }
 
+    .tech-chip[data-tech="n8n"] .tech-dot {
+      background: #ff6b6b;
+      box-shadow: 0 0 6px #ff6b6b;
+    }
+
     /* Staggered pulse animation for tech dots */
     .tech-chip[data-tech="ralph"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0s; }
     .tech-chip[data-tech="mcp"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0.5s; }
     .tech-chip[data-tech="hooks"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1s; }
     .tech-chip[data-tech="healing"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1.5s; }
+    .tech-chip[data-tech="n8n"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 2s; }
 
     @keyframes dot-pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
@@ -826,7 +836,7 @@
             </span>
             <span class="tech-chip" data-tech="mcp" title="Model Context Protocol - Serena, Context7, Playwright">
               <span class="tech-dot"></span>
-              <span class="tech-name">MCP Servers</span>
+              <span class="tech-name">MCP</span>
             </span>
             <span class="tech-chip" data-tech="hooks" title="PreToolUse & Stop hooks for security and control">
               <span class="tech-dot"></span>
@@ -836,6 +846,10 @@
               <span class="tech-dot"></span>
               <span class="tech-name">Self-Heal</span>
             </span>
+            <a href="https://n8n.io" target="_blank" rel="noopener" class="tech-chip" data-tech="n8n" title="n8n - Workflow automation">
+              <span class="tech-dot"></span>
+              <span class="tech-name">n8n</span>
+            </a>
           </div>
         </div>
       </div>
