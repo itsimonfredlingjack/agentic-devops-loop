@@ -66,30 +66,31 @@
     }
 
     /* ========== POWERED BY BADGE ========== */
-    .powered-badge {
-      position: absolute;
-      top: 12px;
-      left: 16px;
+    .header-titles {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      z-index: 101;
+      gap: 8px;
+    }
+
+    .powered-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .powered-label {
       font-size: 9px;
       font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
-      opacity: 0.6;
+      opacity: 0.5;
     }
 
     .powered-stack {
       display: flex;
-      gap: 4px;
+      gap: 6px;
       flex-wrap: wrap;
-      max-width: 180px;
     }
 
     .tech-chip {
@@ -111,22 +112,22 @@
       transform: translateY(-1px);
     }
 
-    .tech-chip[data-tech="claude"]:hover {
+    .tech-chip[data-tech="ralph"]:hover {
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 2px 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .tech-chip[data-tech="mcp"]:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 2px 12px rgba(6, 182, 212, 0.15);
+    }
+
+    .tech-chip[data-tech="hooks"]:hover {
       border-color: rgba(245, 158, 11, 0.4);
       box-shadow: 0 2px 12px rgba(245, 158, 11, 0.15);
     }
 
-    .tech-chip[data-tech="github"]:hover {
-      border-color: rgba(167, 139, 250, 0.4);
-      box-shadow: 0 2px 12px rgba(167, 139, 250, 0.15);
-    }
-
-    .tech-chip[data-tech="jira"]:hover {
-      border-color: rgba(59, 130, 246, 0.4);
-      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.15);
-    }
-
-    .tech-chip[data-tech="jules"]:hover {
+    .tech-chip[data-tech="healing"]:hover {
       border-color: rgba(236, 72, 153, 0.4);
       box-shadow: 0 2px 12px rgba(236, 72, 153, 0.15);
     }
@@ -138,31 +139,31 @@
       flex-shrink: 0;
     }
 
-    .tech-chip[data-tech="claude"] .tech-dot {
+    .tech-chip[data-tech="ralph"] .tech-dot {
+      background: var(--color-ci);
+      box-shadow: 0 0 6px var(--color-ci);
+    }
+
+    .tech-chip[data-tech="mcp"] .tech-dot {
+      background: var(--color-merge);
+      box-shadow: 0 0 6px var(--color-merge);
+    }
+
+    .tech-chip[data-tech="hooks"] .tech-dot {
       background: var(--color-claude);
       box-shadow: 0 0 6px var(--color-claude);
     }
 
-    .tech-chip[data-tech="github"] .tech-dot {
-      background: var(--color-github);
-      box-shadow: 0 0 6px var(--color-github);
-    }
-
-    .tech-chip[data-tech="jira"] .tech-dot {
-      background: var(--color-jira);
-      box-shadow: 0 0 6px var(--color-jira);
-    }
-
-    .tech-chip[data-tech="jules"] .tech-dot {
+    .tech-chip[data-tech="healing"] .tech-dot {
       background: var(--color-jules);
       box-shadow: 0 0 6px var(--color-jules);
     }
 
     /* Staggered pulse animation for tech dots */
-    .tech-chip[data-tech="claude"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0s; }
-    .tech-chip[data-tech="github"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0.5s; }
-    .tech-chip[data-tech="jira"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1s; }
-    .tech-chip[data-tech="jules"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1.5s; }
+    .tech-chip[data-tech="ralph"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0s; }
+    .tech-chip[data-tech="mcp"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 0.5s; }
+    .tech-chip[data-tech="hooks"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1s; }
+    .tech-chip[data-tech="healing"] .tech-dot { animation: dot-pulse 3s ease-in-out infinite 1.5s; }
 
     @keyframes dot-pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
@@ -183,13 +184,19 @@
 
     @media (max-width: 768px) {
       .powered-badge {
-        position: static;
-        margin-bottom: 12px;
-        order: -1;
+        margin-top: 4px;
+      }
+      
+      .powered-stack {
+        gap: 4px;
       }
       
       .header {
         flex-wrap: wrap;
+      }
+      
+      .header-titles {
+        gap: 4px;
       }
     }
 
@@ -805,32 +812,33 @@
 </head>
 <body>
   <header class="header">
-    <!-- Powered By Badge -->
-    <div class="powered-badge">
-      <span class="powered-label">Powered by</span>
-      <div class="powered-stack">
-        <a href="https://www.anthropic.com/claude-code" target="_blank" rel="noopener" class="tech-chip" data-tech="claude" title="Claude Code">
-          <span class="tech-dot"></span>
-          <span class="tech-name">Claude</span>
-        </a>
-        <a href="https://github.com/features/actions" target="_blank" rel="noopener" class="tech-chip" data-tech="github" title="GitHub Actions">
-          <span class="tech-dot"></span>
-          <span class="tech-name">Actions</span>
-        </a>
-        <a href="https://www.atlassian.com/software/jira" target="_blank" rel="noopener" class="tech-chip" data-tech="jira" title="Jira">
-          <span class="tech-dot"></span>
-          <span class="tech-name">Jira</span>
-        </a>
-        <a href="https://githubnext.com/projects/jules" target="_blank" rel="noopener" class="tech-chip" data-tech="jules" title="Jules AI">
-          <span class="tech-dot"></span>
-          <span class="tech-name">Jules</span>
-        </a>
-      </div>
-    </div>
-
     <div class="header-left">
       <div class="logo"></div>
-      <h1>Agentic Loop Monitor</h1>
+      <div class="header-titles">
+        <h1>Agentic Loop Monitor</h1>
+        <!-- Powered By Badge - shows the hidden tech powering the system -->
+        <div class="powered-badge">
+          <span class="powered-label">Powered by</span>
+          <div class="powered-stack">
+            <span class="tech-chip" data-tech="ralph" title="Ralph Wiggum Technique - Autonomous iteration loop">
+              <span class="tech-dot"></span>
+              <span class="tech-name">Ralph Loop</span>
+            </span>
+            <span class="tech-chip" data-tech="mcp" title="Model Context Protocol - Serena, Context7, Playwright">
+              <span class="tech-dot"></span>
+              <span class="tech-name">MCP Servers</span>
+            </span>
+            <span class="tech-chip" data-tech="hooks" title="PreToolUse & Stop hooks for security and control">
+              <span class="tech-dot"></span>
+              <span class="tech-name">Hooks</span>
+            </span>
+            <span class="tech-chip" data-tech="healing" title="Self-healing CI with auto-retry">
+              <span class="tech-dot"></span>
+              <span class="tech-name">Self-Heal</span>
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Navigation Tabs -->
