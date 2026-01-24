@@ -1010,7 +1010,6 @@
         <circle class="orbit-marker-glow" id="markerGlow" cx="250" cy="70" r="8" stroke="var(--color-jira)"/>
         <circle class="orbit-marker" id="orbitMarker" cx="250" cy="70" r="6" fill="var(--color-jira)"/>
       </svg>
-      <div class="click-hint">Click or Space to pause</div>
     </section>
 
     <aside class="side-panel">
@@ -1039,8 +1038,8 @@
       </div>
 
       <div class="panel-card">
-        <div class="section-label">Event Log</div>
-        <ul class="event-log" id="eventLog">
+        <div class="section-label">Pipeline Stages</div>
+        <ul class="event-log" id="pipelineStages">
           <li class="event-item" data-step="0"><span class="event-marker"></span><span>Fetch Jira ticket</span></li>
           <li class="event-item" data-step="1"><span class="event-marker"></span><span>Claude writes code</span></li>
           <li class="event-item" data-step="2"><span class="event-marker"></span><span>Push to GitHub</span></li>
@@ -1049,23 +1048,30 @@
           <li class="event-item" data-step="5"><span class="event-marker"></span><span>Merge to main</span></li>
         </ul>
       </div>
+
+      <div class="panel-card">
+        <div class="section-label">Recent Activity</div>
+        <ul class="event-log" id="activityLog" style="max-height: 200px; overflow-y: auto;">
+          <li class="event-item pending" style="justify-content: center; opacity: 0.5;">
+            <span>Waiting for events...</span>
+          </li>
+        </ul>
+      </div>
     </aside>
   </main>
 
   <footer class="footer">
     <a href="../guide/">Back to Guide</a>
-    <span>Hosted on GitHub Pages</span>
+    <span>Hosted on GitHub Pages &bull; Connected to agent-monitor.fredlingautomation.dev</span>
   </footer>
 
   <script>
-    const STEP_INTERVAL = 5000; // 5s per step: 1.8s move + 3.2s pause at node
+    const WS_URL = 'wss://agent-monitor.fredlingautomation.dev/ws';
     const RADIUS = 180;
     const CENTER = 250;
     const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ~1131
 
     // Mathematically precise node positions
-    // Formula: x = CENTER + RADIUS * sin(angle), y = CENTER - RADIUS * cos(angle)
-    // Where 0° = top (12 o'clock), going clockwise
     const nodePositions = [
       { x: 250, y: 70 },      // 0°   - Jira (top)
       { x: 405.88, y: 160 },  // 60°  - Claude
@@ -1087,6 +1093,7 @@
     let currentStep = 0;
     let isPaused = false;
     let seconds = 0;
+    let socket;
 
     // DOM elements
     const orbitMarker = document.getElementById('orbitMarker');
@@ -1098,16 +1105,18 @@
     const stepName = document.getElementById('stepName');
     const stepDesc = document.getElementById('stepDesc');
     const progressFill = document.getElementById('progressFill');
-    const eventLog = document.getElementById('eventLog');
+    const pipelineStages = document.getElementById('pipelineStages');
+    const activityLog = document.getElementById('activityLog');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const taskTimer = document.getElementById('taskTimer');
+    const taskIdEl = document.querySelector('.task-id');
+    const taskTitleEl = document.querySelector('.task-title');
 
     // Trigger pulse animation from center
     function triggerPulse() {
       triggerPulseRing.classList.remove('active');
-      // Force reflow to restart animation
-      void triggerPulseRing.offsetWidth;
+      void triggerPulseRing.offsetWidth; // Force reflow
       triggerPulseRing.classList.add('active');
     }
 
@@ -1115,20 +1124,28 @@
     setInterval(() => {
       if (!isPaused) {
         seconds++;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        taskTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        updateTimerDisplay();
       }
     }, 1000);
 
+    function updateTimerDisplay() {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      taskTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
     function updateStep(index) {
+      if (index < 0 || index >= steps.length) return;
+
       const step = steps[index];
       const pos = nodePositions[index];
 
       // Trigger pulse from center when loop restarts (step 0)
-      if (index === 0) {
+      if (index === 0 && currentStep !== 0) {
         triggerPulse();
       }
+
+      currentStep = index;
 
       // Move orbiting marker to active node
       orbitMarker.setAttribute('cx', pos.x);
@@ -1153,7 +1170,7 @@
           bg.setAttribute('r', '32');
         } else if (i === index) {
           node.classList.add('active');
-          bg.setAttribute('r', '38'); // 18% larger when active
+          bg.setAttribute('r', '38');
         } else {
           bg.setAttribute('r', '32');
         }
@@ -1167,8 +1184,8 @@
       stepDesc.textContent = step.desc;
       progressFill.style.width = step.progress + '%';
 
-      // Update event log
-      const items = eventLog.querySelectorAll('.event-item');
+      // Update pipeline stages list
+      const items = pipelineStages.querySelectorAll('.event-item');
       items.forEach((item, i) => {
         item.classList.remove('done', 'active', 'pending');
         const marker = item.querySelector('.event-marker');
@@ -1186,30 +1203,114 @@
       });
     }
 
-    function togglePause() {
-      isPaused = !isPaused;
+    function setStatus(status) {
+      isPaused = (status === 'paused');
       statusDot.classList.toggle('paused', isPaused);
       statusText.textContent = isPaused ? 'Paused' : 'Running';
     }
 
-    document.getElementById('orbitalContainer').addEventListener('click', togglePause);
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        togglePause();
+    function addActivityLog(event) {
+      // Remove placeholder if exists
+      if (activityLog.children.length === 1 && activityLog.firstElementChild.innerText === 'Waiting for events...') {
+        activityLog.innerHTML = '';
       }
-    });
 
-    // Animation loop
-    setInterval(() => {
-      if (!isPaused) {
-        currentStep = (currentStep + 1) % steps.length;
-        updateStep(currentStep);
+      const li = document.createElement('li');
+      li.className = `event-item ${event.event_type === 'error' ? 'error' : 'done'}`;
+
+      // Map event types to colors/styles if needed
+      let icon = '•';
+      if (event.event_type === 'success') icon = '✓';
+      else if (event.event_type === 'error') icon = '✕';
+      else if (event.event_type === 'warning') icon = '!';
+
+      li.innerHTML = `
+        <span class="event-marker" style="font-size: 10px;">${icon}</span>
+        <div style="display:flex; flex-direction:column; gap:2px; width:100%">
+          <span style="font-size: 12px; color: var(--text-primary)">${event.message}</span>
+          <span style="font-size: 10px; color: var(--text-label)">${event.source || 'system'}</span>
+        </div>
+      `;
+
+      // Prepend to show newest first
+      activityLog.insertBefore(li, activityLog.firstChild);
+
+      // Limit to 20 items
+      if (activityLog.children.length > 20) {
+        activityLog.removeChild(activityLog.lastChild);
       }
-    }, STEP_INTERVAL);
+    }
 
-    // Initial state
-    updateStep(currentStep);
+    function connectWebSocket() {
+      console.log('Connecting to WebSocket...', WS_URL);
+      socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        console.log('Connected');
+        statusText.textContent = 'Connected';
+        statusDot.style.background = 'var(--status-done)';
+        statusDot.style.animation = 'pulse 2s ease-in-out infinite';
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          console.log('Received:', msg);
+
+          if (msg.type === 'init') {
+            const data = msg.data;
+            if (data.status) setStatus(data.status);
+            if (data.elapsed_seconds) {
+              seconds = data.elapsed_seconds;
+              updateTimerDisplay();
+            }
+            if (data.task) {
+              if (data.task.task_id) taskIdEl.textContent = data.task.task_id;
+              if (data.task.title) taskTitleEl.textContent = data.task.title;
+              if (typeof data.task.step === 'number') updateStep(data.task.step);
+            }
+            // Populate initial events if any
+            if (data.events && Array.isArray(data.events)) {
+              activityLog.innerHTML = ''; // Clear placeholder
+              // Add in chronological order for the log (or reverse if we want newest top)
+              // The API usually sends list, let's assume we want newest on top so reverse them if they come chrono
+              [...data.events].forEach(evt => addActivityLog(evt));
+            }
+          }
+          else if (msg.type === 'task_update') {
+            const task = msg.data;
+            if (task.task_id) taskIdEl.textContent = task.task_id;
+            if (task.title) taskTitleEl.textContent = task.title;
+            if (typeof task.step === 'number') updateStep(task.step);
+          }
+          else if (msg.type === 'status') {
+            setStatus(msg.status);
+          }
+          else if (msg.type === 'event') {
+            addActivityLog(msg.data);
+          }
+        } catch (e) {
+          console.error('Error processing message:', e);
+        }
+      };
+
+      socket.onclose = () => {
+        console.log('Disconnected');
+        statusText.textContent = 'Disconnected';
+        statusDot.style.background = 'var(--status-pending)';
+        statusDot.style.animation = 'none';
+        // Auto-reconnect after 3s
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      socket.onerror = (err) => {
+        console.error('WebSocket error:', err);
+      };
+    }
+
+    // Initialize
+    updateStep(0); // Set initial visual state
+    connectWebSocket();
 
     // ════════════════════════════════════════════════════════════════
     // Active Tab Detection
@@ -1226,7 +1327,6 @@
       });
     }
 
-    // Initialize on load
     initNavTabs();
   </script>
 </body>
