@@ -62,8 +62,6 @@
       "Edit(.github/*)",
       "Write(.claude/hooks/*)",
       "Write(.github/*)",
-      "Read(./.env)",
-      "Read(./.env.*)",
       "Read(./secrets/**)"
     ]
   }
