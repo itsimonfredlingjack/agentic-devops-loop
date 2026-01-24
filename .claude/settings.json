@@ -1,6 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/ccow/session_start.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash|Write|Edit",
@@ -49,7 +61,8 @@
       "Edit(.claude/hooks/*)",
       "Edit(.github/*)",
       "Write(.claude/hooks/*)",
-      "Write(.github/*)"
+      "Write(.github/*)",
+      "Read(./secrets/**)"
     ]
   }
 }
