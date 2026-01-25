@@ -24,6 +24,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/post-tool-use.py"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "*",

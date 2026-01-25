@@ -649,13 +649,11 @@
       gap: 8px;
     }
 
-    .task-status::before {
-      content: '';
+    .task-status span:first-child {
       width: 8px;
       height: 8px;
-      background: var(--status-active);
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--status-active);
+      flex-shrink: 0;
     }
 
     .task-timer {
@@ -1010,6 +1008,7 @@
         <circle class="orbit-marker-glow" id="markerGlow" cx="250" cy="70" r="8" stroke="var(--color-jira)"/>
         <circle class="orbit-marker" id="orbitMarker" cx="250" cy="70" r="6" fill="var(--color-jira)"/>
       </svg>
+      <div class="click-hint">Click or Space to pause</div>
     </section>
 
     <aside class="side-panel">
@@ -1038,8 +1037,8 @@
       </div>
 
       <div class="panel-card">
-        <div class="section-label">Pipeline Stages</div>
-        <ul class="event-log" id="pipelineStages">
+        <div class="section-label">Event Log</div>
+        <ul class="event-log" id="eventLog">
           <li class="event-item" data-step="0"><span class="event-marker"></span><span>Fetch Jira ticket</span></li>
           <li class="event-item" data-step="1"><span class="event-marker"></span><span>Claude writes code</span></li>
           <li class="event-item" data-step="2"><span class="event-marker"></span><span>Push to GitHub</span></li>
@@ -1048,28 +1047,27 @@
           <li class="event-item" data-step="5"><span class="event-marker"></span><span>Merge to main</span></li>
         </ul>
       </div>
-
-      <div class="panel-card">
-        <div class="section-label">Recent Activity</div>
-        <ul class="event-log" id="activityLog" style="max-height: 200px; overflow-y: auto;">
-          <li class="event-item pending" style="justify-content: center; opacity: 0.5;">
-            <span>Waiting for events...</span>
-          </li>
-        </ul>
-      </div>
     </aside>
   </main>
 
   <footer class="footer">
     <a href="../guide/">Back to Guide</a>
-    <span>Hosted on GitHub Pages &bull; Connected to agent-monitor.fredlingautomation.dev</span>
+    <span>Hosted on GitHub Pages</span>
   </footer>
 
   <script>
-    const WS_URL = 'wss://agent-monitor.fredlingautomation.dev/ws';
+    // ════════════════════════════════════════════════════════════════
+    // REAL-TIME MONITOR - WebSocket Connected
+    // ════════════════════════════════════════════════════════════════
+
     const RADIUS = 180;
     const CENTER = 250;
     const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ~1131
+
+    // WebSocket configuration
+    const WS_URL = window.location.protocol === 'https:'
+      ? `wss://${window.location.host}/ws`
+      : `ws://${window.location.host}/ws`;
 
     // Mathematically precise node positions
     const nodePositions = [
@@ -1082,7 +1080,7 @@
     ];
 
     const steps = [
-      { name: 'Jira Ticket', desc: 'Reading ticket requirements...', color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)', progress: 16.67 },
+      { name: 'Jira Ticket', desc: 'Fetching ticket requirements...', color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)', progress: 16.67 },
       { name: 'Claude Code', desc: 'Writing tests and implementation...', color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)', progress: 33.33 },
       { name: 'GitHub PR', desc: 'Pushing code and creating PR...', color: '#a78bfa', shadow: 'rgba(167, 139, 250, 0.4)', progress: 50 },
       { name: 'CI Pipeline', desc: 'Running tests and validation...', color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)', progress: 66.67 },
@@ -1090,10 +1088,12 @@
       { name: 'Merge', desc: 'Merging to main branch!', color: '#06b6d4', shadow: 'rgba(6, 182, 212, 0.4)', progress: 100 }
     ];
 
-    let currentStep = 0;
+    let currentStep = -1; // -1 = idle/waiting
     let isPaused = false;
-    let seconds = 0;
-    let socket;
+    let elapsedSeconds = 0;
+    let ws = null;
+    let reconnectAttempts = 0;
+    let timerInterval = null;
 
     // DOM elements
     const orbitMarker = document.getElementById('orbitMarker');
@@ -1105,47 +1105,256 @@
     const stepName = document.getElementById('stepName');
     const stepDesc = document.getElementById('stepDesc');
     const progressFill = document.getElementById('progressFill');
-    const pipelineStages = document.getElementById('pipelineStages');
-    const activityLog = document.getElementById('activityLog');
+    const eventLog = document.getElementById('eventLog');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const taskTimer = document.getElementById('taskTimer');
-    const taskIdEl = document.querySelector('.task-id');
-    const taskTitleEl = document.querySelector('.task-title');
+    const taskId = document.querySelector('.task-id');
+    const taskTitle = document.querySelector('.task-title');
 
-    // Trigger pulse animation from center
-    function triggerPulse() {
-      triggerPulseRing.classList.remove('active');
-      void triggerPulseRing.offsetWidth; // Force reflow
-      triggerPulseRing.classList.add('active');
+    // ════════════════════════════════════════════════════════════════
+    // WebSocket Connection
+    // ════════════════════════════════════════════════════════════════
+
+    function connectWebSocket() {
+      console.log('Connecting to WebSocket:', WS_URL);
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        reconnectAttempts = 0;
+        updateConnectionStatus('connected');
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        updateConnectionStatus('disconnected');
+        // Reconnect with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+        reconnectAttempts++;
+        setTimeout(connectWebSocket, delay);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleMessage(message);
+        } catch (e) {
+          console.error('Failed to parse message:', e);
+        }
+      };
     }
 
-    // Timer
-    setInterval(() => {
-      if (!isPaused) {
-        seconds++;
-        updateTimerDisplay();
+    function updateConnectionStatus(status) {
+      if (status === 'connected') {
+        statusDot.style.background = 'var(--status-done)';
+        statusDot.style.boxShadow = '0 0 16px var(--status-done)';
+      } else {
+        statusDot.style.background = '#ef4444';
+        statusDot.style.boxShadow = '0 0 16px #ef4444';
+        statusText.textContent = 'Disconnected';
       }
-    }, 1000);
-
-    function updateTimerDisplay() {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      taskTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    function updateStep(index) {
-      if (index < 0 || index >= steps.length) return;
+    // ════════════════════════════════════════════════════════════════
+    // Message Handlers
+    // ════════════════════════════════════════════════════════════════
+
+    function handleMessage(message) {
+      console.log('Received:', message.type, message);
+
+      switch (message.type) {
+        case 'init':
+          handleInit(message.data);
+          break;
+        case 'task_update':
+          handleTaskUpdate(message.data);
+          break;
+        case 'event':
+          handleEvent(message.data);
+          break;
+        case 'status':
+          handleStatusChange(message.status);
+          break;
+        case 'reset':
+          handleReset();
+          break;
+        case 'pong':
+          // Heartbeat response
+          break;
+      }
+    }
+
+    function handleInit(data) {
+      console.log('Initializing with state:', data);
+
+      // Set elapsed time from server
+      elapsedSeconds = data.elapsed_seconds || 0;
+      updateTimer();
+
+      // Start local timer
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!isPaused && currentStep >= 0) {
+          elapsedSeconds++;
+          updateTimer();
+        }
+      }, 1000);
+
+      // Handle task state
+      if (data.task) {
+        handleTaskUpdate(data.task);
+      } else {
+        setIdleState();
+      }
+
+      // Handle status
+      if (data.status === 'paused') {
+        isPaused = true;
+        statusDot.classList.add('paused');
+        statusText.textContent = 'Paused';
+      } else if (data.status === 'running') {
+        isPaused = false;
+        statusDot.classList.remove('paused');
+        statusText.textContent = 'Running';
+      } else {
+        setIdleState();
+      }
+
+      // Populate events
+      if (data.events && data.events.length > 0) {
+        renderEvents(data.events);
+      }
+    }
+
+    function handleTaskUpdate(task) {
+      console.log('Task update:', task);
+
+      // Update task info in side panel
+      if (task.task_id) {
+        taskId.textContent = task.task_id;
+      }
+      if (task.title) {
+        taskTitle.textContent = task.title;
+      }
+
+      // Update step in orbital view
+      if (typeof task.step === 'number' && task.step >= 0 && task.step <= 5) {
+        const previousStep = currentStep;
+        currentStep = task.step;
+
+        // Trigger pulse when starting new task (step 0 from idle)
+        if (previousStep === -1 && currentStep === 0) {
+          triggerPulse();
+        }
+
+        updateOrbitalView(currentStep, task.step_name, task.step_desc);
+      }
+
+      // Update status
+      if (task.status) {
+        const statusMap = {
+          'pending': 'Pending',
+          'in_progress': 'In Progress',
+          'done': 'Complete',
+          'failed': 'Failed'
+        };
+        document.querySelector('.task-status').innerHTML = `
+          <span style="
+            width: 8px;
+            height: 8px;
+            background: ${task.status === 'done' ? 'var(--status-done)' : task.status === 'failed' ? '#ef4444' : 'var(--status-active)'};
+            border-radius: 50%;
+            box-shadow: 0 0 10px ${task.status === 'done' ? 'var(--status-done)' : task.status === 'failed' ? '#ef4444' : 'var(--status-active)'};
+          "></span>
+          ${statusMap[task.status] || task.status}
+        `;
+      }
+
+      // Update iteration info if available
+      if (task.iteration !== undefined) {
+        const iterInfo = task.max_iterations
+          ? `Iteration ${task.iteration}/${task.max_iterations}`
+          : `Iteration ${task.iteration}`;
+        stepDesc.textContent = task.step_desc || iterInfo;
+      }
+
+      statusText.textContent = 'Running';
+      statusDot.classList.remove('paused');
+    }
+
+    function handleEvent(event) {
+      console.log('Event:', event);
+      addEventToLog(event);
+    }
+
+    function handleStatusChange(status) {
+      isPaused = status === 'paused';
+      statusDot.classList.toggle('paused', isPaused);
+      statusText.textContent = isPaused ? 'Paused' : 'Running';
+    }
+
+    function handleReset() {
+      currentStep = -1;
+      elapsedSeconds = 0;
+      updateTimer();
+      setIdleState();
+      clearEventLog();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // UI Update Functions
+    // ════════════════════════════════════════════════════════════════
+
+    function setIdleState() {
+      currentStep = -1;
+      statusText.textContent = 'Waiting';
+      statusDot.style.background = 'var(--status-pending)';
+      statusDot.style.boxShadow = 'none';
+
+      taskId.textContent = '—';
+      taskTitle.textContent = 'Waiting for task...';
+      stepMarker.textContent = '?';
+      stepMarker.style.background = 'var(--status-pending)';
+      stepName.textContent = 'Idle';
+      stepDesc.textContent = 'Run /start-task PROJ-XXX to begin';
+      progressFill.style.width = '0%';
+
+      // Reset progress ring
+      progressRing.style.strokeDashoffset = CIRCUMFERENCE;
+
+      // Reset all nodes to pending
+      nodes.forEach(node => {
+        node.classList.remove('active', 'done');
+        node.querySelector('.node-bg').setAttribute('r', '32');
+      });
+
+      // Hide orbit marker
+      orbitMarker.style.opacity = '0.3';
+      markerGlow.style.opacity = '0';
+
+      // Reset event log to pending state
+      const items = eventLog.querySelectorAll('.event-item');
+      items.forEach(item => {
+        item.classList.remove('done', 'active');
+        item.classList.add('pending');
+        item.querySelector('.event-marker').textContent = '';
+      });
+    }
+
+    function updateOrbitalView(index, customName, customDesc) {
+      if (index < 0 || index > 5) return;
 
       const step = steps[index];
       const pos = nodePositions[index];
 
-      // Trigger pulse from center when loop restarts (step 0)
-      if (index === 0 && currentStep !== 0) {
-        triggerPulse();
-      }
-
-      currentStep = index;
+      // Show orbit marker
+      orbitMarker.style.opacity = '1';
+      markerGlow.style.opacity = '1';
 
       // Move orbiting marker to active node
       orbitMarker.setAttribute('cx', pos.x);
@@ -1170,7 +1379,7 @@
           bg.setAttribute('r', '32');
         } else if (i === index) {
           node.classList.add('active');
-          bg.setAttribute('r', '38');
+          bg.setAttribute('r', '38'); // 18% larger when active
         } else {
           bg.setAttribute('r', '32');
         }
@@ -1180,12 +1389,12 @@
       stepMarker.style.background = step.color;
       stepMarker.style.setProperty('--step-shadow', step.shadow);
       stepMarker.textContent = index + 1;
-      stepName.textContent = step.name;
-      stepDesc.textContent = step.desc;
+      stepName.textContent = customName || step.name;
+      stepDesc.textContent = customDesc || step.desc;
       progressFill.style.width = step.progress + '%';
 
-      // Update pipeline stages list
-      const items = pipelineStages.querySelectorAll('.event-item');
+      // Update event log steps
+      const items = eventLog.querySelectorAll('.event-item');
       items.forEach((item, i) => {
         item.classList.remove('done', 'active', 'pending');
         const marker = item.querySelector('.event-marker');
@@ -1203,118 +1412,131 @@
       });
     }
 
-    function setStatus(status) {
-      isPaused = (status === 'paused');
-      statusDot.classList.toggle('paused', isPaused);
-      statusText.textContent = isPaused ? 'Paused' : 'Running';
+    function updateTimer() {
+      const mins = Math.floor(elapsedSeconds / 60);
+      const secs = elapsedSeconds % 60;
+      taskTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    function addActivityLog(event) {
-      // Remove placeholder if exists
-      if (activityLog.children.length === 1 && activityLog.firstElementChild.innerText === 'Waiting for events...') {
-        activityLog.innerHTML = '';
-      }
+    // Trigger pulse animation from center
+    function triggerPulse() {
+      triggerPulseRing.classList.remove('active');
+      void triggerPulseRing.offsetWidth;
+      triggerPulseRing.classList.add('active');
+    }
 
+    // ════════════════════════════════════════════════════════════════
+    // Event Log Functions
+    // ════════════════════════════════════════════════════════════════
+
+    function addEventToLog(event) {
+      // Create new event item
       const li = document.createElement('li');
-      li.className = `event-item ${event.event_type === 'error' ? 'error' : 'done'}`;
+      li.className = 'event-item';
 
-      // Map event types to colors/styles if needed
-      let icon = '•';
-      if (event.event_type === 'success') icon = '✓';
-      else if (event.event_type === 'error') icon = '✕';
-      else if (event.event_type === 'warning') icon = '!';
+      // Color based on event type
+      const typeColors = {
+        success: 'var(--status-done)',
+        error: '#ef4444',
+        warning: 'var(--status-active)',
+        info: 'var(--color-jira)'
+      };
+      const color = typeColors[event.event_type] || 'var(--text-secondary)';
+
+      // Icon based on event type
+      const typeIcons = {
+        success: '✓',
+        error: '✕',
+        warning: '!',
+        info: '→'
+      };
+      const icon = typeIcons[event.event_type] || '•';
 
       li.innerHTML = `
-        <span class="event-marker" style="font-size: 10px;">${icon}</span>
-        <div style="display:flex; flex-direction:column; gap:2px; width:100%">
-          <span style="font-size: 12px; color: var(--text-primary)">${event.message}</span>
-          <span style="font-size: 10px; color: var(--text-label)">${event.source || 'system'}</span>
-        </div>
+        <span class="event-marker" style="background: ${color}; box-shadow: 0 0 8px ${color}; color: var(--bg-deep); font-size: 8px;">${icon}</span>
+        <span style="flex: 1;">${event.message}</span>
+        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${event.source || ''}</span>
       `;
 
-      // Prepend to show newest first
-      activityLog.insertBefore(li, activityLog.firstChild);
+      // Insert at top of custom events section (after the 6 step items)
+      const stepItems = eventLog.querySelectorAll('.event-item[data-step]');
+      if (stepItems.length > 0) {
+        // Insert after last step item
+        stepItems[stepItems.length - 1].after(li);
+      } else {
+        eventLog.prepend(li);
+      }
 
-      // Limit to 20 items
-      if (activityLog.children.length > 20) {
-        activityLog.removeChild(activityLog.lastChild);
+      // Animate in
+      li.style.opacity = '0';
+      li.style.transform = 'translateX(-10px)';
+      requestAnimationFrame(() => {
+        li.style.transition = 'all 0.3s ease';
+        li.style.opacity = '1';
+        li.style.transform = 'translateX(0)';
+      });
+
+      // Keep max 20 custom events (not counting step items)
+      const customEvents = eventLog.querySelectorAll('.event-item:not([data-step])');
+      if (customEvents.length > 14) {
+        customEvents[customEvents.length - 1].remove();
       }
     }
 
-    function connectWebSocket() {
-      console.log('Connecting to WebSocket...', WS_URL);
-      socket = new WebSocket(WS_URL);
+    function renderEvents(events) {
+      // Clear existing custom events
+      const customEvents = eventLog.querySelectorAll('.event-item:not([data-step])');
+      customEvents.forEach(e => e.remove());
 
-      socket.onopen = () => {
-        console.log('Connected');
-        statusText.textContent = 'Connected';
-        statusDot.style.background = 'var(--status-done)';
-        statusDot.style.animation = 'pulse 2s ease-in-out infinite';
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          console.log('Received:', msg);
-
-          if (msg.type === 'init') {
-            const data = msg.data;
-            if (data.status) setStatus(data.status);
-            if (data.elapsed_seconds) {
-              seconds = data.elapsed_seconds;
-              updateTimerDisplay();
-            }
-            if (data.task) {
-              if (data.task.task_id) taskIdEl.textContent = data.task.task_id;
-              if (data.task.title) taskTitleEl.textContent = data.task.title;
-              if (typeof data.task.step === 'number') updateStep(data.task.step);
-            }
-            // Populate initial events if any
-            if (data.events && Array.isArray(data.events)) {
-              activityLog.innerHTML = ''; // Clear placeholder
-              // Add in chronological order for the log (or reverse if we want newest top)
-              // The API usually sends list, let's assume we want newest on top so reverse them if they come chrono
-              [...data.events].forEach(evt => addActivityLog(evt));
-            }
-          }
-          else if (msg.type === 'task_update') {
-            const task = msg.data;
-            if (task.task_id) taskIdEl.textContent = task.task_id;
-            if (task.title) taskTitleEl.textContent = task.title;
-            if (typeof task.step === 'number') updateStep(task.step);
-          }
-          else if (msg.type === 'status') {
-            setStatus(msg.status);
-          }
-          else if (msg.type === 'event') {
-            addActivityLog(msg.data);
-          }
-        } catch (e) {
-          console.error('Error processing message:', e);
-        }
-      };
-
-      socket.onclose = () => {
-        console.log('Disconnected');
-        statusText.textContent = 'Disconnected';
-        statusDot.style.background = 'var(--status-pending)';
-        statusDot.style.animation = 'none';
-        // Auto-reconnect after 3s
-        setTimeout(connectWebSocket, 3000);
-      };
-
-      socket.onerror = (err) => {
-        console.error('WebSocket error:', err);
-      };
+      // Add events (newest first)
+      events.slice().reverse().forEach(event => {
+        addEventToLog(event);
+      });
     }
 
-    // Initialize
-    updateStep(0); // Set initial visual state
-    connectWebSocket();
+    function clearEventLog() {
+      const customEvents = eventLog.querySelectorAll('.event-item:not([data-step])');
+      customEvents.forEach(e => e.remove());
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Pause/Resume (local toggle that also notifies server)
+    // ════════════════════════════════════════════════════════════════
+
+    function togglePause() {
+      isPaused = !isPaused;
+      statusDot.classList.toggle('paused', isPaused);
+      statusText.textContent = isPaused ? 'Paused' : 'Running';
+
+      // Notify server
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        // Server doesn't have a toggle endpoint, but we can send a message
+        // For now, just toggle locally
+      }
+    }
+
+    document.getElementById('orbitalContainer').addEventListener('click', togglePause);
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      }
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Heartbeat to keep connection alive
+    // ════════════════════════════════════════════════════════════════
+
+    setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 30000);
 
     // ════════════════════════════════════════════════════════════════
     // Active Tab Detection
     // ════════════════════════════════════════════════════════════════
+
     function initNavTabs() {
       const currentPage = window.location.pathname.includes('/monitor/') ? 'monitor' : 'guide';
       const navTabs = document.querySelectorAll('.nav-tab');
@@ -1327,7 +1549,13 @@
       });
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // Initialize
+    // ════════════════════════════════════════════════════════════════
+
     initNavTabs();
+    setIdleState(); // Start in idle state
+    connectWebSocket(); // Connect to real-time updates
   </script>
 </body>
 </html>
