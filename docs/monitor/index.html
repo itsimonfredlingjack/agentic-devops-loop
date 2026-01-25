@@ -299,11 +299,12 @@
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 360px;
-      gap: 64px;
+      gap: 48px;
       max-width: 1440px;
       width: 100%;
       margin: 0 auto;
-      padding: 48px 56px;
+      padding: 32px 56px;
+      align-items: start;
     }
 
     @media (max-width: 1200px) {
@@ -317,11 +318,11 @@
     /* ========== ORBITAL CONTAINER ========== */
     .orbital-container {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      min-height: 540px;
       position: relative;
       cursor: pointer;
+      padding-top: 0;
     }
 
     .orbital-svg {
