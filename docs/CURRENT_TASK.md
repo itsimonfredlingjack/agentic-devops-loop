@@ -18,11 +18,11 @@ Skapa en webbapp med glass morphism design för dokument-upload. Flask app i Pyt
 - Filnamnet inkluderar datum
 
 ## Acceptance Criteria
-- [ ] Aktuell deployment utan avbrytande iteraiton
-- [ ] Filnamnet inkluderar datum
-- [ ] Glass morphism UI implementerad
-- [ ] Export-funktionalitet fungerar
-- [ ] Flask app körbar lokalt
+- [x] Aktuell deployment utan avbrytande iteraiton
+- [x] Filnamnet inkluderar datum
+- [x] Glass morphism UI implementerad
+- [x] Export-funktionalitet fungerar
+- [x] Flask app körbar lokalt
 
 ## Subtasks
 - DEV-10: Test the agentic loop with claude
@@ -40,3 +40,4 @@ Skapa en webbapp med glass morphism design för dokument-upload. Flask app i Pyt
 |---|--------|--------|-----------|
 | 1 | Task initialized | Branch created | Read requirements |
 | 2 | Implement Flask app with glass morphism UI + tests | ✅ All 20 tests passing | Test app locally |
+| 3 | Tested app locally - all features working | ✅ Upload, list, download, export all working | Ready for completion |
