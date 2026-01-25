@@ -31,5 +31,12 @@ Skapa en webbapp med glass morphism design för dokument-upload. Flask app i Pyt
 `feature/DEV-9-document-upload-webapp`
 
 ## Progress
-- Iteration: 1/25
-- Status: Starting
+- Iteration: 2/25
+- Status: Flask app and tests complete
+
+### Iteration Log
+
+| # | Action | Result | Next Step |
+|---|--------|--------|-----------|
+| 1 | Task initialized | Branch created | Read requirements |
+| 2 | Implement Flask app with glass morphism UI + tests | ✅ All 20 tests passing | Test app locally |
