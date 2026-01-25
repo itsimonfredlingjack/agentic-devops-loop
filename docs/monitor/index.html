@@ -594,20 +594,47 @@
     .side-panel {
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 16px;
+      height: fit-content;
+      max-height: calc(100vh - 160px);
     }
 
     .panel-card {
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
       border: 1px solid var(--border-subtle);
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px;
       transition: all 0.3s;
     }
 
     .panel-card:hover {
       border-color: var(--border-glow);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Event Log panel - takes most space */
+    .panel-card--events {
+      flex: 1;
+      min-height: 280px;
+      max-height: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-card--events .event-log {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    /* Compact panels for Active Step and Current Task */
+    .panel-card--compact {
+      flex: 0 0 auto;
+      padding: 16px 20px;
+    }
+
+    .panel-card--compact .section-label {
+      margin-bottom: 12px;
     }
 
     .section-label {
@@ -1013,17 +1040,21 @@
     </section>
 
     <aside class="side-panel">
-      <div class="panel-card">
-        <div class="section-label">Current Task</div>
-        <div class="task-id">PROJ-123</div>
-        <div class="task-title">Implement CSV export for report dashboard</div>
-        <div class="task-meta">
-          <span class="task-status">In Progress</span>
-          <span class="task-timer" id="taskTimer">0:00</span>
-        </div>
+      <!-- EVENT LOG first - highest priority, shows real-time activity -->
+      <div class="panel-card panel-card--events">
+        <div class="section-label">Event Log</div>
+        <ul class="event-log" id="eventLog">
+          <li class="event-item" data-step="0"><span class="event-marker"></span><span>Fetch Jira ticket</span></li>
+          <li class="event-item" data-step="1"><span class="event-marker"></span><span>Claude writes code</span></li>
+          <li class="event-item" data-step="2"><span class="event-marker"></span><span>Push to GitHub</span></li>
+          <li class="event-item" data-step="3"><span class="event-marker"></span><span>Run CI pipeline</span></li>
+          <li class="event-item" data-step="4"><span class="event-marker"></span><span>Jules code review</span></li>
+          <li class="event-item" data-step="5"><span class="event-marker"></span><span>Merge to main</span></li>
+        </ul>
       </div>
 
-      <div class="panel-card">
+      <!-- ACTIVE STEP second - medium priority -->
+      <div class="panel-card panel-card--compact">
         <div class="section-label">Active Step</div>
         <div class="active-step">
           <div class="step-marker" id="stepMarker" style="background: var(--color-jira); --step-shadow: rgba(59, 130, 246, 0.4)">1</div>
@@ -1037,16 +1068,15 @@
         </div>
       </div>
 
-      <div class="panel-card">
-        <div class="section-label">Event Log</div>
-        <ul class="event-log" id="eventLog">
-          <li class="event-item" data-step="0"><span class="event-marker"></span><span>Fetch Jira ticket</span></li>
-          <li class="event-item" data-step="1"><span class="event-marker"></span><span>Claude writes code</span></li>
-          <li class="event-item" data-step="2"><span class="event-marker"></span><span>Push to GitHub</span></li>
-          <li class="event-item" data-step="3"><span class="event-marker"></span><span>Run CI pipeline</span></li>
-          <li class="event-item" data-step="4"><span class="event-marker"></span><span>Jules code review</span></li>
-          <li class="event-item" data-step="5"><span class="event-marker"></span><span>Merge to main</span></li>
-        </ul>
+      <!-- CURRENT TASK last - lowest priority when idle -->
+      <div class="panel-card panel-card--compact">
+        <div class="section-label">Current Task</div>
+        <div class="task-id">PROJ-123</div>
+        <div class="task-title">Implement CSV export for report dashboard</div>
+        <div class="task-meta">
+          <span class="task-status">In Progress</span>
+          <span class="task-timer" id="taskTimer">0:00</span>
+        </div>
       </div>
     </aside>
   </main>
