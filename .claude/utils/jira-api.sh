@@ -31,9 +31,10 @@ case "$1" in
             exit 1
         fi
         ISSUE_KEY="$2"
+        # Use JQL endpoint with fields parameter (newer Jira API)
         curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$BASE_URL/issues/$ISSUE_KEY" \
-            -H "Accept: application/json" | jq '.' 2>/dev/null || echo "{}"
+            "$BASE_URL/search/jql?jql=key=$ISSUE_KEY&fields=key,summary,description,status,assignee,created,updated" \
+            -H "Accept: application/json" | jq '.issues[0] // {"error": "Issue not found"}' 2>/dev/null
         ;;
 
     transition-issue)
