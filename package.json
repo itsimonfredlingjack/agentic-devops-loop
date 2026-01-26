@@ -3,7 +3,19 @@
   "version": "1.0.0",
   "description": "Autonomous development system with Claude Code and GitHub Actions",
   "private": true,
-  "scripts": {},
-  "keywords": ["claude", "ai", "automation", "jira"],
-  "license": "MIT"
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "automation",
+    "jira"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "jest": "^30.2.0"
+  }
 }
