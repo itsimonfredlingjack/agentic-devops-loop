@@ -6,9 +6,10 @@
 ## Active Task
 
 **Jira ID:** DEV-18
-**Status:** In Progress
+**Status:** Complete
 **Branch:** feature/DEV-18-create-timestamp-display
 **Started:** 2026-01-26
+**Completed:** 2026-01-26
 
 ## Acceptance Criteria
 
