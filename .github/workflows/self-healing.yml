@@ -245,7 +245,6 @@ jobs:
             const error = process.env.JULES_ERROR;
             const attempt = parseInt(process.env.ATTEMPT) + 1;
 
-            // Find associated PR
             const { data: prs } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -262,34 +261,38 @@ jobs:
             let body;
 
             if (success) {
-              body = `## 🔧 Jules Self-Healing
-
-**Attempt:** ${attempt}/3
-**Status:** ✅ Jules is working on a fix
-
-**Session:** \`${sessionId}\`
-
-Jules has analyzed the CI failure and is implementing a fix. A new PR or commit will be created shortly.
-
-[View Jules Session](https://jules.google/)
-
----
-*Powered by [Google Jules](https://jules.google/)*`;
+              body = [
+                '## 🔧 Jules Self-Healing',
+                '',
+                `**Attempt:** ${attempt}/3`,
+                '**Status:** ✅ Jules is working on a fix',
+                '',
+                `**Session:** \`${sessionId}\``,
+                '',
+                'Jules has analyzed the CI failure and is implementing a fix. A new PR or commit will be created shortly.',
+                '',
+                '[View Jules Session](https://jules.google/)',
+                '',
+                '---',
+                '*Powered by [Google Jules](https://jules.google/)*'
+              ].join('\n');
             } else {
-              body = `## 🔧 Jules Self-Healing
-
-**Attempt:** ${attempt}/3
-**Status:** ⚠️ Could not start Jules
-
-**Error:** ${error || 'Unknown error'}
-
-Please check:
-1. Jules GitHub App is installed
-2. \`JULES_API_KEY\` secret is configured
-3. Repository is connected in Jules
-
----
-*Powered by [Google Jules](https://jules.google/)*`;
+              body = [
+                '## 🔧 Jules Self-Healing',
+                '',
+                `**Attempt:** ${attempt}/3`,
+                '**Status:** ⚠️ Could not start Jules',
+                '',
+                `**Error:** ${error || 'Unknown error'}`,
+                '',
+                'Please check:',
+                '1. Jules GitHub App is installed',
+                '2. `JULES_API_KEY` secret is configured',
+                '3. Repository is connected in Jules',
+                '',
+                '---',
+                '*Powered by [Google Jules](https://jules.google/)*'
+              ].join('\n');
             }
 
             await github.rest.issues.createComment({
@@ -323,47 +326,55 @@ Please check:
               state: 'open'
             });
 
+            const issueBody = [
+              '## Self-Healing Limit Reached',
+              '',
+              `Jules has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.`,
+              '',
+              '**Manual intervention required.**',
+              '',
+              '### Details',
+              `- **Branch:** \`${branch}\``,
+              `- **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})`,
+              `- **Jules Attempts:** ${attemptCount}/3`,
+              '',
+              '### Next Steps',
+              '1. Review the failed workflow logs',
+              '2. Check Jules sessions at https://jules.google/',
+              '3. Apply manual fixes',
+              '4. Push changes to trigger CI',
+              '',
+              prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : '',
+              '',
+              '---',
+              '*Created by self-healing pipeline*'
+            ].join('\n');
+
             const { data: issue } = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `🚨 CI Failure: Jules exhausted attempts on ${branch}`,
-              body: `## Self-Healing Limit Reached
-
-Jules has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
-
-**Manual intervention required.**
-
-### Details
-- **Branch:** \`${branch}\`
-- **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})
-- **Jules Attempts:** ${attemptCount}/3
-
-### Next Steps
-1. Review the failed workflow logs
-2. Check Jules sessions at https://jules.google/
-3. Apply manual fixes
-4. Push changes to trigger CI
-
-${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
-
----
-*Created by self-healing pipeline*`,
+              body: issueBody,
               labels: ['ci-failure', 'needs-attention']
             });
 
             console.log(`Created escalation issue #${issue.number}`);
 
             if (prs.length > 0) {
+              const commentBody = [
+                '## 🚨 Jules Self-Healing Exhausted',
+                '',
+                `Jules has made ${attemptCount}/3 fix attempts without success.`,
+                '',
+                '**Manual intervention required.**',
+                '',
+                `Escalation issue: #${issue.number}`
+              ].join('\n');
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prs[0].number,
-                body: `## 🚨 Jules Self-Healing Exhausted
-
-Jules has made ${attemptCount}/3 fix attempts without success.
-
-**Manual intervention required.**
-
-Escalation issue: #${issue.number}`
+                body: commentBody
               });
             }
