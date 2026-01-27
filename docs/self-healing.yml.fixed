@@ -185,24 +185,33 @@ jobs:
 
           ATTEMPT_NUM=$((ATTEMPT + 1))
 
+          # Create prompt using heredoc to avoid YAML parsing issues
+          PROMPT=$(cat <<'PROMPT_EOF'
+          CI pipeline has failed. Fix the errors and make the build pass.
+
+          ## Error Context
+          ERROR_PLACEHOLDER
+
+          ## Instructions
+          1. Analyze the error logs
+          2. Identify the root cause
+          3. Fix the code
+          4. Ensure tests pass
+          5. Ensure linting passes
+
+          Focus on:
+          * Fixing the immediate error first
+          * Not introducing new issues
+          * Keeping changes minimal
+          PROMPT_EOF
+          )
+
+          # Replace placeholder with actual error context
+          PROMPT="${PROMPT/ERROR_PLACEHOLDER/$ERROR_CONTEXT}"
+
           # Build JSON payload with proper escaping using jq
           PAYLOAD=$(jq -n \
-            --arg prompt "CI pipeline has failed. Fix the errors and make the build pass.
-
-## Error Context
-$ERROR_CONTEXT
-
-## Instructions
-1. Analyze the error logs
-2. Identify the root cause
-3. Fix the code
-4. Ensure tests pass
-5. Ensure linting passes
-
-Focus on:
-- Fixing the immediate error first
-- Not introducing new issues
-- Keeping changes minimal" \
+            --arg prompt "$PROMPT" \
             --arg source "sources/$REPO" \
             --arg branch "$BRANCH" \
             --arg title "[jules-fix] Fix CI failure (attempt $ATTEMPT_NUM/3)" \
@@ -332,34 +341,34 @@ Focus on:
             let body;
 
             if (success) {
-              body = `## 🔧 Jules Self-Healing
+              body = `## Jules Self-Healing
 
-**Attempt:** ${attempt}/3
-**Status:** ✅ Jules is working on a fix
+            **Attempt:** ${attempt}/3
+            **Status:** Jules is working on a fix
 
-**Session:** \`${sessionId}\`
+            **Session:** \`${sessionId}\`
 
-Jules has analyzed the CI failure and is implementing a fix. A new PR or commit will be created shortly.
+            Jules has analyzed the CI failure and is implementing a fix. A new PR or commit will be created shortly.
 
-[View Jules Session](https://jules.google/)
+            [View Jules Session](https://jules.google/)
 
----
-*Powered by [Google Jules](https://jules.google/)*`;
+            ---
+            *Powered by [Google Jules](https://jules.google/)*`;
             } else {
-              body = `## 🔧 Jules Self-Healing
+              body = `## Jules Self-Healing
 
-**Attempt:** ${attempt}/3
-**Status:** ⚠️ Could not start Jules
+            **Attempt:** ${attempt}/3
+            **Status:** Could not start Jules
 
-**Error:** ${error || 'Unknown error'}
+            **Error:** ${error || 'Unknown error'}
 
-Please check:
-1. Jules GitHub App is installed
-2. \`JULES_API_KEY\` secret is configured
-3. Repository is connected in Jules
+            Please check:
+            1. Jules GitHub App is installed
+            2. \`JULES_API_KEY\` secret is configured
+            3. Repository is connected in Jules
 
----
-*Powered by [Google Jules](https://jules.google/)*`;
+            ---
+            *Powered by [Google Jules](https://jules.google/)*`;
             }
 
             await github.rest.issues.createComment({
@@ -396,28 +405,28 @@ Please check:
             const { data: issue } = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 CI Failure: Jules exhausted attempts on ${branch}`,
+              title: `CI Failure: Jules exhausted attempts on ${branch}`,
               body: `## Self-Healing Limit Reached
 
-Jules has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
+            Jules has made ${attemptCount} attempts to fix CI failures on branch \`${branch}\` without success.
 
-**Manual intervention required.**
+            **Manual intervention required.**
 
-### Details
-- **Branch:** \`${branch}\`
-- **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})
-- **Jules Attempts:** ${attemptCount}/3
+            ### Details
+            - **Branch:** \`${branch}\`
+            - **Failed Workflow:** [View Run](${context.payload.workflow_run.html_url})
+            - **Jules Attempts:** ${attemptCount}/3
 
-### Next Steps
-1. Review the failed workflow logs
-2. Check Jules sessions at https://jules.google/
-3. Apply manual fixes
-4. Push changes to trigger CI
+            ### Next Steps
+            1. Review the failed workflow logs
+            2. Check Jules sessions at https://jules.google/
+            3. Apply manual fixes
+            4. Push changes to trigger CI
 
-${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
+            ${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
 
----
-*Created by self-healing pipeline*`,
+            ---
+            *Created by self-healing pipeline*`,
               labels: ['ci-failure', 'needs-attention']
             });
 
@@ -428,12 +437,12 @@ ${prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : ''}
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prs[0].number,
-                body: `## 🚨 Jules Self-Healing Exhausted
+                body: `## Jules Self-Healing Exhausted
 
-Jules has made ${attemptCount}/3 fix attempts without success.
+            Jules has made ${attemptCount}/3 fix attempts without success.
 
-**Manual intervention required.**
+            **Manual intervention required.**
 
-Escalation issue: #${issue.number}`
+            Escalation issue: #${issue.number}`
               });
             }
