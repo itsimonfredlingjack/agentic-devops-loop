@@ -59,9 +59,7 @@
       "Bash(*eval*)",
       "Bash(sudo *)",
       "Edit(.claude/hooks/*)",
-      "Edit(.github/*)",
       "Write(.claude/hooks/*)",
-      "Write(.github/*)",
       "Read(./secrets/**)"
     ]
   }
