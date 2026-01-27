@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Autonomous development system with Claude Code and GitHub Actions",
   "private": true,
-  "scripts": {},
+  "scripts": {
+    "test": "node test-jules-trigger.js"
+  },
   "keywords": ["claude", "ai", "automation", "jira"],
   "license": "MIT"
 }
