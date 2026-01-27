@@ -15,7 +15,9 @@ export default [
         customElements: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
-        module: 'readonly'
+        module: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly'
       }
     },
     rules: {
@@ -50,7 +52,8 @@ export default [
         document: 'readonly',
         window: 'readonly',
         require: 'readonly',
-        module: 'readonly'
+        module: 'readonly',
+        localStorage: 'readonly'
       }
     },
     rules: {
