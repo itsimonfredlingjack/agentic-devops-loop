@@ -6,9 +6,11 @@
 ## Active Task
 
 **Jira ID:** DEV-19
-**Status:** In Progress
+**Status:** ✅ Complete - In Review
 **Branch:** feature/DEV-19-build-todo-list-app
+**PR:** https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions/pull/11
 **Started:** 2026-01-27
+**Completed:** 2026-01-27
 
 ## Acceptance Criteria
 
