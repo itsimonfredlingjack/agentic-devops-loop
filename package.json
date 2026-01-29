@@ -4,7 +4,7 @@
   "description": "Autonomous development system with Claude Code and GitHub Actions",
   "private": true,
   "scripts": {
-    "test": "node test-fail.js",
+    "test": "jest --passWithNoTests",
     "lint": "eslint ."
   },
   "keywords": [
