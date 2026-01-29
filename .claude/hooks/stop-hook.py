@@ -15,6 +15,7 @@ The hook reads JSON from stdin and writes feedback to stderr.
 """
 
 import json
+import subprocess
 import sys
 import os
 from pathlib import Path
@@ -153,6 +154,143 @@ def build_continue_message(reason: str, suggestions: list) -> dict:
     }
 
 
+def _tail(text: str, lines: int = 20) -> str:
+    """Return the last N lines of text."""
+    all_lines = text.strip().splitlines()
+    return "\n".join(all_lines[-lines:])
+
+
+# ---------------------------------------------------------------------------
+# Verification enforcement functions
+# ---------------------------------------------------------------------------
+
+def detect_project_types(project_root: Path = None) -> set[str]:
+    """Detect project types present in the repo.
+
+    Args:
+        project_root: Root directory to check. Defaults to cwd.
+
+    Returns:
+        A set containing any of: "node", "python".
+    """
+    root = project_root or Path.cwd()
+    types: set[str] = set()
+
+    if (root / "package.json").exists():
+        types.add("node")
+
+    # Python detection: allow tests-only repos (no pyproject) to still be verified.
+    if (root / "pyproject.toml").exists() or (root / "setup.py").exists():
+        types.add("python")
+    else:
+        tests_dir = root / "tests"
+        if tests_dir.exists():
+            try:
+                if any(tests_dir.rglob("test_*.py")):
+                    types.add("python")
+            except Exception:
+                pass
+
+    return types
+
+
+def run_tests(project_type: str) -> tuple[bool, str]:
+    """Run the test suite for the detected project type.
+
+    Fail-closed: if the runner is required but not found, returns False.
+
+    Args:
+        project_type: "node", "python", or "unknown".
+
+    Returns:
+        (passed, output) tuple. passed=True only if tests ran and succeeded.
+    """
+    if project_type == "node":
+        cmd = ["npm", "test"]
+    elif project_type == "python":
+        cmd = ["python3", "-m", "pytest"]
+    else:
+        return False, "Unknown project type \u2014 no test runner configured"
+
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=120
+        )
+        output = (result.stdout + "\n" + result.stderr).strip()
+        return result.returncode == 0, _tail(output)
+    except FileNotFoundError:
+        return False, f"Test runner not found: {cmd[0]}"
+    except subprocess.TimeoutExpired:
+        return False, f"Tests timed out after 120s"
+
+
+def run_lint(project_type: str) -> tuple[bool, str]:
+    """Run the linter for the detected project type.
+
+    Fail-closed: if the linter is required but not found, returns False.
+
+    Args:
+        project_type: "node", "python", or "unknown".
+
+    Returns:
+        (passed, output) tuple. passed=True only if lint ran and succeeded.
+    """
+    if project_type == "node":
+        cmd = ["npm", "run", "lint"]
+    elif project_type == "python":
+        cmd = ["ruff", "check", "."]
+    else:
+        return False, "Unknown project type \u2014 no linter configured"
+
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=60
+        )
+        output = (result.stdout + "\n" + result.stderr).strip()
+        return result.returncode == 0, _tail(output)
+    except FileNotFoundError:
+        return False, f"Linter not found: {cmd[0]}"
+    except subprocess.TimeoutExpired:
+        return False, f"Lint timed out after 60s"
+
+
+def verify_before_exit(requirements: dict, project_types: set[str]) -> tuple[bool, str]:
+    """Run verification checks before allowing exit.
+
+    Fail-closed: required checks that cannot run count as failures.
+
+    Args:
+        requirements: Dict with tests_must_pass, lint_must_pass flags.
+        project_types: Detected project types (e.g. {"node", "python"}).
+
+    Returns:
+        (passed, detail) tuple. detail contains failure output for block message.
+    """
+    failures: list[str] = []
+
+    if requirements.get("tests_must_pass", False):
+        if not project_types:
+            failures.append("Tests required but project type could not be detected")
+        else:
+            for project_type in sorted(project_types):
+                passed, output = run_tests(project_type)
+                if not passed:
+                    failures.append(f"Tests failed ({project_type}):\n{output}")
+
+    if requirements.get("lint_must_pass", False):
+        if not project_types:
+            failures.append("Lint required but project type could not be detected")
+        else:
+            for project_type in sorted(project_types):
+                passed, output = run_lint(project_type)
+                if not passed:
+                    failures.append(f"Lint failed ({project_type}):\n{output}")
+
+    if failures:
+        return False, "\n---\n".join(failures)
+    return True, ""
+
+
 def main():
     """Main hook logic."""
     try:
@@ -177,6 +315,7 @@ def main():
         completion_promise = config.get("completion_promise", "<promise>DONE</promise>")
         max_iterations = config.get("max_iterations", 25)
         scan_length = config.get("scan_length", 5000)
+        requirements = config.get("requirements", {})
 
         # Increment iteration counter
         current_iteration = increment_iteration()
@@ -191,12 +330,29 @@ def main():
             sys.exit(0)  # Allow exit on max iterations
 
         # Check 2: Promise found in transcript (search ENTIRE transcript)
-        if check_promise_in_transcript(transcript, completion_promise, scan_length):
-            sys.exit(0)  # Allow exit
+        promise_found = (
+            check_promise_in_transcript(transcript, completion_promise, scan_length)
+            or check_promise_flag_file(completion_promise)
+        )
 
-        # Check 3: Promise flag file exists and is valid
-        if check_promise_flag_file(completion_promise):
-            sys.exit(0)  # Allow exit
+        if promise_found:
+            # Verification gate: run tests/lint before allowing exit
+            project_types = detect_project_types()
+            passed, detail = verify_before_exit(requirements, project_types)
+            if passed:
+                sys.exit(0)  # All checks pass \u2014 allow exit
+            else:
+                # Verification failed \u2014 block exit with detail
+                response = build_continue_message(
+                    "Promise found but verification failed",
+                    [
+                        detail,
+                        "Fix the failing tests/lint issues",
+                        f"Then output {completion_promise} again",
+                    ]
+                )
+                json.dump(response, sys.stderr)
+                sys.exit(2)
 
         # Promise not found - block exit and provide guidance
         suggestions = [

@@ -42,6 +42,33 @@ Extract:
 
 If Jira MCP unavailable, ask user to provide ticket details manually.
 
+### 3b. Extract Acceptance Criteria Deterministically
+
+Run the extraction utility on the ticket description to populate CURRENT_TASK.md with structured criteria:
+
+```python
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path.cwd() / ".claude" / "utils"))
+from sanitize import extract_acceptance_criteria
+
+criteria = extract_acceptance_criteria(description_text)
+```
+
+This uses three fallback strategies:
+1. Explicit headers (`Acceptance Criteria:`, `Definition of Done:`, `AC:`) with bullet/numbered lists
+2. Checkbox items (`- [ ]` / `- [x]`) anywhere in the description
+3. Gherkin patterns (`Given`/`When`/`Then`)
+
+Use the extracted list to populate the Acceptance Criteria section in CURRENT_TASK.md as checkboxes:
+```markdown
+## Acceptance Criteria
+- [ ] First criterion
+- [ ] Second criterion
+```
+
+If no criteria are extracted, note "No structured acceptance criteria found — derive from description" in CURRENT_TASK.md.
+
 ### 4. Create Branch
 
 Map issue type to branch prefix:
