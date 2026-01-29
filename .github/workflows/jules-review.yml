@@ -42,7 +42,7 @@ jobs:
             -d '{
               "prompt": "Review this pull request for:\n\n1. **Security vulnerabilities** (OWASP Top 10, injection, XSS, auth issues)\n2. **Performance problems** (N+1 queries, inefficient loops, memory leaks)\n3. **Code quality** (readability, error handling, best practices)\n4. **Bug risks** (edge cases, null checks, race conditions)\n\nProvide specific feedback with file paths and line numbers. Suggest fixes for any critical issues found.",
               "sourceContext": {
-                "source": "sources/${{ github.repository }}",
+                "source": "sources/github/${{ github.repository }}",
                 "githubRepoContext": {
                   "startingBranch": "${{ github.head_ref }}"
                 }
@@ -120,7 +120,7 @@ jobs:
             let body;
 
             if (success) {
-              body = `## 🤖 Jules Code Review
+              body = `## \uD83E\uDD16 Jules Code Review
 
               Jules has analyzed this pull request.
 
@@ -131,9 +131,9 @@ jobs:
               ---
               *Powered by [Google Jules](https://jules.google/)*`;
             } else {
-              body = `## 🤖 Jules Code Review
+              body = `## \uD83E\uDD16 Jules Code Review
 
-              ⚠️ Could not start Jules review.
+              \u26A0\uFE0F Could not start Jules review.
 
               **Error:** ${error || 'Unknown error'}
 
@@ -177,7 +177,7 @@ jobs:
             -d '{
               "prompt": "Fix the critical issues found in the code review. Focus on security vulnerabilities and bugs first.",
               "sourceContext": {
-                "source": "sources/${{ github.repository }}",
+                "source": "sources/github/${{ github.repository }}",
                 "githubRepoContext": {
                   "startingBranch": "${{ github.head_ref }}"
                 }

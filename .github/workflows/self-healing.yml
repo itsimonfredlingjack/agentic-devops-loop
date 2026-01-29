@@ -252,7 +252,7 @@ jobs:
                 + "Keep changes minimal and focused on the immediate failure."
               ),
               sourceContext: {
-                source: ("sources/" + $repo),
+                source: ("sources/github/" + $repo),
                 githubRepoContext: { startingBranch: $branch }
               },
               automationMode: "AUTO_CREATE_PR",
@@ -340,10 +340,10 @@ jobs:
 
             if (success) {
               body = [
-                '## 🔧 Jules Self-Healing',
+                '## \uD83D\uDD27 Jules Self-Healing',
                 '',
                 `**Attempt:** ${attempt}/3`,
-                '**Status:** ✅ Jules is working on a fix',
+                '**Status:** \u2705 Jules is working on a fix',
                 '',
                 `**Session:** \`${sessionId}\``,
                 '',
@@ -356,10 +356,10 @@ jobs:
               ].join('\n');
             } else {
               body = [
-                '## 🔧 Jules Self-Healing',
+                '## \uD83D\uDD27 Jules Self-Healing',
                 '',
                 `**Attempt:** ${attempt}/3`,
-                '**Status:** ⚠️ Could not start Jules',
+                '**Status:** \u26A0\uFE0F Could not start Jules',
                 '',
                 `**Error:** ${error || 'Unknown error'}`,
                 '',
@@ -431,7 +431,7 @@ jobs:
             const { data: issue } = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 CI Failure: Jules exhausted attempts on ${branch}`,
+              title: `\uD83D\uDEA8 CI Failure: Jules exhausted attempts on ${branch}`,
               body: issueBody,
               labels: ['ci-failure', 'needs-attention']
             });
@@ -440,7 +440,7 @@ jobs:
 
             if (prs.length > 0) {
               const commentBody = [
-                '## 🚨 Jules Self-Healing Exhausted',
+                '## \uD83D\uDEA8 Jules Self-Healing Exhausted',
                 '',
                 `Jules has made ${attemptCount}/3 fix attempts without success.`,
                 '',
