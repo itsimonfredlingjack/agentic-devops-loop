@@ -23,6 +23,7 @@ jobs:
       should_attempt_fix: ${{ steps.check-attempts.outputs.should_attempt }}
       attempt_count: ${{ steps.check-attempts.outputs.attempt_count }}
       branch: ${{ steps.get-branch.outputs.branch }}
+      pr_number: ${{ steps.get-branch.outputs.pr_number }}
 
     steps:
       - name: Get branch information
@@ -33,20 +34,61 @@ jobs:
             const runId = context.payload.workflow_run.id;
             const headBranch = context.payload.workflow_run.head_branch;
             const headSha = context.payload.workflow_run.head_sha;
+            const pullRequests = context.payload.workflow_run.pull_requests || [];
 
             console.log(`Failed workflow run: ${runId}`);
-            console.log(`Branch: ${headBranch}`);
+            console.log(`Head branch (from workflow_run): ${headBranch}`);
             console.log(`Commit: ${headSha}`);
+            console.log(`Associated PRs: ${pullRequests.length}`);
 
-            core.setOutput('branch', headBranch);
+            let branch = headBranch;
+            let prNumber = '';
+            let hasPr = false;
+
+            if (pullRequests.length > 0) {
+              // Find PR matching the head SHA
+              const matchingPrs = pullRequests.filter(pr => pr.head.sha === headSha);
+
+              if (matchingPrs.length > 0) {
+                const pr = matchingPrs[0];
+                if (matchingPrs.length > 1) {
+                  console.log(`Warning: Multiple PRs match head SHA. Using first one: #${pr.number}`);
+                }
+                branch = pr.head.ref;
+                prNumber = String(pr.number);
+                hasPr = true;
+                console.log(`PR #${prNumber} detected matching head SHA, using head ref: ${branch}`);
+              } else {
+                console.log('No associated PRs match the head SHA.');
+              }
+            } else {
+              console.log('No associated PRs found.');
+            }
+
+            if (!hasPr) {
+                console.log('Skipping self-healing as no valid PR was found.');
+            }
+
+            core.setOutput('branch', branch);
             core.setOutput('sha', headSha);
             core.setOutput('run_id', runId);
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('has_pr', hasPr);
 
       - name: Check self-healing attempts
         id: check-attempts
         uses: actions/github-script@v7
         with:
           script: |
+            const hasPr = '${{ steps.get-branch.outputs.has_pr }}' === 'true';
+
+            if (!hasPr) {
+              console.log('No PR found. Skipping self-healing.');
+              core.setOutput('should_attempt', false);
+              core.setOutput('attempt_count', 0);
+              return;
+            }
+
             const branch = '${{ steps.get-branch.outputs.branch }}';
             const maxAttempts = 3;
 
@@ -252,7 +294,7 @@ jobs:
                 + "Keep changes minimal and focused on the immediate failure."
               ),
               sourceContext: {
-                source: ("sources/" + $repo),
+                source: ("sources/github/" + $repo),
                 githubRepoContext: { startingBranch: $branch }
               },
               automationMode: "AUTO_CREATE_PR",
@@ -315,27 +357,20 @@ jobs:
           JULES_ERROR: ${{ steps.jules-fix.outputs.error }}
           SESSION_ID: ${{ steps.jules-fix.outputs.session_id }}
           ATTEMPT: ${{ needs.analyze-failure.outputs.attempt_count }}
+          PR_NUMBER: ${{ needs.analyze-failure.outputs.pr_number }}
         with:
           script: |
-            const branch = '${{ needs.analyze-failure.outputs.branch }}';
             const success = process.env.JULES_SUCCESS === 'true';
             const sessionId = process.env.SESSION_ID;
             const error = process.env.JULES_ERROR;
             const attempt = parseInt(process.env.ATTEMPT) + 1;
+            const prNumber = parseInt(process.env.PR_NUMBER);
 
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
-
-            if (prs.length === 0) {
-              console.log('No open PR found for this branch');
+            if (!prNumber) {
+              console.log('No PR number available — skipping comment');
               return;
             }
 
-            const pr = prs[0];
             let body;
 
             if (success) {
@@ -376,7 +411,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr.number,
+              issue_number: prNumber,
               body
             });
 
@@ -392,17 +427,24 @@ jobs:
     steps:
       - name: Create escalation issue
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ needs.analyze-failure.outputs.pr_number }}
         with:
           script: |
             const branch = '${{ needs.analyze-failure.outputs.branch }}';
             const attemptCount = '${{ needs.analyze-failure.outputs.attempt_count }}';
+            const prNumber = process.env.PR_NUMBER ? parseInt(process.env.PR_NUMBER) : null;
 
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
+            // Only proceed if attempts were made but failed to fix,
+            // OR if we are escalating for other reasons (but here we are triggered if should_attempt_fix is false).
+            // This job runs when should_attempt_fix == 'false'.
+            // This happens if maxAttempts reached OR if no PR found.
+            // We only want to escalate if maxAttempts reached.
+
+            if (parseInt(attemptCount) < 3) {
+              console.log('Attempts < 3, likely skipped due to no PR. No escalation needed.');
+              return;
+            }
 
             const issueBody = [
               '## Self-Healing Limit Reached',
@@ -422,7 +464,7 @@ jobs:
               '3. Apply manual fixes',
               '4. Push changes to trigger CI',
               '',
-              prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : '',
+              prNumber ? `### Related PR\n- #${prNumber}` : '',
               '',
               '---',
               '*Created by self-healing pipeline*'
@@ -438,7 +480,7 @@ jobs:
 
             console.log(`Created escalation issue #${issue.number}`);
 
-            if (prs.length > 0) {
+            if (prNumber) {
               const commentBody = [
                 '## 🚨 Jules Self-Healing Exhausted',
                 '',
@@ -452,7 +494,7 @@ jobs:
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: prs[0].number,
+                issue_number: prNumber,
                 body: commentBody
               });
             }
