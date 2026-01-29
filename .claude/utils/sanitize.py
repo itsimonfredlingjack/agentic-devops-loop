@@ -142,6 +142,91 @@ Acceptance Criteria:
 </task_context>"""
 
 
+# ---------------------------------------------------------------------------
+# Acceptance Criteria Extraction
+# ---------------------------------------------------------------------------
+
+# Pattern 1: Explicit header followed by bullet/numbered list
+_HEADER_RE = re.compile(
+    r"(?:acceptance\s+criteria|definition\s+of\s+done|ac)\s*:\s*\n",
+    re.IGNORECASE,
+)
+
+# Bullet or numbered list item (captures content after marker)
+_LIST_ITEM_RE = re.compile(
+    r"^\s*(?:[-*]|\d+[.)]\s*)\s*(?:\[[ xX]\]\s*)?(.*\S)",
+    re.MULTILINE,
+)
+
+# Pattern 2: Checkbox items anywhere
+_CHECKBOX_RE = re.compile(
+    r"^\s*[-*]\s*\[[ xX]\]\s+(.*\S)",
+    re.MULTILINE,
+)
+
+# Pattern 3: Gherkin BDD lines
+_GHERKIN_RE = re.compile(
+    r"^\s*(Given\b.*|When\b.*|Then\b.*|And\b.*|But\b.*)\S*",
+    re.MULTILINE,
+)
+
+
+def extract_acceptance_criteria(description: str | None) -> list[str]:
+    """Extract acceptance criteria from a Jira description using three fallback strategies.
+
+    1. Explicit header (Acceptance Criteria: / Definition of Done: / AC:) followed by list
+    2. Checkbox items (- [ ] / - [x]) anywhere
+    3. Gherkin Given/When/Then patterns
+
+    All extracted items are sanitized and deduplicated (preserving order).
+
+    Args:
+        description: Raw Jira ticket description text.
+
+    Returns:
+        List of acceptance criteria strings.
+    """
+    if not description:
+        return []
+
+    items: list[str] = []
+
+    # Strategy 1: Look for explicit header + list
+    header_match = _HEADER_RE.search(description)
+    if header_match:
+        # Extract the block after the header until a blank line or end
+        after_header = description[header_match.end():]
+        for line in after_header.split("\n"):
+            line = line.strip()
+            if not line:
+                break  # stop at first blank line
+            m = _LIST_ITEM_RE.match(line)
+            if m:
+                items.append(m.group(1).strip())
+
+    # Strategy 2: Checkbox items anywhere (may overlap with Strategy 1)
+    for m in _CHECKBOX_RE.finditer(description):
+        items.append(m.group(1).strip())
+
+    # Strategy 3: Gherkin patterns
+    if not items:
+        for m in _GHERKIN_RE.finditer(description):
+            items.append(m.group(1).strip())
+
+    # Sanitize each item
+    items = [remove_dangerous_patterns(item) for item in items]
+
+    # Deduplicate preserving order
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            unique.append(item)
+
+    return unique
+
+
 # CLI interface for testing
 if __name__ == "__main__":
     import sys

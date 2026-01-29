@@ -47,7 +47,7 @@ case "$1" in
 
         # Get available transitions
         TRANSITIONS=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$BASE_URL/issues/$ISSUE_KEY/transitions" \
+            "$BASE_URL/issue/$ISSUE_KEY/transitions" \
             -H "Accept: application/json")
 
         # Find transition ID for status
@@ -60,7 +60,7 @@ case "$1" in
 
         # Execute transition
         curl -s -X POST -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$BASE_URL/issues/$ISSUE_KEY/transitions" \
+            "$BASE_URL/issue/$ISSUE_KEY/transitions" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d "{\"transition\": {\"id\": \"$TRANSITION_ID\"}}"
@@ -76,7 +76,7 @@ case "$1" in
         COMMENT="$3"
 
         curl -s -X POST -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$BASE_URL/issues/$ISSUE_KEY/comments" \
+            "$BASE_URL/issue/$ISSUE_KEY/comment" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d "{\"body\": {\"version\": 1, \"type\": \"doc\", \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"$COMMENT\"}]}]}}"

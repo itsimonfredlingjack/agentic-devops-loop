@@ -7,7 +7,7 @@
     "servers": {
       "jira": {
         "command": "npx",
-        "args": ["-y", "@anthropic/mcp-server-atlassian", "jira"],
+        "args": ["-y", "@aashari/mcp-server-atlassian-jira"],
         "env": {
           "JIRA_URL": "${JIRA_URL}",
           "JIRA_USERNAME": "${JIRA_USERNAME}",

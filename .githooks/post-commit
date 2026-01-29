@@ -1,0 +1,23 @@
+#!/bin/bash
+# Post-commit hook: Jira smart commit automation
+#
+# Extracts Jira IDs and smart commit directives from the commit message
+# and dispatches API calls to Jira. Fire-and-forget \u2014 always exits 0.
+#
+# Directives:
+#   #comment <text>     \u2014 add comment to issue
+#   #in-progress        \u2014 transition to "In Progress"
+#   #in-review          \u2014 transition to "In Review"
+#   #done / #resolved / #closed \u2014 transition to "Done"
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+SMART_COMMIT_PY="${REPO_ROOT}/.claude/utils/smart_commit.py"
+
+# Run the Python helper in background (fire-and-forget, suppress output)
+if [ -f "$SMART_COMMIT_PY" ] && command -v python3 &>/dev/null; then
+    python3 "$SMART_COMMIT_PY" >/dev/null 2>&1 &
+    disown >/dev/null 2>&1 || true
+fi
+
+# Always exit 0 \u2014 never fail a committed change
+exit 0

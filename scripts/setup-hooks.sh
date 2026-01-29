@@ -17,11 +17,12 @@ git config core.hooksPath "$HOOKS_DIR"
 chmod +x "$HOOKS_DIR"/*
 
 echo ""
-echo "✅ Git hooks installed successfully!"
+echo "\u2705 Git hooks installed successfully!"
 echo ""
 echo "Enabled hooks:"
 echo "  - pre-push: Validates branch naming convention"
 echo "  - commit-msg: Validates commit message format"
+echo "  - post-commit: Jira smart commit automation (fire-and-forget)"
 echo ""
 echo "Branch naming format: {type}/{JIRA-ID}-{slug}"
 echo "  Examples: feature/PROJ-123-user-auth, bugfix/PROJ-456-fix-bug"
