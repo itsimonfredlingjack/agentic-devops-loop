@@ -16,6 +16,7 @@ import json
 import sys
 import re
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 
 # ============================================================================
@@ -92,10 +93,29 @@ SENSITIVE_COMMANDS = [
     "poetry add",
 ]
 
+PIP_VERSION_PATTERN = re.compile(r"(==|>=|<=|~=|!=|>|<)")
+
 
 # ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================
+
+def _normalize_allowlist(raw) -> Dict[str, List[str]]:
+    """Normalize allowlist entries into a dict of name -> [versions]."""
+    if isinstance(raw, dict):
+        normalized = {}
+        for name, versions in raw.items():
+            if isinstance(versions, list):
+                normalized[name] = [str(v) for v in versions]
+            elif isinstance(versions, str):
+                normalized[name] = [versions]
+            else:
+                normalized[name] = ["*"]
+        return normalized
+    if isinstance(raw, list):
+        return {str(name): ["*"] for name in raw}
+    return {}
+
 
 def load_custom_allowlist():
     """Load project-specific package allowlist if exists."""
@@ -103,18 +123,100 @@ def load_custom_allowlist():
     if allowlist_path.exists():
         with open(allowlist_path) as f:
             custom = json.load(f)
+            policy = custom.get("policy", {})
             return (
-                set(custom.get("npm", [])),
-                set(custom.get("pip", []))
+                _normalize_allowlist(custom.get("npm", [])),
+                _normalize_allowlist(custom.get("pip", [])),
+                policy,
             )
-    return set(), set()
+    return {}, {}, {}
+
+
+def _merge_allowlists(base_set: set, custom: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    allowlist = {name: ["*"] for name in base_set}
+    allowlist.update(custom)
+    return allowlist
+
+
+def _resolve_allowed_versions(pkg_name: str, allowlist: Dict[str, List[str]]) -> Optional[List[str]]:
+    if pkg_name in allowlist:
+        return allowlist[pkg_name]
+    for pattern, versions in allowlist.items():
+        if "*" in pattern:
+            prefix = pattern.split("*", 1)[0]
+            if pkg_name.startswith(prefix):
+                return versions
+    return None
+
+
+def _parse_npm_spec(spec: str) -> Tuple[Optional[str], Optional[str]]:
+    spec = spec.strip()
+    if not spec or spec.startswith("-"):
+        return None, None
+    if spec.startswith(("file:", "git:", "git+")) or "://" in spec or spec.endswith(".tgz"):
+        return None, None
+
+    name = spec
+    version = None
+
+    if spec.startswith("@"):
+        slash_index = spec.find("/")
+        at_index = spec.rfind("@")
+        if at_index > slash_index:
+            name = spec[:at_index]
+            version = spec[at_index + 1:] or None
+    else:
+        at_index = spec.rfind("@")
+        if at_index > 0:
+            name = spec[:at_index]
+            version = spec[at_index + 1:] or None
+
+    return name, version
+
+
+def _parse_pip_spec(spec: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    spec = spec.strip()
+    if not spec or spec.startswith("-"):
+        return None, None, None
+    if spec.startswith(("file:", "git+", "http://", "https://")) or "://" in spec:
+        return None, None, None
+
+    match = PIP_VERSION_PATTERN.search(spec)
+    if match:
+        name_part = spec[:match.start()]
+        op = match.group(1)
+        version = spec[match.end():] or None
+    else:
+        name_part = spec
+        op = None
+        version = None
+
+    name = name_part.split("[", 1)[0]
+    return name, op, version
+
+
+def _is_pinned_npm_version(version: Optional[str]) -> bool:
+    if not version:
+        return False
+    if version in {"latest", "next"}:
+        return False
+    if re.search(r"[~^<>*|]", version):
+        return False
+    return bool(re.match(r"^\d+(\.\d+){0,2}([\-+][0-9A-Za-z.-]+)?$", version))
+
+
+def _is_pinned_pip_version(op: Optional[str], version: Optional[str]) -> bool:
+    if op != "==" or not version:
+        return False
+    return "*" not in version
 
 
 def validate_package_install(command: str) -> tuple[bool, str]:
     """Validate npm/pip install commands against allowlist."""
-    custom_npm, custom_pip = load_custom_allowlist()
-    allowed_npm = ALLOWED_NPM_PACKAGES | custom_npm
-    allowed_pip = ALLOWED_PIP_PACKAGES | custom_pip
+    custom_npm, custom_pip, policy = load_custom_allowlist()
+    allowed_npm = _merge_allowlists(ALLOWED_NPM_PACKAGES, custom_npm)
+    allowed_pip = _merge_allowlists(ALLOWED_PIP_PACKAGES, custom_pip)
+    require_pinned = bool(policy.get("require_pinned_versions", False))
 
     # Extract package names from command
     if "npm install" in command or "npm i " in command or "yarn add" in command:
@@ -124,15 +226,24 @@ def validate_package_install(command: str) -> tuple[bool, str]:
                    ["npm", "install", "i", "yarn", "add", "pnpm"]]
 
         for pkg in packages:
-            # Handle scoped packages @org/package
-            pkg_name = pkg.split("@")[0] if "@" in pkg and not pkg.startswith("@") else pkg
-            pkg_name = pkg_name.split("/")[0] if "/" in pkg_name and not pkg_name.startswith("@") else pkg_name
+            pkg_name, version = _parse_npm_spec(pkg)
+            if not pkg_name:
+                return False, f"Unsupported npm spec '{pkg}'. Use registry packages only."
 
-            # Check against allowlist (support wildcards like @types/*)
-            if pkg_name not in allowed_npm:
-                # Check for wildcard matches
-                if not any(pkg_name.startswith(a.replace("*", "")) for a in allowed_npm if "*" in a):
-                    return False, f"Package '{pkg_name}' not in allowlist. Add to .claude/package-allowlist.json"
+            allowed_versions = _resolve_allowed_versions(pkg_name, allowed_npm)
+            if not allowed_versions:
+                return False, f"Package '{pkg_name}' not in allowlist. Add to .claude/package-allowlist.json"
+
+            if require_pinned and not _is_pinned_npm_version(version):
+                return False, f"Package '{pkg_name}' must be installed with a pinned version (e.g., {pkg_name}@1.2.3)"
+
+            if "*" not in allowed_versions:
+                if not version:
+                    allowed = ", ".join(allowed_versions)
+                    return False, f"Package '{pkg_name}' requires a pinned version from allowlist: {allowed}"
+                if version not in allowed_versions:
+                    allowed = ", ".join(allowed_versions)
+                    return False, f"Version '{version}' for '{pkg_name}' is not in allowlist: {allowed}"
 
     elif "pip install" in command or "pip3 install" in command or "poetry add" in command:
         parts = command.split()
@@ -140,9 +251,24 @@ def validate_package_install(command: str) -> tuple[bool, str]:
                    ["pip", "pip3", "install", "poetry", "add"]]
 
         for pkg in packages:
-            pkg_name = pkg.split("==")[0].split(">=")[0].split("<=")[0].split("[")[0]
-            if pkg_name not in allowed_pip:
+            pkg_name, op, version = _parse_pip_spec(pkg)
+            if not pkg_name:
+                return False, f"Unsupported pip spec '{pkg}'. Use registry packages only."
+
+            allowed_versions = _resolve_allowed_versions(pkg_name, allowed_pip)
+            if not allowed_versions:
                 return False, f"Package '{pkg_name}' not in allowlist. Add to .claude/package-allowlist.json"
+
+            if require_pinned and not _is_pinned_pip_version(op, version):
+                return False, f"Package '{pkg_name}' must be installed with a pinned version (e.g., {pkg_name}==1.2.3)"
+
+            if "*" not in allowed_versions:
+                if not version:
+                    allowed = ", ".join(allowed_versions)
+                    return False, f"Package '{pkg_name}' requires a pinned version from allowlist: {allowed}"
+                if version not in allowed_versions:
+                    allowed = ", ".join(allowed_versions)
+                    return False, f"Version '{version}' for '{pkg_name}' is not in allowlist: {allowed}"
 
     return True, ""
 

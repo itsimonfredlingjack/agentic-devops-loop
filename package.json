@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "test": "jest --passWithNoTests",
+    "test:tracker": "jest --config jest.config.tracker.js",
+    "test:all": "npm test && npm run test:tracker",
     "lint": "eslint ."
   },
   "keywords": [
@@ -17,5 +19,8 @@
   "devDependencies": {
     "eslint": "^9.39.2",
     "jest": "^30.2.0"
+  },
+  "dependencies": {
+    "jest-environment-jsdom": "^30.0.0"
   }
 }

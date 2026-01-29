@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Tracker Demo - Agentic Dev Loop</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .demo-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      padding: 40px;
+      max-width: 700px;
+      width: 90%;
+    }
+
+    .demo-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .demo-header h1 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 32px;
+    }
+
+    .demo-header p {
+      margin: 0;
+      color: #666;
+      font-size: 16px;
+    }
+
+    .demo-header .badge {
+      display: inline-block;
+      background: #4CAF50;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+
+    .demo-footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .demo-footer a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .demo-footer a:hover {
+      text-decoration: underline;
+    }
+
+    .info-box {
+      background: #f0f7ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+
+    .info-box h3 {
+      margin: 0 0 10px 0;
+      color: #1976d2;
+      font-size: 16px;
+    }
+
+    .info-box ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #555;
+      font-size: 14px;
+    }
+
+    .info-box li {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <div class="demo-header">
+      <h1>🚀 Task Tracker Demo</h1>
+      <p>Built with the Agentic Dev Loop</p>
+      <span class="badge">TDD • Web Components • Shadow DOM</span>
+    </div>
+
+    <div class="info-box">
+      <h3>📋 About This Demo</h3>
+      <ul>
+        <li>Complete TDD workflow (tests written first)</li>
+        <li>Native Web Component with Shadow DOM</li>
+        <li>100% test coverage with Jest</li>
+        <li>Linted with ESLint</li>
+        <li>Built autonomously by Claude Code + Ralph Loop</li>
+      </ul>
+    </div>
+
+    <!-- Task Tracker Web Component -->
+    <task-tracker></task-tracker>
+
+    <div class="demo-footer">
+      <p>
+        This component was developed using the
+        <a href="https://github.com/yourusername/agentic-dev-loop" target="_blank">
+          Agentic Dev Loop
+        </a>
+        system
+      </p>
+      <p style="margin-top: 10px; font-size: 12px;">
+        Jira Ticket → Claude Code (Ralph Loop) → GitHub Actions → Jules AI Review → Merge
+      </p>
+    </div>
+  </div>
+
+  <script src="src/task-tracker.js"></script>
+</body>
+</html>

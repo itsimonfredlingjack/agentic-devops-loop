@@ -232,14 +232,29 @@ Files in these paths require human review via CODEOWNERS:
 
 ## Package Installation
 
-Only packages in `.claude/package-allowlist.json` can be installed.
+Only packages in `.claude/package-allowlist.json` can be installed, and versions must be pinned.
 
 **Current Allowlist:**
 
 ```json
 {
-  "npm": ["jest", "vitest", "@playwright/test", "eslint", "prettier", "typescript", "@types/*"],
-  "pip": ["pytest", "pytest-cov", "ruff", "mypy", "httpx"]
+  "policy": { "require_pinned_versions": true },
+  "npm": {
+    "eslint": ["9.39.2"],
+    "jest": ["30.2.0"],
+    "vitest": ["*"],
+    "@playwright/test": ["*"],
+    "prettier": ["*"],
+    "typescript": ["*"],
+    "@types/*": ["*"]
+  },
+  "pip": {
+    "pytest": ["*"],
+    "pytest-cov": ["*"],
+    "ruff": ["*"],
+    "mypy": ["*"],
+    "httpx": ["*"]
+  }
 }
 ```
 

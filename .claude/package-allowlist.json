@@ -1,21 +1,25 @@
 {
   "$schema": "./package-allowlist.schema.json",
   "description": "Project-specific package allowlist for agent installations",
-  "npm": [
-    "jest",
-    "vitest",
-    "@playwright/test",
-    "eslint",
-    "prettier",
-    "typescript",
-    "@types/*"
-  ],
-  "pip": [
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "mypy",
-    "httpx"
-  ],
-  "notes": "Add packages here that the agent is allowed to install. Wildcards supported for npm scoped packages (@types/*)"
+  "policy": {
+    "require_pinned_versions": true
+  },
+  "npm": {
+    "eslint": ["9.39.2"],
+    "jest": ["30.2.0"],
+    "jest-environment-jsdom": ["*"],
+    "vitest": ["*"],
+    "@playwright/test": ["*"],
+    "prettier": ["*"],
+    "typescript": ["*"],
+    "@types/*": ["*"]
+  },
+  "pip": {
+    "pytest": ["*"],
+    "pytest-cov": ["*"],
+    "ruff": ["*"],
+    "mypy": ["*"],
+    "httpx": ["*"]
+  },
+  "notes": "Add packages here that the agent is allowed to install. Versions are required when policy.require_pinned_versions is true. Use \"*\" to allow any pinned version."
 }

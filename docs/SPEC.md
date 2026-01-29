@@ -344,17 +344,27 @@ Validates:
 
 **File:** `.claude/package-allowlist.json`
 
-Only these packages can be installed by the agent:
+Only these packages can be installed by the agent. Versions must be pinned when `policy.require_pinned_versions` is enabled; use `"*"` to allow any pinned version.
 
 **npm:**
-- `jest`, `vitest`, `@playwright/test`
-- `eslint`, `prettier`, `typescript`
+- `jest` (pinned), `eslint` (pinned)
+- `vitest`, `@playwright/test`, `prettier`, `typescript`
 - `@types/*` (wildcard for DefinitelyTyped)
 
 **pip:**
 - `pytest`, `pytest-cov`
 - `ruff`, `mypy`
 - `httpx`
+
+Example:
+
+```json
+{
+  "policy": { "require_pinned_versions": true },
+  "npm": { "jest": ["30.2.0"], "@types/*": ["*"] },
+  "pip": { "pytest": ["*"] }
+}
+```
 
 ### CODEOWNERS Protection
 

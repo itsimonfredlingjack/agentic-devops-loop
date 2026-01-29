@@ -125,12 +125,20 @@ Every git operation references Jira:
 
 ### Package Allowlist
 
-Edit `.claude/package-allowlist.json` to allow project-specific packages:
+Edit `.claude/package-allowlist.json` to allow project-specific packages (pinned versions required):
 
 ```json
 {
-  "npm": ["react", "next", "tailwindcss"],
-  "pip": ["django", "celery", "redis"]
+  "policy": { "require_pinned_versions": true },
+  "npm": {
+    "react": ["18.3.1"],
+    "next": ["*"],
+    "@types/*": ["*"]
+  },
+  "pip": {
+    "django": ["5.1.2"],
+    "celery": ["*"]
+  }
 }
 ```
 
