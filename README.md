@@ -108,4 +108,4 @@ agentic-dev-loop/
 
 </div>
 
-<!-- Tracking: [PROJ-123] v2 -->
+<!-- Tracking: [PROJ-123] v3 -->
