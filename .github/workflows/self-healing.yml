@@ -71,122 +71,200 @@ jobs:
             core.setOutput('should_attempt', shouldAttempt);
             core.setOutput('attempt_count', attemptCount);
 
-  fetch-logs:
-    name: Fetch Build Logs
-    runs-on: ubuntu-latest
-    needs: analyze-failure
-    if: needs.analyze-failure.outputs.should_attempt_fix == 'true'
-    permissions:
-      actions: read
-
-    outputs:
-      error_logs: ${{ steps.get-logs.outputs.logs }}
-      error_summary: ${{ steps.get-logs.outputs.summary }}
-
-    steps:
-      - name: Download workflow logs
-        id: get-logs
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const runId = context.payload.workflow_run.id;
-
-            try {
-              const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: runId
-              });
-
-              const failedJobs = jobs.jobs.filter(job => job.conclusion === 'failure');
-              let errorLogs = [];
-              let errorSummary = [];
-
-              for (const job of failedJobs) {
-                console.log(`Failed job: ${job.name}`);
-
-                try {
-                  const { data: logs } = await github.rest.actions.downloadJobLogsForWorkflowRun({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    job_id: job.id
-                  });
-
-                  const logLines = logs.split('\n');
-                  const errorLines = logLines.filter(line =>
-                    line.toLowerCase().includes('error') ||
-                    line.toLowerCase().includes('failed') ||
-                    line.toLowerCase().includes('exception')
-                  ).slice(-100);
-
-                  errorLogs.push({
-                    job: job.name,
-                    errors: errorLines
-                  });
-
-                  errorSummary.push(`Job "${job.name}": ${errorLines.length} error lines`);
-                } catch (e) {
-                  console.log(`Could not fetch logs for job ${job.id}: ${e.message}`);
-                }
-              }
-
-              core.setOutput('logs', JSON.stringify(errorLogs));
-              core.setOutput('summary', errorSummary.join('\n'));
-
-            } catch (e) {
-              console.log(`Error fetching logs: ${e.message}`);
-              core.setOutput('logs', '[]');
-              core.setOutput('summary', 'Could not fetch error logs');
-            }
-
   jules-fix:
     name: Jules Auto-Fix
     runs-on: ubuntu-latest
-    needs: [analyze-failure, fetch-logs]
+    needs: [analyze-failure]
     if: needs.analyze-failure.outputs.should_attempt_fix == 'true'
     permissions:
       contents: write
       pull-requests: write
+      actions: read
+      checks: read
 
     steps:
+      - name: Fetch and parse CI logs
+        id: get-logs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const runId = context.payload.workflow_run.id;
+
+            // ── 1. Collect failed jobs ──────────────────────────────
+            const { data: jobsData } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId,
+            });
+
+            const failedJobs = jobsData.jobs.filter(j => j.conclusion === 'failure');
+
+            if (failedJobs.length === 0) {
+              fs.writeFileSync('error_context.txt', 'No failed jobs found in the CI run.');
+              core.info('No failed jobs — nothing to parse.');
+              return;
+            }
+
+            const sections = [];
+
+            for (const job of failedJobs) {
+              // List the specific steps that failed for quick orientation
+              const failedSteps = (job.steps || [])
+                .filter(s => s.conclusion === 'failure')
+                .map(s => `  - Step "${s.name}" failed`)
+                .join('\n');
+
+              let logExcerpt = '';
+
+              try {
+                const { data: rawLog } = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  job_id: job.id,
+                });
+
+                // Strip ANSI escape codes and timestamp prefixes
+                const clean = rawLog
+                  .replace(/\x1b\[[0-9;]*m/g, '')
+                  .replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z /gm, '');
+
+                const lines = clean.split('\n');
+
+                // Patterns that indicate real errors
+                const errorRe = /\b(error\b|ERR!|FAIL(?:ED|URE)?|TypeError|ReferenceError|SyntaxError|Cannot find|Module not found|not found|unexpected token|failed to compile|exit code [1-9]|AssertionError|assert\.|Expected|Received|ENOENT|EACCES)/i;
+                // Patterns that are noise even when they contain "error"
+                const noiseRe = /^(\s*npm warn|warning:|0 error|0 failure|passing|info |notice |deprecated)/i;
+
+                // Collect indices of error lines + surrounding context
+                // (2 lines before, 5 lines after each match)
+                const errorIndices = new Set();
+                lines.forEach((line, i) => {
+                  if (errorRe.test(line) && !noiseRe.test(line.trim())) {
+                    for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 5); j++) {
+                      errorIndices.add(j);
+                    }
+                  }
+                });
+
+                if (errorIndices.size > 0) {
+                  const sorted = [...errorIndices].sort((a, b) => a - b);
+                  const excerptLines = [];
+                  let prev = -2;
+                  for (const idx of sorted) {
+                    if (idx > prev + 1) excerptLines.push('...');
+                    excerptLines.push(lines[idx]);
+                    prev = idx;
+                  }
+                  logExcerpt = excerptLines.join('\n');
+                } else {
+                  // Fallback: last 40 lines of the log
+                  logExcerpt = lines.slice(-40).join('\n');
+                }
+              } catch (e) {
+                logExcerpt = `(Could not download logs: ${e.message})`;
+              }
+
+              sections.push(
+                `### Job: ${job.name}\n${failedSteps}\n\`\`\`\n${logExcerpt}\n\`\`\``
+              );
+            }
+
+            // ── 2. Supplement with check-run annotations ────────────
+            try {
+              const sha = context.payload.workflow_run.head_sha;
+              const { data: checkRuns } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: sha,
+                status: 'completed',
+                filter: 'latest',
+              });
+
+              const failedChecks = checkRuns.check_runs.filter(
+                cr => cr.conclusion === 'failure'
+              );
+
+              for (const cr of failedChecks) {
+                const { data: anns } = await github.rest.checks.listAnnotations({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  check_run_id: cr.id,
+                });
+
+                const failures = anns
+                  .filter(a => a.annotation_level === 'failure')
+                  .slice(0, 10)
+                  .map(a => `- ${a.path}:${a.start_line}: ${a.message}`)
+                  .join('\n');
+
+                if (failures) {
+                  sections.push(`### Annotations (${cr.name})\n${failures}`);
+                }
+              }
+            } catch (_) {
+              // Annotations are supplementary — do not fail the step
+            }
+
+            // ── 3. Write to file to avoid output-size limits ────────
+            let errorContext = sections.join('\n\n');
+            if (errorContext.length > 4000) {
+              errorContext = errorContext.slice(0, 3950) + '\n...(truncated)';
+            }
+            fs.writeFileSync('error_context.txt', errorContext);
+            core.info(`Wrote ${errorContext.length} chars of error context`);
+
       - name: Trigger Jules to fix CI failure
         id: jules-fix
         env:
           JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
-          ERROR_LOGS: ${{ needs.fetch-logs.outputs.error_logs }}
-          ERROR_SUMMARY: ${{ needs.fetch-logs.outputs.error_summary }}
           BRANCH: ${{ needs.analyze-failure.outputs.branch }}
           ATTEMPT: ${{ needs.analyze-failure.outputs.attempt_count }}
+          REPO: ${{ github.repository }}
         run: |
           echo "Triggering Jules to fix CI failure..."
           echo "Branch: $BRANCH"
-          echo "Attempt: $((ATTEMPT + 1))/3"
-          echo "Error summary: $ERROR_SUMMARY"
+          NEXT_ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt: ${NEXT_ATTEMPT}/3"
 
-          # Build the fix prompt with error context
-          ERROR_CONTEXT=$(echo "$ERROR_LOGS" | jq -r '
-            .[] | "Job: \(.job)\nErrors:\n\(.errors | join("\n"))\n---"
-          ' 2>/dev/null || echo "Could not parse error logs")
+          # Fallback if the log-fetch step produced no file
+          if [ ! -f error_context.txt ]; then
+            echo "Could not retrieve CI error logs." > error_context.txt
+          fi
+
+          # Build JSON payload with jq --rawfile so all special characters
+          # (quotes, backslashes, newlines) are properly escaped.
+          PAYLOAD=$(jq -n \
+            --rawfile error_ctx error_context.txt \
+            --arg branch "$BRANCH" \
+            --arg repo "$REPO" \
+            --arg title "[jules-fix] Fix CI failure (attempt ${NEXT_ATTEMPT}/3)" \
+            '{
+              prompt: (
+                "CI pipeline has failed. Fix the errors and make the build pass.\n\n"
+                + "## Error Context\n" + $error_ctx + "\n\n"
+                + "## Instructions\n"
+                + "1. Analyze the error logs above\n"
+                + "2. Identify the root cause\n"
+                + "3. Fix the code\n"
+                + "4. Ensure tests pass\n"
+                + "5. Ensure linting passes\n\n"
+                + "Keep changes minimal and focused on the immediate failure."
+              ),
+              sourceContext: {
+                source: ("sources/" + $repo),
+                githubRepoContext: { startingBranch: $branch }
+              },
+              automationMode: "AUTO_CREATE_PR",
+              title: $title,
+              requirePlanApproval: false
+            }')
 
           RESPONSE=$(curl -s -X POST \
             "https://jules.googleapis.com/v1alpha/sessions" \
             -H "X-Goog-Api-Key: $JULES_API_KEY" \
             -H "Content-Type: application/json" \
-            -d @- <<EOF
-          {
-            "prompt": "CI pipeline has failed. Fix the errors and make the build pass.\n\n## Error Context\n$ERROR_CONTEXT\n\n## Instructions\n1. Analyze the error logs\n2. Identify the root cause\n3. Fix the code\n4. Ensure tests pass\n5. Ensure linting passes\n\nFocus on:\n- Fixing the immediate error first\n- Not introducing new issues\n- Keeping changes minimal",
-            "sourceContext": {
-              "source": "sources/${{ github.repository }}",
-              "githubRepoContext": {
-                "startingBranch": "$BRANCH"
-              }
-            },
-            "automationMode": "AUTO_CREATE_PR",
-            "title": "[jules-fix] Fix CI failure (attempt $((ATTEMPT + 1))/3)",
-            "requirePlanApproval": false
-          }
-          EOF
-          )
+            -d "$PAYLOAD")
 
           echo "Jules response: $RESPONSE"
 
