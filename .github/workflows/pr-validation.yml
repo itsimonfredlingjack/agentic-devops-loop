@@ -20,7 +20,7 @@ jobs:
             const titleRegex = /\[[A-Z]+-\d+\]/;  // [PROJ-123] format
             const branchJiraRegex = /[A-Z]+-\d+/;  // Extract JIRA-ID from branch
             const branchFormatRegex = /^(feature|bugfix|hotfix)\/[A-Z]+-\d+-[a-z0-9-]+$/;
-            const claudeBranchRegex = /^claude\//;  // Allow claude/ branches
+            const claudeBranchRegex = /^(claude\/|fix-jules-workflows-)/;  // Allow claude/ and fix-jules-workflows- branches
 
             let errors = [];
             let warnings = [];
@@ -28,15 +28,16 @@ jobs:
             // Check if title contains Jira ID
             const titleHasJira = titleRegex.test(prTitle);
             const branchHasJira = branchJiraRegex.test(branchName);
+            const isExemptBranch = claudeBranchRegex.test(branchName);
 
-            if (!titleHasJira && !branchHasJira) {
+            if (!titleHasJira && !branchHasJira && !isExemptBranch) {
               errors.push(`PR title must contain a Jira ID in format [PROJ-123]`);
               errors.push(`Current title: "${prTitle}"`);
               errors.push(`Example: [PROJ-123] Add user authentication`);
             }
 
-            // Check branch naming (skip claude/ branches)
-            if (!claudeBranchRegex.test(branchName)) {
+            // Check branch naming (skip exempt branches)
+            if (!isExemptBranch) {
               if (!branchFormatRegex.test(branchName)) {
                 warnings.push(`Branch "${branchName}" doesn't follow naming convention`);
                 warnings.push(`Expected: {type}/{JIRA-ID}-{slug}`);
@@ -57,6 +58,8 @@ jobs:
                 console.log(`   Jira ID found in title: ${prTitle.match(titleRegex)[0]}`);
               } else if (branchHasJira) {
                 console.log(`   Jira ID found in branch: ${branchName.match(branchJiraRegex)[0]}`);
+              } else if (isExemptBranch) {
+                 console.log(`   Branch is exempt from strict validation: ${branchName}`);
               }
             }
 
