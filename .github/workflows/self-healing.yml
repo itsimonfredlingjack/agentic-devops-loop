@@ -214,8 +214,22 @@ jobs:
             fs.writeFileSync('error_context.txt', errorContext);
             core.info(`Wrote ${errorContext.length} chars of error context`);
 
+      - name: Validate Jules API key
+        id: validate-key
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        run: |
+          if [ -z "$JULES_API_KEY" ]; then
+            echo "::error::JULES_API_KEY secret is not configured"
+            echo "valid=false" >> $GITHUB_OUTPUT
+          else
+            echo "Jules API key is configured"
+            echo "valid=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger Jules to fix CI failure
         id: jules-fix
+        if: steps.validate-key.outputs.valid == 'true'
         env:
           JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
           BRANCH: ${{ needs.analyze-failure.outputs.branch }}
@@ -260,23 +274,49 @@ jobs:
               requirePlanApproval: false
             }')
 
-          RESPONSE=$(curl -s -X POST \
-            "https://jules.googleapis.com/v1alpha/sessions" \
-            -H "X-Goog-Api-Key: $JULES_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
+          echo "Sending request to Jules API..."
+
+          # Retry logic for transient failures (5xx, 429)
+          MAX_RETRIES=3
+          RETRY_DELAY=5
+          RESPONSE=""
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+              "https://jules.googleapis.com/v1alpha/sessions" \
+              -H "X-Goog-Api-Key: $JULES_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+
+            echo "HTTP Status: $HTTP_CODE (attempt $i/$MAX_RETRIES)"
+
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+              RESPONSE="$BODY"
+              break
+            elif [ "$HTTP_CODE" -ge 500 ] || [ "$HTTP_CODE" -eq 429 ]; then
+              echo "Retryable error, waiting ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+              RETRY_DELAY=$((RETRY_DELAY * 2))
+            else
+              RESPONSE="$BODY"
+              break
+            fi
+          done
 
           echo "Jules response: $RESPONSE"
 
           SESSION_ID=$(echo "$RESPONSE" | jq -r '.name // empty')
 
-          if [ -n "$SESSION_ID" ]; then
+          if [ -n "$SESSION_ID" ] && [ "$SESSION_ID" != "null" ]; then
             echo "session_id=$SESSION_ID" >> $GITHUB_OUTPUT
             echo "success=true" >> $GITHUB_OUTPUT
             echo "Jules session created: $SESSION_ID"
           else
             echo "success=false" >> $GITHUB_OUTPUT
-            ERROR=$(echo "$RESPONSE" | jq -r '.error.message // "Unknown error"')
+            ERROR=$(echo "$RESPONSE" | jq -r '.error.message // .message // "Unknown error"')
             echo "error=$ERROR" >> $GITHUB_OUTPUT
             echo "Failed to create Jules session: $ERROR"
           fi
@@ -299,9 +339,16 @@ jobs:
 
             if [ "$STATUS" = "COMPLETED" ]; then
               echo "Jules completed the fix!"
+              PR_URL=$(echo "$RESPONSE" | jq -r '.outputPullRequestUrl // empty')
+              if [ -n "$PR_URL" ] && [ "$PR_URL" != "null" ]; then
+                echo "Fix PR: $PR_URL"
+                echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+              fi
               break
             elif [ "$STATUS" = "FAILED" ]; then
               echo "Jules failed to fix the issue"
+              FAILURE_REASON=$(echo "$RESPONSE" | jq -r '.failureReason // "Unknown"')
+              echo "Failure reason: $FAILURE_REASON"
               break
             fi
 
