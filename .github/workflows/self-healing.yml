@@ -23,6 +23,7 @@ jobs:
       should_attempt_fix: ${{ steps.check-attempts.outputs.should_attempt }}
       attempt_count: ${{ steps.check-attempts.outputs.attempt_count }}
       branch: ${{ steps.get-branch.outputs.branch }}
+      pr_number: ${{ steps.get-branch.outputs.pr_number }}
 
     steps:
       - name: Get branch information
@@ -33,14 +34,31 @@ jobs:
             const runId = context.payload.workflow_run.id;
             const headBranch = context.payload.workflow_run.head_branch;
             const headSha = context.payload.workflow_run.head_sha;
+            const pullRequests = context.payload.workflow_run.pull_requests || [];
 
             console.log(`Failed workflow run: ${runId}`);
-            console.log(`Branch: ${headBranch}`);
+            console.log(`Head branch (from workflow_run): ${headBranch}`);
             console.log(`Commit: ${headSha}`);
+            console.log(`Associated PRs: ${pullRequests.length}`);
 
-            core.setOutput('branch', headBranch);
+            // Prefer the PR head ref over head_branch, since head_branch
+            // can resolve to "main" for PR-triggered CI runs.
+            let branch = headBranch;
+            let prNumber = '';
+
+            if (pullRequests.length > 0) {
+              const pr = pullRequests[0];
+              branch = pr.head.ref;
+              prNumber = String(pr.number);
+              console.log(`PR #${prNumber} detected, using head ref: ${branch}`);
+            } else {
+              console.log(`No associated PRs — using head_branch: ${branch}`);
+            }
+
+            core.setOutput('branch', branch);
             core.setOutput('sha', headSha);
             core.setOutput('run_id', runId);
+            core.setOutput('pr_number', prNumber);
 
       - name: Check self-healing attempts
         id: check-attempts
@@ -252,7 +270,7 @@ jobs:
                 + "Keep changes minimal and focused on the immediate failure."
               ),
               sourceContext: {
-                source: ("sources/" + $repo),
+                source: ("sources/github/" + $repo),
                 githubRepoContext: { startingBranch: $branch }
               },
               automationMode: "AUTO_CREATE_PR",
@@ -315,6 +333,7 @@ jobs:
           JULES_ERROR: ${{ steps.jules-fix.outputs.error }}
           SESSION_ID: ${{ steps.jules-fix.outputs.session_id }}
           ATTEMPT: ${{ needs.analyze-failure.outputs.attempt_count }}
+          PR_NUMBER: ${{ needs.analyze-failure.outputs.pr_number }}
         with:
           script: |
             const branch = '${{ needs.analyze-failure.outputs.branch }}';
@@ -322,20 +341,34 @@ jobs:
             const sessionId = process.env.SESSION_ID;
             const error = process.env.JULES_ERROR;
             const attempt = parseInt(process.env.ATTEMPT) + 1;
+            const prNumberFromRun = process.env.PR_NUMBER;
 
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
+            // Use PR number from workflow_run.pull_requests if available,
+            // otherwise fall back to searching by branch name.
+            let prNumber = null;
 
-            if (prs.length === 0) {
-              console.log('No open PR found for this branch');
+            if (prNumberFromRun) {
+              prNumber = parseInt(prNumberFromRun, 10);
+              console.log(`Using PR #${prNumber} from workflow_run.pull_requests`);
+            } else {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${branch}`,
+                state: 'open'
+              });
+
+              if (prs.length > 0) {
+                prNumber = prs[0].number;
+                console.log(`Found PR #${prNumber} by branch search`);
+              }
+            }
+
+            if (!prNumber) {
+              console.log('No open PR found — skipping comment');
               return;
             }
 
-            const pr = prs[0];
             let body;
 
             if (success) {
@@ -376,7 +409,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr.number,
+              issue_number: prNumber,
               body
             });
 
@@ -396,13 +429,26 @@ jobs:
           script: |
             const branch = '${{ needs.analyze-failure.outputs.branch }}';
             const attemptCount = '${{ needs.analyze-failure.outputs.attempt_count }}';
+            const prNumberFromRun = '${{ needs.analyze-failure.outputs.pr_number }}';
 
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
+            // Find the related PR: prefer workflow_run data, fall back to branch search
+            let relatedPr = null;
+
+            if (prNumberFromRun) {
+              relatedPr = { number: parseInt(prNumberFromRun, 10) };
+              console.log(`Using PR #${relatedPr.number} from workflow_run.pull_requests`);
+            } else {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${branch}`,
+                state: 'open'
+              });
+              if (prs.length > 0) {
+                relatedPr = prs[0];
+                console.log(`Found PR #${relatedPr.number} by branch search`);
+              }
+            }
 
             const issueBody = [
               '## Self-Healing Limit Reached',
@@ -422,7 +468,7 @@ jobs:
               '3. Apply manual fixes',
               '4. Push changes to trigger CI',
               '',
-              prs.length > 0 ? `### Related PR\n- #${prs[0].number}` : '',
+              relatedPr ? `### Related PR\n- #${relatedPr.number}` : '',
               '',
               '---',
               '*Created by self-healing pipeline*'
@@ -438,7 +484,7 @@ jobs:
 
             console.log(`Created escalation issue #${issue.number}`);
 
-            if (prs.length > 0) {
+            if (relatedPr) {
               const commentBody = [
                 '## 🚨 Jules Self-Healing Exhausted',
                 '',
@@ -452,7 +498,7 @@ jobs:
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: prs[0].number,
+                issue_number: relatedPr.number,
                 body: commentBody
               });
             }
