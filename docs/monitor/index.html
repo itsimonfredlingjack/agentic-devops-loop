@@ -1537,7 +1537,8 @@
     function togglePause() {
       isPaused = !isPaused;
       statusDot.classList.toggle('paused', isPaused);
-      statusText.textContent = isPaused ? 'Paused' : 'Running';
+      const runLabel = demoRunning ? 'Demo' : 'Running';
+      statusText.textContent = isPaused ? 'Paused' : runLabel;
 
       // Notify server
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -1581,12 +1582,206 @@
     }
 
     // ════════════════════════════════════════════════════════════════
+    // DEMO MODE - Simulates the full loop on static hosting
+    // ════════════════════════════════════════════════════════════════
+
+    let demoRunning = false;
+    let demoTimeout = null;
+
+    const demoEvents = [
+      { step: 0, events: [
+        { event_type: 'info', message: 'Fetching PROJ-123 from Jira...', source: 'jira' },
+        { event_type: 'success', message: 'Ticket loaded: Implement CSV export', source: 'jira' }
+      ]},
+      { step: 1, events: [
+        { event_type: 'info', message: 'Reading acceptance criteria...', source: 'claude' },
+        { event_type: 'info', message: 'Writing failing test (RED phase)', source: 'claude' },
+        { event_type: 'success', message: 'Tests written, implementing code...', source: 'claude' },
+        { event_type: 'success', message: 'All tests passing (GREEN phase)', source: 'claude' }
+      ]},
+      { step: 2, events: [
+        { event_type: 'info', message: 'Staging changes...', source: 'git' },
+        { event_type: 'info', message: 'Committing: PROJ-123: Add CSV export', source: 'git' },
+        { event_type: 'success', message: 'PR #42 created successfully', source: 'github' }
+      ]},
+      { step: 3, events: [
+        { event_type: 'info', message: 'Running lint checks...', source: 'ci' },
+        { event_type: 'success', message: 'Lint passed (0 errors)', source: 'ci' },
+        { event_type: 'info', message: 'Running test suite...', source: 'ci' },
+        { event_type: 'success', message: 'Tests passed (24/24, 94% coverage)', source: 'ci' }
+      ]},
+      { step: 4, events: [
+        { event_type: 'info', message: 'Jules reviewing PR #42...', source: 'jules' },
+        { event_type: 'info', message: 'Analyzing code quality...', source: 'jules' },
+        { event_type: 'success', message: 'Review approved - LGTM', source: 'jules' }
+      ]},
+      { step: 5, events: [
+        { event_type: 'info', message: 'Merging PR #42 to main...', source: 'git' },
+        { event_type: 'success', message: 'Merged! Branch cleaned up.', source: 'github' },
+        { event_type: 'success', message: 'Jira PROJ-123 transitioned to Done', source: 'jira' }
+      ]}
+    ];
+
+    function startDemo() {
+      if (demoRunning) return;
+      demoRunning = true;
+      elapsedSeconds = 0;
+
+      // Start timer
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!isPaused) {
+          elapsedSeconds++;
+          updateTimer();
+        }
+      }, 1000);
+
+      // Update status to running
+      statusDot.style.background = 'var(--status-done)';
+      statusDot.style.boxShadow = '0 0 16px var(--status-done)';
+      statusDot.classList.remove('paused');
+      statusText.textContent = 'Demo';
+
+      // Update task info
+      taskId.textContent = 'PROJ-123';
+      taskTitle.textContent = 'Implement CSV export for report dashboard';
+
+      // Show orbit marker
+      orbitMarker.style.opacity = '1';
+      markerGlow.style.opacity = '1';
+
+      // Fire center pulse
+      triggerPulse();
+
+      // Run loop
+      runDemoStep(0);
+    }
+
+    function runDemoStep(stepIndex) {
+      if (!demoRunning) return;
+
+      if (stepIndex >= steps.length) {
+        // Loop complete - pause briefly, then reset and restart
+        demoTimeout = setTimeout(() => {
+          resetDemo();
+          demoTimeout = setTimeout(() => {
+            startDemo();
+          }, 2000);
+        }, 3000);
+        return;
+      }
+
+      // Wait if paused
+      if (isPaused) {
+        demoTimeout = setTimeout(() => runDemoStep(stepIndex), 200);
+        return;
+      }
+
+      // Activate this step
+      currentStep = stepIndex;
+      const step = steps[stepIndex];
+      updateOrbitalView(stepIndex, step.name, step.desc);
+      statusText.textContent = 'Demo';
+
+      // Fire events for this step with staggered timing
+      const stepEvents = demoEvents[stepIndex].events;
+      stepEvents.forEach((evt, i) => {
+        setTimeout(() => {
+          if (demoRunning && !isPaused) {
+            addEventToLog(evt);
+          }
+        }, 800 * (i + 1));
+      });
+
+      // Move to next step after events finish
+      const stepDuration = 800 * (stepEvents.length + 1) + 1200;
+      demoTimeout = setTimeout(() => {
+        runDemoStep(stepIndex + 1);
+      }, stepDuration);
+    }
+
+    function resetDemo() {
+      currentStep = -1;
+      elapsedSeconds = 0;
+      updateTimer();
+
+      // Reset nodes
+      nodes.forEach(node => {
+        node.classList.remove('active', 'done');
+        node.querySelector('.node-bg').setAttribute('r', '32');
+      });
+
+      // Reset progress
+      progressRing.style.strokeDashoffset = CIRCUMFERENCE;
+      progressFill.style.width = '0%';
+
+      // Reset orbit marker to start position
+      orbitMarker.setAttribute('cx', nodePositions[0].x);
+      orbitMarker.setAttribute('cy', nodePositions[0].y);
+      orbitMarker.style.fill = steps[0].color;
+      markerGlow.setAttribute('cx', nodePositions[0].x);
+      markerGlow.setAttribute('cy', nodePositions[0].y);
+      markerGlow.style.stroke = steps[0].color;
+
+      // Reset step info
+      stepMarker.style.background = 'var(--status-pending)';
+      stepMarker.textContent = '?';
+      stepName.textContent = 'Restarting...';
+      stepDesc.textContent = 'New loop cycle starting';
+
+      // Clear custom events from log
+      clearEventLog();
+
+      // Reset event log items to pending
+      const items = eventLog.querySelectorAll('.event-item[data-step]');
+      items.forEach(item => {
+        item.classList.remove('done', 'active');
+        item.classList.add('pending');
+        item.querySelector('.event-marker').textContent = '';
+      });
+    }
+
+    function stopDemo() {
+      demoRunning = false;
+      if (demoTimeout) {
+        clearTimeout(demoTimeout);
+        demoTimeout = null;
+      }
+    }
+
+    // Detect if we're on static hosting (GitHub Pages) or no WS server
+    function isStaticHosting() {
+      const host = window.location.hostname;
+      return host.includes('github.io') ||
+             host.includes('netlify') ||
+             host.includes('vercel') ||
+             host === '' ||
+             window.location.protocol === 'file:';
+    }
+
+    // ════════════════════════════════════════════════════════════════
     // Initialize
     // ════════════════════════════════════════════════════════════════
 
     initNavTabs();
-    setIdleState(); // Start in idle state
-    connectWebSocket(); // Connect to real-time updates
+    setIdleState();
+
+    if (isStaticHosting()) {
+      // On static hosting: skip WebSocket, run demo mode
+      console.log('Static hosting detected - starting demo mode');
+      setTimeout(startDemo, 800);
+    } else {
+      // Real server: connect via WebSocket
+      connectWebSocket();
+
+      // Fallback: if WebSocket doesn't connect within 5s, start demo
+      setTimeout(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.log('WebSocket unavailable - falling back to demo mode');
+          startDemo();
+        }
+      }, 5000);
+    }
   </script>
 </body>
 </html>
