@@ -147,7 +147,7 @@ def post_event_async(payload: dict):
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+            with urlopen(request, timeout=TIMEOUT_SECONDS) as _response:
                 pass  # We don't need the response
         except (URLError, HTTPError, TimeoutError, Exception):
             # Silently ignore all errors - don't slow down Claude

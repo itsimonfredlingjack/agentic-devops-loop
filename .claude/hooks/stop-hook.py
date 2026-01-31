@@ -17,7 +17,6 @@ The hook reads JSON from stdin and writes feedback to stderr.
 import json
 import subprocess
 import sys
-import os
 from pathlib import Path
 from datetime import datetime
 
@@ -221,7 +220,7 @@ def run_tests(project_type: str) -> tuple[bool, str]:
     except FileNotFoundError:
         return False, f"Test runner not found: {cmd[0]}"
     except subprocess.TimeoutExpired:
-        return False, f"Tests timed out after 120s"
+        return False, "Tests timed out after 120s"
 
 
 def run_lint(project_type: str) -> tuple[bool, str]:
@@ -251,7 +250,7 @@ def run_lint(project_type: str) -> tuple[bool, str]:
     except FileNotFoundError:
         return False, f"Linter not found: {cmd[0]}"
     except subprocess.TimeoutExpired:
-        return False, f"Lint timed out after 60s"
+        return False, "Lint timed out after 60s"
 
 
 def verify_before_exit(requirements: dict, project_types: set[str]) -> tuple[bool, str]:

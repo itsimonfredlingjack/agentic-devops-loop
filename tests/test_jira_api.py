@@ -1,11 +1,8 @@
 """Tests for .claude/utils/jira_api.py \u2014 Python Jira API fallback."""
 
 import json
-import os
 import sys
-import tempfile
 from pathlib import Path
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest

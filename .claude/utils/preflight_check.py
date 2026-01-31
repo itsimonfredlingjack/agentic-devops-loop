@@ -4,10 +4,9 @@ Preflight validation for starting new tasks.
 """
 
 import subprocess
-import os
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 
 def check_git_status() -> Tuple[bool, str]:

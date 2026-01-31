@@ -4,12 +4,9 @@ Tests the functions: detect_project_types(), run_tests(), run_lint(),
 and the integration of verification into the promise detection flow.
 """
 
-import json
-import os
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
 import subprocess
+from unittest.mock import patch
 
 import pytest
 

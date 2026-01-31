@@ -27,10 +27,10 @@ git status
 
 ### 3. Fetch Jira Ticket
 
-Use Jira MCP tools to fetch the ticket:
+Use the Jira API helper to fetch the ticket:
 
-```
-jira_get_issue(issue_key="$ARGUMENTS")
+```bash
+python3 .claude/utils/jira_api.py get-issue $ARGUMENTS
 ```
 
 Extract:
@@ -40,7 +40,7 @@ Extract:
 - `priority.name` - Priority level
 - Acceptance criteria (from description or custom field)
 
-If Jira MCP unavailable, ask user to provide ticket details manually.
+If the API call fails (missing `.env` credentials or auth error), ask the user to provide ticket details manually.
 
 ### 3b. Extract Acceptance Criteria Deterministically
 
