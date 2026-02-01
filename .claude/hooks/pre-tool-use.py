@@ -22,27 +22,13 @@ from pathlib import Path
 # SECURITY CONFIGURATION
 # ============================================================================
 
-# Allowed packages - add your project's dependencies here
+# Minimal fallback defaults (test/lint only) - used when package-allowlist.json is missing
 ALLOWED_NPM_PACKAGES = {
-    # Testing
-    "jest", "mocha", "chai", "vitest", "playwright", "@playwright/test",
-    # Linting
-    "eslint", "prettier", "typescript", "@types/*",
-    # Common utilities
-    "lodash", "axios", "express", "fastify",
-    # Build tools
-    "vite", "esbuild", "webpack", "rollup",
+    "jest", "vitest", "eslint", "prettier", "typescript", "@types/*",
 }
 
 ALLOWED_PIP_PACKAGES = {
-    # Testing
-    "pytest", "pytest-cov", "pytest-asyncio", "coverage",
-    # Linting
-    "ruff", "black", "mypy", "flake8",
-    # Common utilities
-    "requests", "httpx", "fastapi", "flask", "pydantic",
-    # Build tools
-    "build", "wheel", "setuptools",
+    "pytest", "pytest-cov", "ruff", "mypy",
 }
 
 # Paths that cannot be written to

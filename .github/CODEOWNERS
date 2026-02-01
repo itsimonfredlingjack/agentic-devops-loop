@@ -9,37 +9,36 @@
 
 # GitHub configuration (workflows, actions, issue templates, etc.)
 # Prevents agent from modifying CI/CD pipelines or GitHub settings
-/.github/ @REPO_OWNER
+/.github/ @itsimonfredlingjack
 
 # Claude Code hooks (PreToolUse validation, stop-hooks)
 # Prevents agent from disabling its own safety constraints
-/.claude/hooks/ @REPO_OWNER
+/.claude/hooks/ @itsimonfredlingjack
 
 # Docker configuration (privilege escalation risk)
-/Dockerfile @REPO_OWNER
-/docker-compose.yml @REPO_OWNER
-/docker-compose.yaml @REPO_OWNER
-/docker-compose*.yml @REPO_OWNER
-/docker-compose*.yaml @REPO_OWNER
+/Dockerfile @itsimonfredlingjack
+/docker-compose.yml @itsimonfredlingjack
+/docker-compose.yaml @itsimonfredlingjack
+/docker-compose*.yml @itsimonfredlingjack
+/docker-compose*.yaml @itsimonfredlingjack
 
 # Environment and secrets (credential exposure risk)
-/.env @REPO_OWNER
-/.env.* @REPO_OWNER
-/.envrc @REPO_OWNER
-/secrets/ @REPO_OWNER
-/**/secrets/ @REPO_OWNER
-/.secrets @REPO_OWNER
+/.env @itsimonfredlingjack
+/.env.* @itsimonfredlingjack
+/.envrc @itsimonfredlingjack
+/secrets/ @itsimonfredlingjack
+/**/secrets/ @itsimonfredlingjack
+/.secrets @itsimonfredlingjack
 
 # Dependency lock files (supply chain security)
-/package-lock.json @REPO_OWNER
-/yarn.lock @REPO_OWNER
-/pnpm-lock.yaml @REPO_OWNER
-/Gemfile.lock @REPO_OWNER
-/poetry.lock @REPO_OWNER
-/Pipfile.lock @REPO_OWNER
-/go.sum @REPO_OWNER
+/package-lock.json @itsimonfredlingjack
+/yarn.lock @itsimonfredlingjack
+/pnpm-lock.yaml @itsimonfredlingjack
+/Gemfile.lock @itsimonfredlingjack
+/poetry.lock @itsimonfredlingjack
+/Pipfile.lock @itsimonfredlingjack
+/go.sum @itsimonfredlingjack
 
 # ============================================================================
-# NOTE: Replace @REPO_OWNER with actual GitHub username(s) or team(s)
-# Example: @myusername or @myorg/security-team
+# Owner: @itsimonfredlingjack
 # ============================================================================

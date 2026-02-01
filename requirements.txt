@@ -1,1 +1,7 @@
-flask
+# Python dependencies for CI and development
+# Hook scripts use only stdlib - these are for testing/linting
+pytest
+pytest-cov
+ruff
+mypy
+httpx

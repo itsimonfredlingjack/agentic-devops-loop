@@ -19,7 +19,7 @@ jobs:
             // Regex patterns
             const titleRegex = /\[[A-Z]+-\d+\]/;  // [PROJ-123] format
             const branchJiraRegex = /[A-Z]+-\d+/;  // Extract JIRA-ID from branch
-            const branchFormatRegex = /^(feature|bugfix|hotfix)\/[A-Z]+-\d+-[a-z0-9-]+$/;
+            const branchFormatRegex = /^(feature|bugfix|hotfix|refactor|docs)\/[A-Z]+-\d+-[a-z0-9-]+$/;
             const claudeBranchRegex = /^claude\//;  // Allow claude/ branches
 
             let errors = [];
