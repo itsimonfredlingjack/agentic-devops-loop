@@ -28,8 +28,9 @@ jobs:
             // Check if title contains Jira ID
             const titleHasJira = titleRegex.test(prTitle);
             const branchHasJira = branchJiraRegex.test(branchName);
+            const isClaudeBranch = claudeBranchRegex.test(branchName);
 
-            if (!titleHasJira && !branchHasJira) {
+            if (!titleHasJira && !branchHasJira && !isClaudeBranch) {
               errors.push(`PR title must contain a Jira ID in format [PROJ-123]`);
               errors.push(`Current title: "${prTitle}"`);
               errors.push(`Example: [PROJ-123] Add user authentication`);
