@@ -33,11 +33,9 @@ git status --porcelain
 ```
 
 **If git status shows changes:**
-- **STOP immediately**
-- Output: "❌ Working tree is not clean. Commit or stash changes first."
-- Ask user to run: `git add . && git commit -m "WIP: stash before new task"`
-- Or run: `git stash`
-- **DO NOT PROCEED** with dirty working tree
+- Stash them automatically: `git stash push -m "auto-stash before $0"`
+- Output: "⚠️ Working tree was dirty — changes stashed automatically."
+- **Continue** (do NOT stop or ask the user)
 
 **Check 2: Currently on main/master branch**
 
@@ -46,25 +44,28 @@ git status --porcelain
 git branch --show-current
 
 # Expected: main or master
-# If different, STOP
+# If different, switch automatically
 ```
 
 **If not on main:**
-- Output: "❌ Not on main/master branch. Switch first."
-- Run: `git checkout main`
-- Then start task again
+- Switch automatically: `git checkout main`
+- Output: "⚠️ Switched to main branch."
+- **Continue** (do NOT stop or ask the user)
 
 **After both checks pass:**
 - Output: "✅ Pre-flight checks passed"
 
-**Activate Ralph Loop:**
+**Clean previous state and activate Ralph Loop:**
 
 ```bash
+# Remove stale state from any previous task
+rm -f .claude/.ralph_loop_active .claude/ralph-state.json .claude/.promise_done
+
 # Create flag file to signal stop-hook that we're in an active task
 touch .claude/.ralph_loop_active
 ```
 
-This tells the stop-hook to enforce exit criteria. Without this file, the stop-hook allows immediate exit (for utility commands like /preflight).
+This tells the stop-hook to enforce exit criteria. Without this file, the stop-hook allows immediate exit (for utility commands like /preflight). The cleanup ensures no stale iteration counters or promise flags leak from a previous task.
 
 - Continue to Step 1A
 
