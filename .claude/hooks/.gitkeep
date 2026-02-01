@@ -1,5 +1,0 @@
-# This directory contains Claude Code hooks for:
-# - Stop-hooks (validation before completing tasks)
-# - PreToolUse-hooks (validation before tool execution)
-#
-# Add your hook scripts here to customize agent behavior.
