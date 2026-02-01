@@ -633,3 +633,75 @@ After the Ralph Loop completes a ticket:
 </div>
 
 <!-- Tracking: [PROJ-123] v3 -->
+
+---
+
+## 🛠 Development Resources
+
+<details>
+<summary><strong>📋 Click here to copy the Flask TDD Prompt Template</strong></summary>
+
+### How to use this template
+Copy the markdown below into a new Jira ticket or Claude prompt to start a new micro-service assignment.
+
+***
+
+# 🚀 Uppdrag: Flask TDD - [APP_NAME]
+
+**Mål:** Bygg en Flask-applikation enligt strikt 3-lagersarkitektur med TDD.
+**Prioritet:** 1. Tester (röda -> gröna). 2. Minimal implementation.
+
+## 🛠 Konfiguration (Fyll i detta)
+
+| Variabel | Värde |
+| :--- | :--- |
+| **App Name** | `[APP_NAME]` |
+| **Modell** | `[MODEL_NAME]` (t.ex. Book) |
+| **Fält** | `[LIST_OF_FIELDS]` (t.ex. id:int, title:str) |
+| **Service** | `[SERVICE_NAME]` (t.ex. LibraryService) |
+| **Affärsregler** | 1. `[RULE_1]`<br>2. `[RULE_2]` |
+| **Routes** | `GET /`, `POST /add`, `[OTHER_ROUTE]` |
+
+## 📋 Regler & Setup
+
+* **Språk:** Kod/Kommentarer på **Engelska**. UI/Felmeddelanden på **Svenska**.
+* **Databas:** `sqlite:///:memory:` för tester.
+* **Dependency Injection:** Måste användas. Service tar repository i `__init__`.
+
+## 🏗 Arkitektur (LÅST)
+
+Du måste följa denna struktur exakt (Clean Architecture):
+
+1.  **Application Factory:** `create_app(config)` i `app/__init__.py`.
+2.  **Lager 1: Data (`app/data/`)**
+    * Modell (Dataclass/SQLAlchemy).
+    * Repository-protokoll (Abstract Base Class).
+    * `InMemoryRepository` (för tester/MVP).
+3.  **Lager 2: Business (`app/business/`)**
+    * Ren Python-klass (Service).
+    * Får **aldrig** bero på Flask eller HTTP.
+    * Repository injiceras i konstruktorn.
+4.  **Lager 3: Presentation (`app/presentation/`)**
+    * Flask Blueprint.
+    * Hanterar HTTP (request/response), Templates, Forms.
+    * Service injiceras via `app.config` eller factory-mönster.
+
+## ✅ Acceptance Criteria
+
+### Fas 1: Core & Business Logic (Unit Tests)
+- [ ] Projektstruktur skapad.
+- [ ] `[MODEL_NAME]` implementerad.
+- [ ] Repository-protokoll + `InMemoryRepository` skapat.
+- [ ] `[SERVICE_NAME]` implementerad med DI.
+- [ ] **TEST:** Unit-tester (pytest) verifierar alla affärsregler utan Flask.
+
+### Fas 2: Integration & Web (Integration Tests)
+- [ ] `create_app` konfigurerar Flask och injicerar dependencies.
+- [ ] Templates (`base.html` + sidor) skapade med svensk text.
+- [ ] Routes implementerade i Blueprint.
+- [ ] **TEST:** Integrationstester verifierar flöden och HTTP-statuskoder.
+- [ ] `pytest` körs grönt. `ruff check .` passerar.
+
+***
+
+</details>
