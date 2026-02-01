@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Ralph Loop exit policy configuration with profile support",
 
-  "active_profile": "code_repo",
+  "active_profile": "template_repo",
 
   "profiles": {
     "template_repo": {
