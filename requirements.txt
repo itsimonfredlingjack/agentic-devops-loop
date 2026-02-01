@@ -5,3 +5,4 @@ pytest-cov
 ruff
 mypy
 httpx
+flask==3.0.0
