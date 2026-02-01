@@ -6,6 +6,7 @@
     "vitest",
     "@playwright/test",
     "eslint",
+    "@eslint/js",
     "prettier",
     "typescript",
     "@types/*"
