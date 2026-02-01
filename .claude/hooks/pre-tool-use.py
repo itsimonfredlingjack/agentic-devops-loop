@@ -205,7 +205,8 @@ def main():
         try:
             hook_input = json.loads(input_data)
         except json.JSONDecodeError:
-            sys.exit(0)  # Invalid JSON, fail open
+            json.dump({"blocked": True, "reason": "Invalid JSON input to security hook"}, sys.stderr)
+            sys.exit(2)  # Fail closed — malformed input is suspicious
 
         tool_name = hook_input.get("tool_name", "")
         tool_input = hook_input.get("tool_input", {})
@@ -226,10 +227,10 @@ def main():
             sys.exit(2)
 
     except Exception as e:
-        # Fail open on errors to prevent stuck state
-        error_response = {"error": str(e), "action": "allow_on_error"}
+        # Fail CLOSED — a broken security gate must not become an open door
+        error_response = {"blocked": True, "reason": f"Security hook error: {e}"}
         json.dump(error_response, sys.stderr)
-        sys.exit(0)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

@@ -140,7 +140,7 @@ def _api_request(creds: dict, method: str, path: str, data: dict | None = None) 
     req = Request(url, data=body, headers=headers, method=method)
 
     try:
-        with urlopen(req) as resp:
+        with urlopen(req, timeout=30) as resp:
             raw = resp.read()
             if not raw:
                 return None

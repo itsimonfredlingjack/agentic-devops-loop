@@ -32,11 +32,35 @@ except ImportError:
 # Flag file that indicates we're in an active Ralph loop
 # Only /start-task creates this file, utility commands don't
 LOOP_FLAG = Path.cwd() / ".claude" / ".ralph_loop_active"
+PROMISE_FLAG = Path.cwd() / ".claude" / ".promise_done"
+STATE_FILE = Path.cwd() / ".claude" / "ralph-state.json"
+
+# Maximum age of flag file before it's considered stale (24 hours)
+MAX_FLAG_AGE_SECONDS = 86400
+
+
+def cleanup_loop_state():
+    """Remove all Ralph Loop state files."""
+    for f in (LOOP_FLAG, PROMISE_FLAG, STATE_FILE):
+        try:
+            f.unlink(missing_ok=True)
+        except Exception:
+            pass
+
 
 # CRITICAL: If not in active Ralph loop, allow exit immediately
 # This prevents utility commands (/preflight, /finish-task) from being blocked
 if not LOOP_FLAG.exists():
     sys.exit(0)  # Allow exit, no enforcement
+
+# Check for stale flag file (older than 24h = orphaned from a crash)
+try:
+    flag_age = datetime.now().timestamp() - LOOP_FLAG.stat().st_mtime
+    if flag_age > MAX_FLAG_AGE_SECONDS:
+        cleanup_loop_state()
+        sys.exit(0)  # Stale flag — allow exit, previous session crashed
+except Exception:
+    pass  # Can't stat the file — proceed with normal checks
 
 
 def load_config():
@@ -368,8 +392,9 @@ def main():
         try:
             hook_input = json.loads(input_data)
         except json.JSONDecodeError:
-            # Invalid JSON, allow exit (fail open)
-            sys.exit(0)
+            # Invalid JSON from Claude Code — block exit (fail closed)
+            json.dump({"action": "continue", "reason": "Stop hook received invalid JSON"}, sys.stderr)
+            sys.exit(2)
 
         # Load configuration
         config = load_config()
@@ -393,6 +418,8 @@ def main():
                 ["Review the task manually", "Check for infinite loops in logic"]
             )
             json.dump(response, sys.stderr)
+            # Clean up state files so next session isn't trapped
+            cleanup_loop_state()
             # Notify monitor of forced exit
             if _task_id:
                 send_task_fail(_task_id, f"Max iterations ({max_iterations}) exceeded")
@@ -444,13 +471,18 @@ def main():
         sys.exit(2)
 
     except Exception as e:
-        # On any error, fail open (allow exit) to prevent stuck state
-        error_response = {
-            "error": str(e),
-            "action": "allow_exit_on_error"
-        }
-        json.dump(error_response, sys.stderr)
-        sys.exit(0)
+        # Fail CLOSED by default — but allow exit if iterations are exhausted
+        # to prevent permanently stuck agents
+        try:
+            iteration = get_iteration_count()
+        except Exception:
+            iteration = 999  # Can't even read state — force exit as safety valve
+        if iteration >= 25:
+            json.dump({"error": str(e), "action": "forced_exit_on_error"}, sys.stderr)
+            sys.exit(0)  # Safety valve: let agent out after max iterations
+        else:
+            json.dump({"action": "continue", "reason": f"Stop hook error: {e}"}, sys.stderr)
+            sys.exit(2)  # Block exit — hook needs fixing but agent can retry
 
 
 if __name__ == "__main__":
