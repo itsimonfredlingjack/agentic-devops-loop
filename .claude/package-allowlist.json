@@ -15,7 +15,11 @@
     "pytest-cov",
     "ruff",
     "mypy",
-    "httpx"
+    "httpx",
+    "flask",
+    "flask-sqlalchemy",
+    "flask-migrate",
+    "python-dotenv"
   ],
   "notes": "Add packages here that the agent is allowed to install. Wildcards supported for npm scoped packages (@types/*)"
 }
