@@ -6,7 +6,6 @@ protected path enforcement, and the main hook flow.
 
 import importlib.util
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
