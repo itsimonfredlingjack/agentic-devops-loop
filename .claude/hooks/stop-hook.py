@@ -67,7 +67,6 @@ def load_config():
     return {
         "completion_promise": "<promise>DONE</promise>",
         "max_iterations": 25,
-        "scan_length": 5000,
         "requirements": {
             "tests_must_pass": False,
             "lint_must_pass": True
@@ -104,13 +103,12 @@ def increment_iteration():
     return state["iterations"]
 
 
-def check_promise_in_transcript(transcript: str, promise: str, scan_length: int = None) -> bool:
+def check_promise_in_transcript(transcript: str, promise: str) -> bool:
     """Check if completion promise exists in entire transcript.
 
     Args:
         transcript: Full session transcript
         promise: Promise string to search for
-        scan_length: Ignored (for backwards compatibility)
 
     Returns:
         True if promise found anywhere in transcript
@@ -281,13 +279,42 @@ def run_lint(project_type: str) -> tuple[bool, str]:
         return False, "Lint timed out after 60s"
 
 
+def run_coverage(project_type: str, threshold: int) -> tuple[bool, str]:
+    """Run test coverage and check against threshold.
+
+    Args:
+        project_type: "node" or "python".
+        threshold: Minimum coverage percentage required.
+
+    Returns:
+        (passed, output) tuple. passed=True only if coverage meets threshold.
+    """
+    if project_type == "python":
+        cmd = ["python3", "-m", "pytest", "--cov", "--cov-fail-under", str(threshold), "-q"]
+    elif project_type == "node":
+        cmd = ["npx", "vitest", "run", "--coverage", "--coverage.thresholds.lines", str(threshold)]
+    else:
+        return False, f"No coverage runner for project type: {project_type}"
+
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=180
+        )
+        output = (result.stdout + "\n" + result.stderr).strip()
+        return result.returncode == 0, _tail(output)
+    except FileNotFoundError:
+        return False, f"Coverage runner not found: {cmd[0]}"
+    except subprocess.TimeoutExpired:
+        return False, "Coverage check timed out after 180s"
+
+
 def verify_before_exit(requirements: dict, project_types: set[str]) -> tuple[bool, str]:
     """Run verification checks before allowing exit.
 
     Fail-closed: required checks that cannot run count as failures.
 
     Args:
-        requirements: Dict with tests_must_pass, lint_must_pass flags.
+        requirements: Dict with tests_must_pass, lint_must_pass, coverage_threshold flags.
         project_types: Detected project types (e.g. {"node", "python"}).
 
     Returns:
@@ -312,6 +339,16 @@ def verify_before_exit(requirements: dict, project_types: set[str]) -> tuple[boo
                 passed, output = run_lint(project_type)
                 if not passed:
                     failures.append(f"Lint failed ({project_type}):\n{output}")
+
+    coverage_threshold = requirements.get("coverage_threshold")
+    if coverage_threshold and int(coverage_threshold) > 0:
+        if not project_types:
+            failures.append("Coverage required but project type could not be detected")
+        else:
+            for project_type in sorted(project_types):
+                passed, output = run_coverage(project_type, int(coverage_threshold))
+                if not passed:
+                    failures.append(f"Coverage below {coverage_threshold}% ({project_type}):\n{output}")
 
     if failures:
         return False, "\n---\n".join(failures)
@@ -341,7 +378,6 @@ def main():
         transcript = hook_input.get("transcript", "")
         completion_promise = config.get("completion_promise", "<promise>DONE</promise>")
         max_iterations = config.get("max_iterations", 25)
-        scan_length = config.get("scan_length", 5000)
         requirements = config.get("requirements", {})
 
         # Increment iteration counter
@@ -364,7 +400,7 @@ def main():
 
         # Check 2: Promise found in transcript (search ENTIRE transcript)
         promise_found = (
-            check_promise_in_transcript(transcript, completion_promise, scan_length)
+            check_promise_in_transcript(transcript, completion_promise)
             or check_promise_flag_file(completion_promise)
         )
 

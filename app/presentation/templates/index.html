@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Alla artiklar</h2>
+
+{% if articles %}
+    {% for article in articles %}
+    <div class="article">
+        <h2><a href="/article/{{ article.id }}">{{ article.title }}</a></h2>
+        <p class="meta">Av {{ article.author }} - {{ article.published_date.strftime('%Y-%m-%d %H:%M') }}</p>
+    </div>
+    {% endfor %}
+{% else %}
+    <p>Inga artiklar ännu.</p>
+{% endif %}
+{% endblock %}

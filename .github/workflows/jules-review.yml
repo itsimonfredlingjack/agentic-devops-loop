@@ -15,6 +15,8 @@ jobs:
   jules-review:
     name: Google Jules AI Review
     runs-on: ubuntu-latest
+    outputs:
+      has_critical_issues: ${{ steps.feedback.outputs.has_critical_issues }}
 
     steps:
       - name: Checkout code
@@ -105,6 +107,10 @@ jobs:
           echo "$ACTIVITIES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+          # Check if Jules found critical issues (security vulnerabilities or bugs)
+          HAS_CRITICAL=$(echo "$ACTIVITIES" | jq -r '[.activities[]? | select(.severity == "CRITICAL" or .severity == "HIGH")] | length > 0')
+          echo "has_critical_issues=$HAS_CRITICAL" >> $GITHUB_OUTPUT
+
       - name: Post review comment
         uses: actions/github-script@v7
         env:
@@ -157,7 +163,10 @@ jobs:
     name: Jules Auto-Fix (Critical Issues)
     runs-on: ubuntu-latest
     needs: jules-review
-    if: failure()
+    if: needs.jules-review.outputs.has_critical_issues == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout code

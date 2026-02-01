@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nyhetsarkiv{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 { color: #333; }
+        .error { color: red; }
+        .article { border-bottom: 1px solid #ccc; padding: 10px 0; }
+        .article h2 { margin: 5px 0; }
+        .meta { color: #666; font-size: 0.9em; }
+        form { margin: 20px 0; }
+        label { display: block; margin: 10px 0 5px; }
+        input, textarea { width: 100%; padding: 5px; }
+        button { padding: 10px 20px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Nyhetsarkiv</h1>
+    <nav>
+        <a href="/">Alla artiklar</a> |
+        <a href="/article/new">Ny artikel</a>
+    </nav>
+    <hr>
+    {% block content %}{% endblock %}
+</body>
+</html>

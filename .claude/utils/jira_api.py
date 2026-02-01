@@ -3,19 +3,21 @@
 Python Jira API Fallback
 
 Mirrors jira-api.sh CLI interface using only stdlib (urllib.request).
-Commands: ping, get-issue, transition-issue, add-comment
+Commands: ping, get-issue, transition-issue, add-comment, search
 
 Usage:
     python3 jira_api.py ping
     python3 jira_api.py get-issue PROJ-123
     python3 jira_api.py transition-issue PROJ-123 "In Progress"
     python3 jira_api.py add-comment PROJ-123 "Comment text"
+    python3 jira_api.py search "project = DEV ORDER BY created DESC"
 """
 
 import base64
 import json
 import os
 import sys
+import urllib.parse
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -242,6 +244,21 @@ def ping(creds: dict) -> dict:
     return _api_request(creds, "GET", "/myself")
 
 
+def search_issues(creds: dict, jql: str, max_results: int = 10) -> dict:
+    """Search Jira issues using JQL.
+
+    Args:
+        creds: Credentials dict.
+        jql: JQL query string, e.g. "project = DEV ORDER BY created DESC".
+        max_results: Maximum number of results to return (default 10).
+
+    Returns:
+        Search results dict containing issues array.
+    """
+    params = urllib.parse.urlencode({"jql": jql, "maxResults": max_results})
+    return _api_request(creds, "GET", f"/search?{params}")
+
+
 def cli(args: list[str]) -> int:
     """CLI entrypoint \u2014 mirrors jira-api.sh interface.
 
@@ -253,7 +270,7 @@ def cli(args: list[str]) -> int:
     """
     if not args:
         print("Usage: jira_api.py <command> [args...]", file=sys.stderr)
-        print("Commands: ping, get-issue, transition-issue, add-comment", file=sys.stderr)
+        print("Commands: ping, get-issue, transition-issue, add-comment, search", file=sys.stderr)
         return 1
 
     command = args[0]
@@ -300,9 +317,18 @@ def cli(args: list[str]) -> int:
             print(f"Comment added to {args[1]}")
             return 0
 
+        elif command == "search":
+            if len(args) < 2:
+                print("Usage: jira_api.py search 'JQL query'", file=sys.stderr)
+                return 1
+            max_results = int(args[2]) if len(args) > 2 else 10
+            result = search_issues(creds, args[1], max_results)
+            print(json.dumps(result, indent=2))
+            return 0
+
         else:
             print(f"Unknown command: {command}", file=sys.stderr)
-            print("Commands: ping, get-issue, transition-issue, add-comment", file=sys.stderr)
+            print("Commands: ping, get-issue, transition-issue, add-comment, search", file=sys.stderr)
             return 1
 
     except JiraAPIError as e:
