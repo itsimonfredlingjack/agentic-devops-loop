@@ -1483,11 +1483,28 @@
       };
       const icon = typeIcons[event.event_type] || '•';
 
-      li.innerHTML = `
-        <span class="event-marker" style="background: ${color}; box-shadow: 0 0 8px ${color}; color: var(--bg-deep); font-size: 8px;">${icon}</span>
-        <span style="flex: 1;">${event.message}</span>
-        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${event.source || ''}</span>
-      `;
+      // Create elements safely to prevent XSS
+      const markerSpan = document.createElement('span');
+      markerSpan.className = 'event-marker';
+      markerSpan.style.background = color;
+      markerSpan.style.boxShadow = `0 0 8px ${color}`;
+      markerSpan.style.color = 'var(--bg-deep)';
+      markerSpan.style.fontSize = '8px';
+      markerSpan.textContent = icon;
+
+      const messageSpan = document.createElement('span');
+      messageSpan.style.flex = '1';
+      messageSpan.textContent = event.message;
+
+      const sourceSpan = document.createElement('span');
+      sourceSpan.style.fontFamily = 'var(--font-mono)';
+      sourceSpan.style.fontSize = '11px';
+      sourceSpan.style.color = 'var(--text-muted)';
+      sourceSpan.textContent = event.source || '';
+
+      li.appendChild(markerSpan);
+      li.appendChild(messageSpan);
+      li.appendChild(sourceSpan);
 
       // Insert at top of custom events section (after the 6 step items)
       const stepItems = eventLog.querySelectorAll('.event-item[data-step]');

@@ -24,10 +24,12 @@ jobs:
 
       - name: Get PR info
         id: pr-info
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
           echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "pr_title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
 
       - name: Trigger Jules Review
         id: jules

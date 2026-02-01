@@ -11,6 +11,14 @@ UPLOAD_FOLDER.mkdir(exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+
+
+def allowed_file(filename: str) -> bool:
+    """Check if file has an allowed extension."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def format_filename(original_filename: str) -> str:
     """Format filename with current date.
@@ -44,7 +52,7 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    if file:
+    if file and allowed_file(file.filename):
         # Format the filename with date
         formatted_name = format_filename(file.filename)
         filepath = app.config['UPLOAD_FOLDER'] / formatted_name
@@ -56,7 +64,7 @@ def upload_file():
             'path': str(filepath)
         }), 200
 
-    return jsonify({'error': 'Upload failed'}), 500
+    return jsonify({'error': 'Upload failed or invalid file type'}), 500
 
 
 @app.route('/export', methods=['GET'])
@@ -70,4 +78,4 @@ def export():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='localhost', port=5000)
+    app.run(debug=False, host='localhost', port=5000)

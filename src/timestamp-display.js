@@ -9,6 +9,8 @@ class TimestampDisplay extends HTMLElement {
     this.updateInterval = null;
     this.attachShadow({ mode: 'open' });
     this.render();
+    this.dateElement = this.shadowRoot.querySelector('[data-role="date"]');
+    this.timeElement = this.shadowRoot.querySelector('[data-role="time"]');
   }
 
   connectedCallback() {
@@ -122,14 +124,11 @@ class TimestampDisplay extends HTMLElement {
     const dateStr = this.formatDate(now);
     const timeStr = this.formatTime(now);
 
-    const dateElement = this.shadowRoot.querySelector('[data-role="date"]');
-    const timeElement = this.shadowRoot.querySelector('[data-role="time"]');
-
-    if (dateElement) {
-      dateElement.textContent = dateStr;
+    if (this.dateElement) {
+      this.dateElement.textContent = dateStr;
     }
-    if (timeElement) {
-      timeElement.textContent = timeStr;
+    if (this.timeElement) {
+      this.timeElement.textContent = timeStr;
     }
   }
 
