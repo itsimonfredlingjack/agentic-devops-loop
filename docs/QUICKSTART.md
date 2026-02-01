@@ -173,9 +173,8 @@ cat docs/CURRENT_TASK.md
 
 ### Jira-anslutning fungerar inte
 ```bash
-# Testa credentials
-source .env
-curl -u "$JIRA_USERNAME:$JIRA_API_TOKEN" "$JIRA_URL/rest/api/3/myself"
+# Testa credentials (läser .env automatiskt)
+python3 .claude/utils/jira_api.py ping
 ```
 
 ### Git hooks fungerar inte
@@ -216,7 +215,7 @@ your-project/
 │   │   └── stop-hook.py       # Exit-kontroll
 │   ├── plugins/
 │   │   └── agentic-loop/
-│   │       └── manifest.json  # Jira MCP
+│   │       └── manifest.json  # Jira integration (MCP optional)
 │   ├── commands/              # Working slash commands
 │   │   ├── start-task.md      # /start-task JIRA-ID
 │   │   └── finish-task.md     # /finish-task

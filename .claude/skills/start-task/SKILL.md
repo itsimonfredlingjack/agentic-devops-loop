@@ -3,7 +3,7 @@ name: start-task
 description: Initialize a new task from a Jira ticket, create branch, and set up CURRENT_TASK.md
 argument-hint: "[JIRA-ID]"
 disable-model-invocation: true
-allowed-tools: Bash(git *), Bash(source *), Read, Write
+allowed-tools: Bash(git *), Bash(source *), Bash(python3 *), Read, Write
 ---
 
 # Start Task Skill
@@ -12,7 +12,7 @@ Initialize the Ralph Loop for Jira ticket **$0**.
 
 ## Prerequisites
 
-- Jira MCP server must be configured with valid credentials
+- `.env` must include Jira credentials (`JIRA_URL`, `JIRA_USERNAME`/`JIRA_EMAIL`, `JIRA_API_TOKEN`/`JIRA_TOKEN`)
 - Git repository must be clean (no uncommitted changes)
 - Must be on main/master branch
 
@@ -70,20 +70,20 @@ This tells the stop-hook to enforce exit criteria. Without this file, the stop-h
 
 ### Step 1A: Validate Jira Connection (SAFETY)
 
-Before attempting to fetch, validate Jira MCP is available.
+Before attempting to fetch, validate the Jira API is available.
 
 **Run this command to test:**
 
 ```bash
 # Test Jira connection (will error if unavailable)
-jira_search_issues(jql="project = YOUR_PROJECT LIMIT 1")
+python3 .claude/utils/jira_api.py ping
 ```
 
-**If this fails with "Connection refused" or "MCP not available":**
+**If this fails with "Connection error" or auth error:**
 - **STOP IMMEDIATELY**
-- Output: "❌ Jira MCP is not available. Cannot fetch ticket details."
+- Output: "❌ Jira API is not available. Cannot fetch ticket details."
 - Ask user to:
-  1. Check `.env` file has `JIRA_URL` and `JIRA_TOKEN`
+  1. Check `.env` file has `JIRA_URL`, `JIRA_USERNAME`/`JIRA_EMAIL`, and `JIRA_API_TOKEN`/`JIRA_TOKEN`
   2. Restart Claude Code session
   3. Or run `/preflight` to validate setup
 - **DO NOT PROCEED without real Jira data**
@@ -108,14 +108,14 @@ fi
 
 ### Step 2: Fetch Jira Ticket
 
-Use the Jira MCP tools to fetch the ticket:
+Use the Jira API helper to fetch the ticket:
 
 ```
-jira_get_issue(issue_key="{JIRA_ID}")
+python3 .claude/utils/jira_api.py get-issue {JIRA_ID}
 ```
 
 **If this fails:**
-- The Jira MCP is not properly configured
+- The Jira API is not properly configured
 - **DO NOT GUESS or INVENT**
 - Output error message and **STOP**
 - Ask user to manually provide:
@@ -308,7 +308,7 @@ This guarantees:
 Transition the Jira ticket to "In Progress":
 
 ```
-jira_transition_issue(issue_key="{JIRA_ID}", transition="In Progress")
+python3 .claude/utils/jira_api.py transition-issue "{JIRA_ID}" "In Progress"
 ```
 
 ### Step 8: Add Jira Comment
@@ -316,7 +316,7 @@ jira_transition_issue(issue_key="{JIRA_ID}", transition="In Progress")
 Log that the agent has started work:
 
 ```
-jira_add_comment(issue_key="{JIRA_ID}", body="🤖 Claude Code agent started work on this ticket.\n\nBranch: `{branch_name}`\nTimestamp: {timestamp}")
+python3 .claude/utils/jira_api.py add-comment "{JIRA_ID}" "🤖 Claude Code agent started work on this ticket.\n\nBranch: `{branch_name}`\nTimestamp: {timestamp}"
 ```
 
 ### Step 9: Reset Ralph State
@@ -404,7 +404,7 @@ Only then output the promise on its own line.
 - **Jira ticket not found:** Exit with error, do not create branch
 - **Branch already exists:** Ask user whether to switch to existing branch
 - **Uncommitted changes:** Abort and ask user to commit or stash
-- **MCP server unavailable:** Fall back to manual mode (ask user for ticket details)
+- **Jira API unavailable:** Fall back to manual mode (ask user for ticket details)
 
 ## Post-Skill Behavior
 

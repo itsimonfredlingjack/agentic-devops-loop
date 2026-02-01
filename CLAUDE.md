@@ -267,13 +267,13 @@ The Ralph Loop supports different profiles in `.claude/ralph-config.json`:
 
 ## Jira Integration
 
-The system uses MCP (Model Context Protocol) to interact with Jira.
+The system uses the REST API helper (`.claude/utils/jira_api.py`) to interact with Jira. MCP is optional.
 
-**Available Tools:**
-- `jira_get_issue` - Fetch ticket details
-- `jira_search` - Search for issues
-- `jira_transition_issue` - Change ticket status
-- `jira_add_comment` - Post comments
+**Available Commands:**
+- `python3 .claude/utils/jira_api.py ping`
+- `python3 .claude/utils/jira_api.py get-issue`
+- `python3 .claude/utils/jira_api.py transition-issue`
+- `python3 .claude/utils/jira_api.py add-comment`
 
 **Required Environment Variables:**
 ```bash

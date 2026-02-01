@@ -84,7 +84,7 @@ claude
 agentic-dev-loop/
 ├── .claude/               # 🧠 The Brain (Ralph Config & Memory)
 │   ├── hooks/             # Security enforcement protocols
-│   └── plugins/           # MCP Integrations
+│   └── plugins/           # Integrations (MCP optional)
 ├── .github/workflows/     # ⚡ The Nervous System
 │   ├── jules-review.yml   # AI Code Reviewer
 │   └── self-healing.yml   # Auto-Remediation Logic

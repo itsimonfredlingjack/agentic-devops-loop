@@ -28,15 +28,15 @@ git branch --show-current
 **Pass if:** Output is `main` or `master`
 **Fail if:** Different branch
 
-### 3. Jira MCP Available
+### 3. Jira API Available
 
 ```bash
 # Test Jira connection
-jira_search_issues(jql="ORDER BY created DESC LIMIT 1")
+python3 .claude/utils/jira_api.py ping
 ```
 
-**Pass if:** Returns issue list
-**Fail if:** Connection error or "MCP not available"
+**Pass if:** Returns Jira user profile
+**Fail if:** Connection error or auth error
 
 ### 4. GitHub Auth (can push)
 
@@ -65,7 +65,7 @@ PREFLIGHT CHECKS
 
 [✅] Git working tree clean
 [✅] On main branch
-[✅] Jira MCP responding
+[✅] Jira API responding
 [✅] GitHub auth working
 [✅] Environment configured
 
@@ -80,7 +80,7 @@ PREFLIGHT CHECKS
 ═════════════════════════════════════════
 
 [✅] Git working tree clean
-[❌] Jira MCP responding
+[❌] Jira API responding
      └─ Error: Connection refused
         Action: Check JIRA_URL in .env
 [✅] GitHub auth working

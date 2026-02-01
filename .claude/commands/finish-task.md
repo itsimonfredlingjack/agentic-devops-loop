@@ -123,17 +123,12 @@ import time; time.sleep(0.5)
 
 Transition to "In Review":
 ```
-jira_transition_issue(issue_key="{JIRA_ID}", transition="In Review")
+python3 .claude/utils/jira_api.py transition-issue "{JIRA_ID}" "In Review"
 ```
 
 Add completion comment:
 ```
-jira_add_comment(issue_key="{JIRA_ID}", body="🤖 Implementation complete!
-
-**Branch:** `{branch_name}`
-**PR:** {pr_url}
-
-All tests pass. Ready for review.")
+python3 .claude/utils/jira_api.py add-comment "{JIRA_ID}" "🤖 Implementation complete!\n\n**Branch:** `{branch_name}`\n**PR:** {pr_url}\n\nAll tests pass. Ready for review."
 ```
 
 ### 9. Update CURRENT_TASK.md

@@ -3,9 +3,10 @@
 Python Jira API Fallback
 
 Mirrors jira-api.sh CLI interface using only stdlib (urllib.request).
-Commands: get-issue, transition-issue, add-comment
+Commands: ping, get-issue, transition-issue, add-comment
 
 Usage:
+    python3 jira_api.py ping
     python3 jira_api.py get-issue PROJ-123
     python3 jira_api.py transition-issue PROJ-123 "In Progress"
     python3 jira_api.py add-comment PROJ-123 "Comment text"
@@ -13,6 +14,7 @@ Usage:
 
 import base64
 import json
+import os
 import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -23,47 +25,56 @@ class JiraAPIError(Exception):
     """Raised when a Jira API call fails."""
 
 
-def load_credentials(env_path: str) -> dict:
-    """Load Jira credentials from a .env file.
+def load_credentials(env_path: str | None = None) -> dict:
+    """Load Jira credentials from environment or a .env file.
 
     Supports both JIRA_USERNAME/JIRA_EMAIL and JIRA_API_TOKEN/JIRA_TOKEN.
 
     Args:
-        env_path: Path to .env file.
+        env_path: Optional path to .env file.
 
     Returns:
         Dict with keys: url, username, token.
 
     Raises:
-        FileNotFoundError: If .env file doesn't exist.
+        FileNotFoundError: If env_path is provided but .env file doesn't exist.
         ValueError: If required credentials are missing.
     """
-    path = Path(env_path)
-    if not path.exists():
-        raise FileNotFoundError(f".env file not found: {env_path}")
-
     env_vars: dict[str, str] = {}
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip()
-            # Strip surrounding quotes
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-                value = value[1:-1]
+    for key in ("JIRA_URL", "JIRA_USERNAME", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_TOKEN"):
+        value = os.environ.get(key)
+        if value:
             env_vars[key] = value
+
+    if env_path:
+        path = Path(env_path)
+        if not path.exists():
+            raise FileNotFoundError(f".env file not found: {env_path}")
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip()
+                # Strip surrounding quotes
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                    value = value[1:-1]
+                if key and key not in env_vars:
+                    env_vars[key] = value
 
     url = env_vars.get("JIRA_URL", "")
     username = env_vars.get("JIRA_USERNAME") or env_vars.get("JIRA_EMAIL", "")
     token = env_vars.get("JIRA_API_TOKEN") or env_vars.get("JIRA_TOKEN", "")
 
     if not url or not username or not token:
-        raise ValueError("Missing Jira credentials in .env (need JIRA_URL, username, token)")
+        raise ValueError(
+            "Missing Jira credentials in environment or .env "
+            "(need JIRA_URL, username, token)"
+        )
 
     return {"url": url.rstrip("/"), "username": username, "token": token}
 
@@ -219,6 +230,18 @@ def add_comment(creds: dict, issue_key: str, text: str) -> dict | None:
     return _api_request(creds, "POST", f"/issue/{issue_key}/comment", data=adf_body)
 
 
+def ping(creds: dict) -> dict:
+    """Verify Jira credentials by calling /myself.
+
+    Args:
+        creds: Credentials dict.
+
+    Returns:
+        Jira user profile dict.
+    """
+    return _api_request(creds, "GET", "/myself")
+
+
 def cli(args: list[str]) -> int:
     """CLI entrypoint \u2014 mirrors jira-api.sh interface.
 
@@ -230,20 +253,30 @@ def cli(args: list[str]) -> int:
     """
     if not args:
         print("Usage: jira_api.py <command> [args...]", file=sys.stderr)
-        print("Commands: get-issue, transition-issue, add-comment", file=sys.stderr)
+        print("Commands: ping, get-issue, transition-issue, add-comment", file=sys.stderr)
         return 1
 
     command = args[0]
 
+    env_path = None
     try:
         env_path = find_env_file()
+    except FileNotFoundError:
+        env_path = None
+
+    try:
         creds = load_credentials(env_path)
     except (FileNotFoundError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
     try:
-        if command == "get-issue":
+        if command == "ping":
+            result = ping(creds)
+            print(json.dumps(result, indent=2))
+            return 0
+
+        elif command == "get-issue":
             if len(args) < 2:
                 print("Usage: jira_api.py get-issue ISSUE_KEY", file=sys.stderr)
                 return 1
@@ -269,7 +302,7 @@ def cli(args: list[str]) -> int:
 
         else:
             print(f"Unknown command: {command}", file=sys.stderr)
-            print("Commands: get-issue, transition-issue, add-comment", file=sys.stderr)
+            print("Commands: ping, get-issue, transition-issue, add-comment", file=sys.stderr)
             return 1
 
     except JiraAPIError as e:
