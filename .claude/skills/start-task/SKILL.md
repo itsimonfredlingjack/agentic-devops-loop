@@ -1,12 +1,14 @@
 ---
 name: start-task
 description: Initialize a new task from a Jira ticket, create branch, and set up CURRENT_TASK.md
-args: JIRA_ID (e.g., PROJ-123)
+argument-hint: "[JIRA-ID]"
+disable-model-invocation: true
+allowed-tools: Bash(git *), Bash(source *), Read, Write
 ---
 
 # Start Task Skill
 
-This skill initializes the Ralph Loop for a new Jira task.
+Initialize the Ralph Loop for Jira ticket **$0**.
 
 ## Prerequisites
 

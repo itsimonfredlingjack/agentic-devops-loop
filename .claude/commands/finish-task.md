@@ -106,6 +106,19 @@ Implements {JIRA_ID}
 
 Capture the PR URL from output.
 
+### 7b. Notify Monitor - PR Created
+
+Update the monitor to show the Jules Review step:
+
+```bash
+python3 -c "
+import sys; sys.path.insert(0, '.claude/utils')
+from monitor_client import send_task_update
+send_task_update('{JIRA_ID}', step=4, step_name='Jules Review', step_desc='PR created, awaiting review...')
+import time; time.sleep(0.5)
+"
+```
+
 ### 8. Update Jira
 
 Transition to "In Review":

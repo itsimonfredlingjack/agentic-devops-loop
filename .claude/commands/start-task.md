@@ -186,6 +186,21 @@ jira_add_comment(issue_key="$ARGUMENTS", body="🤖 Claude Code agent started wo
 rm -f .claude/ralph-state.json
 ```
 
+### 7b. Notify Monitor
+
+Send a task_start event to the agent monitor so the orbital visualization activates:
+
+```bash
+python3 -c "
+import sys; sys.path.insert(0, '.claude/utils')
+from monitor_client import send_task_start
+send_task_start('$ARGUMENTS', title='{summary}', branch='{branch_name}', max_iterations=25)
+import time; time.sleep(0.5)  # Brief wait for async send
+"
+```
+
+If this fails (monitor offline), ignore and continue — it's non-blocking.
+
 ### 8. Output Confirmation
 
 After setup, display:

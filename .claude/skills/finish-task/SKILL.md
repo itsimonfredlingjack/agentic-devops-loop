@@ -1,7 +1,8 @@
 ---
 name: finish-task
 description: Complete a task - verify all criteria, commit, push, create PR, and update Jira
-args: none (uses current task from CURRENT_TASK.md)
+disable-model-invocation: true
+allowed-tools: Bash(git *), Bash(gh pr *), Bash(pytest *), Bash(ruff *), Bash(source *), Read
 ---
 
 # Finish Task Skill

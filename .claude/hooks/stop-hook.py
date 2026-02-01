@@ -20,6 +20,15 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
+# Add utils to path for monitor_client
+sys.path.insert(0, str(Path(__file__).parent.parent / "utils"))
+try:
+    from monitor_client import send_task_complete, send_task_fail, send_event
+except ImportError:
+    def send_task_complete(*a, **kw): pass
+    def send_task_fail(*a, **kw): pass
+    def send_event(*a, **kw): pass
+
 # Flag file that indicates we're in an active Ralph loop
 # Only /start-task creates this file, utility commands don't
 LOOP_FLAG = Path.cwd() / ".claude" / ".ralph_loop_active"
@@ -141,6 +150,25 @@ def write_promise_flag(promise: str) -> None:
 
     with open(flag_file, 'w') as f:
         f.write(promise)
+
+
+def get_task_id() -> str | None:
+    """Extract task_id from CURRENT_TASK.md if available."""
+    import re as _re
+    current_task_paths = [
+        Path.cwd() / "docs" / "CURRENT_TASK.md",
+        Path.cwd() / "CURRENT_TASK.md",
+    ]
+    for task_path in current_task_paths:
+        if task_path.exists():
+            try:
+                content = task_path.read_text()
+                match = _re.search(r"([A-Z]+-\d+)", content)
+                if match:
+                    return match.group(1)
+            except Exception:
+                pass
+    return None
 
 
 def build_continue_message(reason: str, suggestions: list) -> dict:
@@ -319,6 +347,9 @@ def main():
         # Increment iteration counter
         current_iteration = increment_iteration()
 
+        # Extract task_id for monitor notifications
+        _task_id = get_task_id()
+
         # Check 1: Max iterations exceeded
         if current_iteration >= max_iterations:
             response = build_continue_message(
@@ -326,6 +357,9 @@ def main():
                 ["Review the task manually", "Check for infinite loops in logic"]
             )
             json.dump(response, sys.stderr)
+            # Notify monitor of forced exit
+            if _task_id:
+                send_task_fail(_task_id, f"Max iterations ({max_iterations}) exceeded")
             sys.exit(0)  # Allow exit on max iterations
 
         # Check 2: Promise found in transcript (search ENTIRE transcript)
@@ -339,7 +373,10 @@ def main():
             project_types = detect_project_types()
             passed, detail = verify_before_exit(requirements, project_types)
             if passed:
-                sys.exit(0)  # All checks pass \u2014 allow exit
+                # Notify monitor of successful completion
+                if _task_id:
+                    send_task_complete(_task_id)
+                sys.exit(0)  # All checks pass — allow exit
             else:
                 # Verification failed \u2014 block exit with detail
                 response = build_continue_message(
