@@ -327,9 +327,9 @@ Clear the iteration counter:
 rm -f .claude/ralph-state.json
 ```
 
-### Step 10: Output Ralph Loop Initialization Prompt
+### Step 10: Output Ralph Loop Initialization and Begin First Iteration
 
-After setup, output the following prompt structure to initialize the loop:
+Output the initialization message:
 
 ```
 ✅ Task {JIRA_ID} initialized
@@ -339,16 +339,14 @@ Status: In Progress
 Iteration: 1/25
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-RALPH LOOP ACTIVE
-
-Your task: Implement according to CURRENT_TASK.md
+RALPH LOOP ACTIVE — Starting first iteration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Strategy:
 1. Read docs/CURRENT_TASK.md (your memory)
 2. Write a test that fails (Red)
 3. Implement until test passes (Green)
-4. Refactor if needed (Refactor)
+4. Refactor if needed
 5. Run ALL tests
 6. ONLY if ALL tests pass: output <promise>DONE</promise>
 
@@ -362,8 +360,38 @@ The stop-hook will block exit until criteria are met.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Begin by reading docs/CURRENT_TASK.md
+Now reading docs/CURRENT_TASK.md to begin implementation...
 ```
+
+**DO NOT STOP HERE. CONTINUE IMMEDIATELY TO STEP 11.**
+
+### Step 11: Begin First Ralph Loop Iteration
+
+You have output the initialization message. Now execute the first iteration:
+
+1. **Read** `docs/CURRENT_TASK.md` to understand the task, acceptance criteria, and required changes
+2. **Parse** the acceptance criteria from CURRENT_TASK.md
+3. **Identify** the first testable requirement from the acceptance criteria
+4. **Write** a failing test (Red phase of TDD) that captures this requirement
+5. **Run** the test to confirm it fails (expected behavior)
+6. **Implement** the minimal code to make the test pass (Green phase)
+7. **Run** all tests to verify nothing broke
+8. **Update** `docs/CURRENT_TASK.md` with progress:
+   - Add a new row to the Iteration Log (iteration 2)
+   - Note what was accomplished
+   - Note any blockers or decisions
+   - Update the "Current iteration" count
+9. **Commit** your changes with proper format: `{JIRA-ID}: Description of what was implemented`
+10. **Check exit criteria:**
+    - Do ALL acceptance criteria appear met based on CURRENT_TASK.md?
+    - Do ALL tests pass?
+    - Is there any linting errors?
+    - Are changes committed?
+    - Is branch pushed to remote?
+11. **If ALL exit criteria met:** Output `<promise>DONE</promise>` on its own line and exit
+12. **If NOT all criteria met:** Return to step 1 and repeat iteration (you will be in iteration 2, then 3, etc. up to max 25)
+
+The Ralph Loop continues automatically until all exit criteria are satisfied. The stop-hook enforces this.
 
 ### Promise Format - EXACT SPECIFICATION
 
@@ -405,19 +433,3 @@ Only then output the promise on its own line.
 - **Branch already exists:** Ask user whether to switch to existing branch
 - **Uncommitted changes:** Abort and ask user to commit or stash
 - **Jira API unavailable:** Fall back to manual mode (ask user for ticket details)
-
-## Post-Skill Behavior
-
-After this skill completes, the agent enters Ralph Loop mode:
-
-1. **Read** `docs/CURRENT_TASK.md` to understand requirements
-2. **Follow TDD:** Write failing test → Implement → Refactor
-3. **Update** CURRENT_TASK.md after each significant action
-4. **Run tests** frequently
-5. **Output** `<promise>DONE</promise>` ONLY when:
-   - All acceptance criteria met
-   - All tests pass
-   - All linting passes
-   - Changes committed and pushed
-
-The stop-hook will automatically validate these conditions and block exit if not met.
