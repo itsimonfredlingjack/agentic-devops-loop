@@ -133,7 +133,7 @@ Copy the markdown below into a new Jira ticket or Claude prompt to start a new m
 | Variabel | Värde |
 | :--- | :--- |
 | **App Name** | `[APP_NAME]` |
-| **Modell** | `[MODEL_NAME]` (t.ex. Book) |
+| **Modell** | `[CATEGORY]` (t.ex. FINANCE) |
 | **Fält** | `[LIST_OF_FIELDS]` (t.ex. id:int, title:str) |
 | **Service** | `[SERVICE_NAME]` (t.ex. LibraryService) |
 | **Affärsregler** | 1. `[RULE_1]`<br>2. `[RULE_2]` |
