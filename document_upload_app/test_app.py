@@ -1,13 +1,14 @@
 """Tests for the document upload Flask app."""
 import pytest
 from datetime import datetime
-from app import app, format_filename
+from document_upload_app.upload_app import app, format_filename
 
 
 @pytest.fixture
-def client():
+def client(tmp_path):
     """Create test client."""
     app.config['TESTING'] = True
+    app.config['UPLOAD_FOLDER'] = tmp_path
     with app.test_client() as client:
         yield client
 
