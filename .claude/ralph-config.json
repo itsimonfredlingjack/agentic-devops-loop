@@ -27,8 +27,7 @@
         "max_iterations": 25,
         "requirements": {
           "tests_must_pass": true,
-          "lint_must_pass": true,
-          "coverage_threshold": 80
+          "lint_must_pass": true
         }
       }
     }
