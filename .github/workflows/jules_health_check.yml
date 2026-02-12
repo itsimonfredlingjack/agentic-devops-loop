@@ -1,0 +1,193 @@
+name: Jules Health Check
+
+on:
+  schedule:
+    # 06:00 UTC ~= 07:00 Stockholm during CET.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Health check mode"
+        required: true
+        type: choice
+        default: ping
+        options:
+          - ping
+          - full
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: jules-health-check
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Start timer
+        id: start
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install health-check dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run preflight checks
+        id: preflight
+        run: bash scripts/preflight.sh
+
+      - name: Validate Jules secret
+        id: secret_check
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        run: |
+          if [ -z "$JULES_API_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "JULES_API_KEY is missing." >&2
+            exit 1
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build ping payload
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: payload
+        run: |
+          mkdir -p artifacts
+          python scripts/jules_payload.py \
+            --profile QUICK_REVIEW \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "$GITHUB_SHA" \
+            --output-file artifacts/jules_context.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Jules handshake
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: jules
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            This is a health-check ping for Jules integration.
+            Do not review code or propose changes.
+            Reply with a short acknowledgement that connectivity works.
+            JULES_CONTEXT: ${{ steps.payload.outputs.jules_context }}
+          include_last_commit: false
+          include_commit_log: false
+
+      - name: Full mode quick CI probe
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'full' }}
+        run: |
+          pytest -q tests/agent/test_stop_hook.py
+
+      - name: Write metrics artifact
+        if: always()
+        env:
+          START_EPOCH: ${{ steps.start.outputs.epoch }}
+          JULES_RESULT: ${{ steps.jules.outcome || 'skipped' }}
+          SESSION_ID: ${{ steps.jules.outputs.session_id || '' }}
+          FILES_CHANGED_COUNT: ${{ steps.payload.outputs.files_changed_count || '0' }}
+          DIFF_BYTES_SENT: ${{ steps.payload.outputs.diff_bytes_sent || '0' }}
+          LOG_LINES_SENT: ${{ steps.payload.outputs.log_lines_sent || '0' }}
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+
+          start_epoch = int(os.environ.get("START_EPOCH") or "0")
+          duration_sec = max(0, int(time.time()) - start_epoch) if start_epoch else 0
+
+          metrics = {
+              "workflow_name": "jules_health_check.yml",
+              "run_id": os.environ.get("GITHUB_RUN_ID"),
+              "sha": os.environ.get("GITHUB_SHA"),
+              "pr_number": "",
+              "duration_sec": duration_sec,
+              "retries_count": max(0, int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")) - 1),
+              "files_changed_count": int(os.environ.get("FILES_CHANGED_COUNT", "0")),
+              "diff_bytes_sent": int(os.environ.get("DIFF_BYTES_SENT", "0")),
+              "log_lines_sent": int(os.environ.get("LOG_LINES_SENT", "0")),
+              "jules_session_id": os.environ.get("SESSION_ID", ""),
+              "jules_result": os.environ.get("JULES_RESULT", "skipped"),
+              "fix_outcome": "no_change",
+          }
+
+          Path("artifacts/jules_metrics.json").write_text(
+              json.dumps(metrics, indent=2),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jules-health-check-metrics-${{ github.run_id }}
+          path: |
+            artifacts/jules_metrics.json
+            artifacts/jules_context.json
+
+      - name: Step summary
+        if: always()
+        run: |
+          echo "## Jules Health Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode: \`${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'ping' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Jules result: \`${{ steps.jules.outcome || 'skipped' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update health issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SUMMARY="Jules health check failed on run ${{ github.run_id }}"
+          gh label create "jules-healthcheck" \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "BFDADC" \
+            --description "Tracks Jules health-check failures" \
+            2>/dev/null || true
+
+          EXISTING=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "jules-healthcheck" \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          BODY=$(cat <<EOF
+          $SUMMARY
+
+          - Workflow: jules_health_check.yml
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Trigger: ${{ github.event_name }}
+
+          See artifact \`jules-health-check-metrics-${{ github.run_id }}\` for details.
+          EOF
+          )
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Jules health check failed" \
+              --body "$BODY" \
+              --label "jules-healthcheck"
+          fi

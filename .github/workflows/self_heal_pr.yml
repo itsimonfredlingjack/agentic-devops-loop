@@ -1,0 +1,179 @@
+name: Self Heal PR (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to heal"
+        required: true
+        type: string
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  actions: read
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: self-heal-pr-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  heal-pr:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.label.name == 'jules-heal') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Resolve PR metadata
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+        run: |
+          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json number,headRefName,headRefOid,headRepositoryOwner,headRepository,baseRefName,isCrossRepository \
+            > pr.json
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path('pr.json').read_text(encoding='utf-8'))
+          # Only allow same-repo PRs to avoid security footguns.
+          is_cross = bool(data.get('isCrossRepository'))
+          if is_cross:
+              raise SystemExit('Refusing to self-heal cross-repo PR')
+
+          Path(os.environ['GITHUB_OUTPUT']).write_text(
+              "\n".join(
+                  [
+                      f"number={data['number']}",
+                      f"head_ref={data['headRefName']}",
+                      f"head_sha={data['headRefOid']}",
+                  ]
+              )
+              + "\n",
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Validate Jules secret
+        id: secret_check
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        run: |
+          if [ -z "$JULES_API_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "JULES_API_KEY is missing; self-healing will be skipped."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout PR head
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Find latest CI run for PR
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          RUN_ID=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow CI \
+            --event pull_request \
+            --json databaseId,headSha,conclusion \
+            --jq '.[] | select(.conclusion=="failure") | select(.headSha=="'"${{ steps.pr.outputs.head_sha }}"'") | .databaseId' \
+            --limit 20 | head -n 1)
+
+          if [ -z "$RUN_ID" ]; then
+            echo "run_id=" >> "$GITHUB_OUTPUT"
+            echo "No failed CI run found for this PR head SHA; continuing without logs."
+          else
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Collect failure capsule
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.ci.outputs.run_id }}
+        run: |
+          mkdir -p artifacts
+          if [ -n "$RUN_ID" ]; then
+            gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > artifacts/failed_logs.txt || true
+          else
+            : > artifacts/failed_logs.txt
+          fi
+
+      - name: Build compact Jules payload
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: payload
+        run: |
+          mkdir -p artifacts
+          BASE_SHA=$(git rev-parse "${{ steps.pr.outputs.head_sha }}^" 2>/dev/null || true)
+          python scripts/jules_payload.py \
+            --profile HEALING_FIX \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "${{ steps.pr.outputs.head_sha }}" \
+            --pr-number "${{ steps.pr.outputs.number }}" \
+            --base-sha "$BASE_SHA" \
+            --head-sha "${{ steps.pr.outputs.head_sha }}" \
+            --log-file artifacts/failed_logs.txt \
+            --log-url "${{ github.server_url }}/${{ github.repository }}/pull/${{ steps.pr.outputs.number }}" \
+            --output-file artifacts/jules_context.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Snapshot artifacts before Jules runs
+        if: always()
+        run: |
+          rm -rf jules_artifacts
+          mkdir -p jules_artifacts
+          if [ -d artifacts ]; then
+            cp -R artifacts/. jules_artifacts/ || true
+          fi
+
+      - name: Invoke Jules remediation
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: jules
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            You are the CI self-healing agent for this repository.
+            Propose or apply the smallest deterministic fix that can recover CI.
+            Prefer a single focused fix over broad refactors.
+            JULES_CONTEXT: ${{ steps.payload.outputs.jules_context }}
+          include_last_commit: true
+          include_commit_log: false
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jules-self-heal-pr-${{ github.run_id }}
+          path: |
+            jules_artifacts/jules_context.json
+            jules_artifacts/failed_logs.txt
+
+      - name: Step summary
+        if: always()
+        run: |
+          echo "## Self Heal PR Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PR: #${{ steps.pr.outputs.number }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Jules result: \`${{ steps.jules.outcome || 'skipped' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: \`jules-self-heal-pr-${{ github.run_id }}\`" >> "$GITHUB_STEP_SUMMARY"

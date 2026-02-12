@@ -1,44 +1,49 @@
-# CODEOWNERS - Security Critical Files
-# These patterns require manual review to prevent agent privilege escalation
-#
-# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# CODEOWNERS - Skydda känsliga filer
+# Dessa filer kräver human review innan merge
+# Dokumentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# ============================================================================
-# SECURITY CRITICAL: All changes to these files require human review
-# ============================================================================
+# ============================================
+# Claude Configuration - Förhindrar att agenten
+# modifierar sina egna regler
+# ============================================
+.claude/CLAUDE.md @itsimonfredlingjack
+.claude/hooks/** @itsimonfredlingjack
+.claude/settings.local.json @itsimonfredlingjack
 
-# GitHub configuration (workflows, actions, issue templates, etc.)
-# Prevents agent from modifying CI/CD pipelines or GitHub settings
-/.github/ @itsimonfredlingjack
+# ============================================
+# Git Hooks - Förhindrar att bypass av
+# pre-commit/pre-push checks
+# ============================================
+.git/hooks/** @itsimonfredlingjack
 
-# Claude Code hooks (PreToolUse validation, stop-hooks)
-# Prevents agent from disabling its own safety constraints
-/.claude/hooks/ @itsimonfredlingjack
+# ============================================
+# GitHub Configuration
+# ============================================
+.github/** @itsimonfredlingjack
+.github/CODEOWNERS @itsimonfredlingjack
+.github/workflows/** @itsimonfredlingjack
 
-# Docker configuration (privilege escalation risk)
-/Dockerfile @itsimonfredlingjack
-/docker-compose.yml @itsimonfredlingjack
-/docker-compose.yaml @itsimonfredlingjack
-/docker-compose*.yml @itsimonfredlingjack
-/docker-compose*.yaml @itsimonfredlingjack
+# ============================================
+# Säkerhetskritiska filer
+# ============================================
+**/auth/** @itsimonfredlingjack
+**/security/** @itsimonfredlingjack
+**/*secret* @itsimonfredlingjack
+**/*credential* @itsimonfredlingjack
+**/*password* @itsimonfredlingjack
 
-# Environment and secrets (credential exposure risk)
-/.env @itsimonfredlingjack
-/.env.* @itsimonfredlingjack
-/.envrc @itsimonfredlingjack
-/secrets/ @itsimonfredlingjack
-/**/secrets/ @itsimonfredlingjack
-/.secrets @itsimonfredlingjack
+# ============================================
+# Environment och konfiguration
+# ============================================
+.env @itsimonfredlingjack
+.env.* @itsimonfredlingjack
+*.env @itsimonfredlingjack
+config/production.* @itsimonfredlingjack
 
-# Dependency lock files (supply chain security)
-/package-lock.json @itsimonfredlingjack
-/yarn.lock @itsimonfredlingjack
-/pnpm-lock.yaml @itsimonfredlingjack
-/Gemfile.lock @itsimonfredlingjack
-/poetry.lock @itsimonfredlingjack
-/Pipfile.lock @itsimonfredlingjack
-/go.sum @itsimonfredlingjack
-
-# ============================================================================
-# Owner: @itsimonfredlingjack
-# ============================================================================
+# ============================================
+# Package management
+# ============================================
+requirements.txt @itsimonfredlingjack
+pyproject.toml @itsimonfredlingjack
+package.json @itsimonfredlingjack
+package-lock.json @itsimonfredlingjack

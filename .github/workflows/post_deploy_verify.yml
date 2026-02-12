@@ -1,0 +1,192 @@
+name: Post-Deploy Verification
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Azure Container Apps"]
+    types: [completed]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  verify-deployment:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    environment: production
+    timeout-minutes: 5
+
+    steps:
+      - name: Azure login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get deployment info
+        id: app_info
+        run: |
+          APP_INFO=$(az containerapp show \
+            --name "${{ secrets.APP_NAME }}" \
+            --resource-group "${{ secrets.RESOURCE_GROUP }}" \
+            --query '{fqdn: properties.configuration.ingress.fqdn, latestRevision: properties.latestRevisionName}' \
+            -o json)
+
+          FQDN=$(echo "$APP_INFO" | jq -r '.fqdn')
+          REVISION=$(echo "$APP_INFO" | jq -r '.latestRevision')
+
+          echo "fqdn=$FQDN" >> "$GITHUB_OUTPUT"
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+          echo "App FQDN: $FQDN"
+          echo "Latest revision: $REVISION"
+
+      - name: Health check with retries
+        id: health
+        run: |
+          FQDN="${{ steps.app_info.outputs.fqdn }}"
+          MAX_RETRIES=5
+          RETRY_INTERVAL=10
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Health check attempt $i/$MAX_RETRIES..."
+            if response=$(curl -sf "https://${FQDN}/health" --max-time 10 2>/dev/null); then
+              STATUS=$(echo "$response" | jq -r '.status')
+              echo "Health check passed: $STATUS"
+              echo "healthy=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting ${RETRY_INTERVAL}s..."
+            sleep "$RETRY_INTERVAL"
+          done
+
+          echo "healthy=false" >> "$GITHUB_OUTPUT"
+          echo "::error::Health check failed after $MAX_RETRIES attempts"
+
+      - name: Extract Jira ticket from commit
+        id: jira
+        run: |
+          COMMIT_MSG="${{ github.event.workflow_run.head_commit.message }}"
+          TICKET_ID=$(echo "$COMMIT_MSG" | grep -oP 'GE-\d+' | head -1 || echo "")
+          echo "ticket_id=$TICKET_ID" >> "$GITHUB_OUTPUT"
+          echo "Extracted ticket: ${TICKET_ID:-none}"
+
+      - name: Comment Jira — deploy verified
+        if: steps.health.outputs.healthy == 'true' && steps.jira.outputs.ticket_id != ''
+        env:
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+        run: |
+          TICKET="${{ steps.jira.outputs.ticket_id }}"
+          REVISION="${{ steps.app_info.outputs.revision }}"
+          FQDN="${{ steps.app_info.outputs.fqdn }}"
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          read -r -d '' BODY <<EOF || true
+          Deployed & Verified
+
+          Revision: ${REVISION}
+          FQDN: https://${FQDN}
+          Commit: ${SHA:0:7}
+          Health: OK
+          Run: ${RUN_URL}
+          Verified: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+
+          jq -n --arg body "$BODY" '{body: $body}' | \
+            curl -sf -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+              -X POST "${JIRA_URL}/rest/api/2/issue/${TICKET}/comment" \
+              -H "Content-Type: application/json" \
+              -d @- \
+              || echo "::warning::Failed to comment on Jira ticket $TICKET"
+
+      - name: Rollback on health failure
+        id: rollback
+        if: steps.health.outputs.healthy == 'false'
+        run: |
+          echo "::error::Health check failed — initiating rollback"
+
+          CURRENT="${{ steps.app_info.outputs.revision }}"
+          APP_NAME="${{ secrets.APP_NAME }}"
+          RG="${{ secrets.RESOURCE_GROUP }}"
+
+          # List all revisions sorted by creation date
+          REVISIONS=$(az containerapp revision list \
+            --name "$APP_NAME" \
+            --resource-group "$RG" \
+            --query 'sort_by([].{name:name, created:properties.createdTime, active:properties.active}, &created) | reverse(@)[].name' \
+            -o tsv)
+
+          PREVIOUS=$(echo "$REVISIONS" | grep -v "$CURRENT" | head -1)
+
+          if [ -n "$PREVIOUS" ]; then
+            echo "Rolling back: activating $PREVIOUS, deactivating $CURRENT"
+
+            az containerapp revision activate \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --revision "$PREVIOUS"
+
+            az containerapp revision deactivate \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --revision "$CURRENT" || true
+
+            echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No previous revision — restarting current"
+            az containerapp revision restart \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --revision "$CURRENT"
+            echo "previous=restarted-${CURRENT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment Jira — deploy failed
+        if: steps.health.outputs.healthy == 'false' && steps.jira.outputs.ticket_id != ''
+        env:
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+        run: |
+          TICKET="${{ steps.jira.outputs.ticket_id }}"
+          REVISION="${{ steps.app_info.outputs.revision }}"
+          PREVIOUS="${{ steps.rollback.outputs.previous }}"
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          read -r -d '' BODY <<EOF || true
+          Deploy failed health check — rolled back
+
+          Failed revision: ${REVISION}
+          Rolled back to: ${PREVIOUS}
+          Commit: ${SHA:0:7}
+          Run: ${RUN_URL}
+          Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+
+          jq -n --arg body "$BODY" '{body: $body}' | \
+            curl -sf -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+              -X POST "${JIRA_URL}/rest/api/2/issue/${TICKET}/comment" \
+              -H "Content-Type: application/json" \
+              -d @- \
+              || echo "::warning::Failed to comment on Jira ticket $TICKET"
+
+      - name: Step summary
+        if: always()
+        run: |
+          echo "## Post-Deploy Verification" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| FQDN | \`${{ steps.app_info.outputs.fqdn || 'unknown' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Revision | \`${{ steps.app_info.outputs.revision || 'unknown' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Health | \`${{ steps.health.outputs.healthy || 'unknown' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Jira | \`${{ steps.jira.outputs.ticket_id || 'none' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy SHA | \`${{ github.event.workflow_run.head_sha || 'unknown' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail workflow on unhealthy deploy
+        if: steps.health.outputs.healthy == 'false'
+        run: exit 1

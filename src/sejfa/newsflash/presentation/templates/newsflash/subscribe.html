@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Subscribe - News Flash{% endblock %}
+
+{% block content %}
+<section class="subscribe">
+    <div class="subscribe__container">
+        <h2 class="subscribe__heading">Join Our Newsletter</h2>
+        <p class="subscribe__subtitle">Get the latest tech news delivered to your inbox</p>
+
+        {% if error %}
+        <div class="error-banner" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('newsflash.subscribe_confirm') }}" method="POST" class="subscribe__form">
+            <div class="form__group">
+                <label for="email" class="form__label">Email Address *</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form__input{% if error %} form__input--error{% endif %}"
+                    placeholder="you@example.com"
+                    value="{{ email_value or '' }}"
+                    required
+                >
+            </div>
+
+            <div class="form__group">
+                <label for="name" class="form__label">Name (Optional)</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    class="form__input"
+                    placeholder="Your name"
+                    value="{{ name_value or '' }}"
+                >
+            </div>
+
+            <button type="submit" class="form__button">Subscribe</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

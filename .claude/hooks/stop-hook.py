@@ -2,45 +2,153 @@
 """
 Ralph Loop Stop-Hook
 
-This hook prevents the agent from exiting until:
-1. The completion_promise string is found in the transcript
-2. All tests pass (verified by promise format)
-3. Max iterations haven't been exceeded
+Goal: prevent the agent from exiting until completion is verifiable.
+
+Enforcement rules:
+- When on a Jira-style task branch (e.g. feature/GE-123-...), the hook enforces even if the agent deletes the loop-flag.
+- When on main/master, the hook does not enforce (utility commands should not be blocked).
+- Outside a git repo (e.g. tests using tmp dirs), enforcement requires the loop flag file.
 
 Exit codes:
-- 0: Allow exit (promise found, criteria met)
-- 2: Block exit (continue working)
-
-The hook reads JSON from stdin and writes feedback to stderr.
+- 0: allow exit
+- 2: block exit (continue working)
 """
 
+from __future__ import annotations
+
 import json
+import os
+import re
 import subprocess
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
-# Add utils to path for monitor_client
-sys.path.insert(0, str(Path(__file__).parent.parent / "utils"))
+HOOKS_DIR = Path(__file__).resolve().parent
+if str(HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(HOOKS_DIR))
+
+# Monitor integration - sends real-time updates to the dashboard
 try:
-    from monitor_client import send_task_complete, send_task_fail, send_event
+    from monitor_client import (
+        activate_claude,
+        activate_actions,
+        activate_jira,
+        start_task,
+        complete_task,
+    )
+    MONITOR_AVAILABLE = True
 except ImportError:
-    def send_task_complete(*a, **kw): pass
-    def send_task_fail(*a, **kw): pass
-    def send_event(*a, **kw): pass
+    MONITOR_AVAILABLE = False
 
-# Flag file that indicates we're in an active Ralph loop
-# Only /start-task creates this file, utility commands don't
+DEFAULT_PROMISE = "<promise>DONE</promise>"
+JIRA_KEY_RE = re.compile(r"[A-Z]+-[0-9]+")
+
 LOOP_FLAG = Path.cwd() / ".claude" / ".ralph_loop_active"
+STATE_FILE = Path.cwd() / ".claude" / "ralph-state.json"
+PROMISE_FLAG_FILE = Path.cwd() / ".claude" / ".promise_done"
+DEBUG_LOG = Path.cwd() / ".claude" / "stop-hook-debug.log"
+GIT_GUARD_FILE = Path.cwd() / ".git" / "info" / "ralph-loop-active.json"
 
-# CRITICAL: If not in active Ralph loop, allow exit immediately
-# This prevents utility commands (/preflight, /finish-task) from being blocked
-if not LOOP_FLAG.exists():
-    sys.exit(0)  # Allow exit, no enforcement
+
+def _debug(msg: str) -> None:
+    if os.environ.get("RALPH_STOP_HOOK_DEBUG") != "1":
+        return
+    DEBUG_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with open(DEBUG_LOG, "a") as f:
+        f.write(msg.rstrip() + "\n")
 
 
-def load_config():
-    """Load Ralph Loop configuration with profile support."""
+def _repo_id() -> str:
+    try:
+        return str(Path.cwd().resolve())
+    except Exception:
+        return str(Path.cwd())
+
+
+def _read_json_dict(path: Path) -> dict[str, Any]:
+    try:
+        if not path.exists():
+            return {}
+        with open(path) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_json_dict(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2)
+    tmp.replace(path)
+
+
+def loop_guard_active() -> bool:
+    """True if a loop has been activated and not cleared.
+
+    This is intentionally independent of `.claude/.ralph_loop_active` so deleting
+    that file cannot bypass enforcement once the loop has started.
+    """
+    state = _read_json_dict(STATE_FILE)
+    if state.get("loop_active") is True:
+        return True
+
+    guard = _read_json_dict(GIT_GUARD_FILE)
+    return guard.get("repo_id") == _repo_id() and guard.get("loop_active") is True
+
+
+def ensure_loop_guard(hook_input: dict[str, Any]) -> None:
+    """Persist loop-active state in STATE_FILE and (when available) GIT_GUARD_FILE."""
+    state = _read_json_dict(STATE_FILE)
+    state.setdefault("started_at", datetime.now().isoformat())
+    state["loop_active"] = True
+    transcript_path = hook_input.get("transcript_path") or hook_input.get("transcriptPath")
+    if isinstance(transcript_path, str) and transcript_path:
+        state["last_seen_transcript_path"] = transcript_path
+    _write_json_dict(STATE_FILE, state)
+
+    if GIT_GUARD_FILE.parent.exists():
+        _write_json_dict(
+            GIT_GUARD_FILE,
+            {
+                "repo_id": _repo_id(),
+                "loop_active": True,
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
+
+    # If the primary flag was deleted mid-loop, recreate it to prevent bypass.
+    if not LOOP_FLAG.exists():
+        try:
+            LOOP_FLAG.parent.mkdir(parents=True, exist_ok=True)
+            LOOP_FLAG.touch(exist_ok=True)
+        except Exception:
+            pass
+
+
+def clear_loop_guard() -> None:
+    """Clear persisted loop-active state after completion (or timeout)."""
+    state = _read_json_dict(STATE_FILE)
+    if state:
+        state["loop_active"] = False
+        state["completed_at"] = datetime.now().isoformat()
+        _write_json_dict(STATE_FILE, state)
+
+    for path in (GIT_GUARD_FILE, LOOP_FLAG, PROMISE_FLAG_FILE):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        except Exception:
+            # Cleanup is best-effort; never block exit due to cleanup failures.
+            pass
+
+
+def load_config() -> tuple[dict[str, Any], bool]:
+    """Load exit policy config. Returns (policy, has_explicit_config)."""
     config_paths = [
         Path(__file__).parent.parent / "ralph-config.json",
         Path.cwd() / ".claude" / "ralph-config.json",
@@ -48,408 +156,424 @@ def load_config():
     ]
 
     for config_path in config_paths:
-        if config_path.exists():
-            with open(config_path) as f:
-                config = json.load(f)
+        if not config_path.exists():
+            continue
 
-            # Check if this is a profile-based config
-            if "profiles" in config:
-                active_profile = config.get("active_profile", "template_repo")
-                profiles = config.get("profiles", {})
-                profile = profiles.get(active_profile, {})
-                exit_policy = profile.get("exit_policy", {})
-                return exit_policy
-            else:
-                # Legacy format - return as-is (for backwards compatibility)
-                return config.get("exit_policy", config)
+        with open(config_path) as f:
+            config = json.load(f)
 
-    # Default configuration
-    return {
-        "completion_promise": "<promise>DONE</promise>",
-        "max_iterations": 25,
-        "requirements": {
-            "tests_must_pass": False,
-            "lint_must_pass": True
-        }
-    }
+        if "profiles" in config:
+            active_profile = config.get("active_profile", "template_repo")
+            profile = (config.get("profiles") or {}).get(active_profile, {}) or {}
+            return (profile.get("exit_policy") or {}), True
 
+        # Legacy / flat format
+        return (config.get("exit_policy") or config), True
 
-def get_iteration_count():
-    """Get current iteration count from state file."""
-    state_file = Path.cwd() / ".claude" / "ralph-state.json"
-    if state_file.exists():
-        with open(state_file) as f:
-            state = json.load(f)
-            return state.get("iterations", 0)
-    return 0
+    # Default is permissive so temp-dir tests and utility contexts don't get stuck.
+    return (
+        {
+            "completion_promise": DEFAULT_PROMISE,
+            "max_iterations": 25,
+            "scan_length": 5000,
+            "requirements": {"tests_must_pass": False, "lint_must_pass": False},
+        },
+        False,
+    )
 
 
-def increment_iteration():
-    """Increment and save iteration count."""
-    state_file = Path.cwd() / ".claude" / "ralph-state.json"
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-
-    state = {"iterations": 0, "started_at": datetime.now().isoformat()}
-    if state_file.exists():
-        with open(state_file) as f:
-            state = json.load(f)
-
-    state["iterations"] = state.get("iterations", 0) + 1
-    state["last_check"] = datetime.now().isoformat()
-
-    with open(state_file, "w") as f:
-        json.dump(state, f, indent=2)
-
-    return state["iterations"]
-
-
-def check_promise_in_transcript(transcript: str, promise: str) -> bool:
-    """Check if completion promise exists in entire transcript.
-
-    Args:
-        transcript: Full session transcript
-        promise: Promise string to search for
-
-    Returns:
-        True if promise found anywhere in transcript
-    """
-    if not transcript:
+def is_git_repo() -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "true"
+    except Exception:
         return False
-    # Search ENTIRE transcript, not just tail
-    return promise in transcript
+
+
+def get_git_branch() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip()
+    except Exception:
+        return None
+
+
+def should_enforce_exit_policy(hook_input: dict[str, Any]) -> bool:
+    """Return True if enforcement should be active."""
+    # Strongest signal: a persisted guard from an active loop.
+    if loop_guard_active():
+        return True
+
+    # Strong signal that we're inside a loop: the hook input includes a completion promise.
+    if hook_input.get("completion_promise"):
+        return True
+
+    if LOOP_FLAG.exists():
+        return True
+
+    if not is_git_repo():
+        return False
+
+    branch = get_git_branch() or ""
+    if branch in {"main", "master"}:
+        return False
+
+    # Enforce on branches that look like Jira task branches.
+    return bool(JIRA_KEY_RE.search(branch))
+
+
+def get_transcript_text(hook_input: dict[str, Any], scan_length: int) -> str:
+    """Extract transcript content (prefers transcript_path tail for performance)."""
+    transcript = hook_input.get("transcript")
+    if isinstance(transcript, str) and transcript:
+        return transcript
+
+    transcript_path = hook_input.get("transcript_path") or hook_input.get("transcriptPath")
+    if not transcript_path:
+        return ""
+
+    try:
+        path = Path(str(transcript_path)).expanduser()
+        if not path.is_absolute():
+            path = (Path.cwd() / path).resolve()
+        if not path.exists() or not path.is_file():
+            return ""
+
+        with open(path, "rb") as f:
+            if scan_length and scan_length > 0:
+                f.seek(0, 2)
+                size = f.tell()
+                f.seek(max(size - scan_length, 0))
+            data = f.read()
+
+        return data.decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
+
+
+def run_cmd(cmd: list[str], timeout_s: int) -> tuple[int, str]:
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout_s,
+        check=False,
+    )
+    out = ((result.stdout or "") + (result.stderr or "")).strip()
+    if len(out) > 1500:
+        out = out[:1500] + "\n...(truncated)"
+    return result.returncode, out
+
+
+def resolve_tools() -> dict[str, list[str]]:
+    """Resolve pytest/ruff commands; prefer ./venv when present."""
+    venv_bin = Path.cwd() / "venv" / "bin"
+
+    python = "python3"
+    if (venv_bin / "python").exists():
+        python = str(venv_bin / "python")
+    elif (venv_bin / "python3").exists():
+        python = str(venv_bin / "python3")
+
+    pytest_cmd = [python, "-m", "pytest"]
+    if (venv_bin / "pytest").exists():
+        pytest_cmd = [str(venv_bin / "pytest")]
+
+    ruff_cmd = ["ruff"]
+    if (venv_bin / "ruff").exists():
+        ruff_cmd = [str(venv_bin / "ruff")]
+
+    return {"pytest": pytest_cmd, "ruff": ruff_cmd}
+
+
+def increment_iteration() -> int:
+    state = _read_json_dict(STATE_FILE)
+    state.setdefault("started_at", datetime.now().isoformat())
+    state["loop_active"] = True
+    state["iterations"] = int(state.get("iterations", 0) or 0) + 1
+    state["last_check"] = datetime.now().isoformat()
+    _write_json_dict(STATE_FILE, state)
+    return int(state["iterations"])
 
 
 def check_promise_flag_file(promise: str) -> bool:
-    """Check if promise flag file exists and contains the correct promise.
-
-    Flag file location: .claude/.promise_done
-    Flag file contains: exact promise string
-
-    Returns:
-        True if flag file exists and contains correct promise
-    """
-    flag_file = Path.cwd() / ".claude" / ".promise_done"
-
-    if not flag_file.exists():
+    if not PROMISE_FLAG_FILE.exists():
         return False
-
     try:
-        with open(flag_file, 'r') as f:
-            content = f.read().strip()
-        return content == promise
+        return PROMISE_FLAG_FILE.read_text().strip() == promise
     except Exception:
         return False
 
 
 def write_promise_flag(promise: str) -> None:
-    """Write promise flag file for stop-hook to detect."""
-    flag_file = Path.cwd() / ".claude" / ".promise_done"
-    flag_file.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(flag_file, 'w') as f:
-        f.write(promise)
+    PROMISE_FLAG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PROMISE_FLAG_FILE.write_text(promise)
 
 
-def get_task_id() -> str | None:
-    """Extract task_id from CURRENT_TASK.md if available."""
-    import re as _re
-    current_task_paths = [
-        Path.cwd() / "docs" / "CURRENT_TASK.md",
-        Path.cwd() / "CURRENT_TASK.md",
-    ]
-    for task_path in current_task_paths:
-        if task_path.exists():
-            try:
-                content = task_path.read_text()
-                match = _re.search(r"([A-Z]+-\d+)", content)
-                if match:
-                    return match.group(1)
-            except Exception:
-                pass
-    return None
-
-
-def build_continue_message(reason: str, suggestions: list) -> dict:
-    """Build the JSON response for continuing work."""
+def build_continue_message(reason: str, suggestions: list[str]) -> dict[str, Any]:
     return {
+        "decision": "block",
         "action": "continue",
         "reason": reason,
         "suggestions": suggestions,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
-def _tail(text: str, lines: int = 20) -> str:
-    """Return the last N lines of text."""
-    all_lines = text.strip().splitlines()
-    return "\n".join(all_lines[-lines:])
-
-
-# ---------------------------------------------------------------------------
-# Verification enforcement functions
-# ---------------------------------------------------------------------------
-
-def detect_project_types(project_root: Path = None) -> set[str]:
-    """Detect project types present in the repo.
-
-    Args:
-        project_root: Root directory to check. Defaults to cwd.
-
-    Returns:
-        A set containing any of: "node", "python".
-    """
-    root = project_root or Path.cwd()
-    types: set[str] = set()
-
-    if (root / "package.json").exists():
-        types.add("node")
-
-    # Python detection: allow tests-only repos (no pyproject) to still be verified.
-    if (root / "pyproject.toml").exists() or (root / "setup.py").exists():
-        types.add("python")
-    else:
-        tests_dir = root / "tests"
-        if tests_dir.exists():
-            try:
-                if any(tests_dir.rglob("test_*.py")):
-                    types.add("python")
-            except Exception:
-                pass
-
-    return types
-
-
-def run_tests(project_type: str) -> tuple[bool, str]:
-    """Run the test suite for the detected project type.
-
-    Fail-closed: if the runner is required but not found, returns False.
-
-    Args:
-        project_type: "node", "python", or "unknown".
-
-    Returns:
-        (passed, output) tuple. passed=True only if tests ran and succeeded.
-    """
-    if project_type == "node":
-        cmd = ["npm", "test"]
-    elif project_type == "python":
-        cmd = ["python3", "-m", "pytest"]
-    else:
-        return False, "Unknown project type \u2014 no test runner configured"
-
+def _save_progress_on_max_iterations(max_iterations: int) -> None:
+    """Best-effort: commit WIP, push, and create a draft PR when max iterations hit."""
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=120
+        branch = get_git_branch()
+        if not branch or branch in ("main", "master"):
+            return
+
+        # Log progress to state file
+        state = _read_json_dict(STATE_FILE)
+        state["exit_reason"] = "max_iterations"
+        state["max_iterations"] = max_iterations
+        state["exited_at"] = datetime.now().isoformat()
+        _write_json_dict(STATE_FILE, state)
+
+        # Check for uncommitted changes
+        status_result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True, text=True, timeout=10, check=False,
         )
-        output = (result.stdout + "\n" + result.stderr).strip()
-        return result.returncode == 0, _tail(output)
-    except FileNotFoundError:
-        return False, f"Test runner not found: {cmd[0]}"
-    except subprocess.TimeoutExpired:
-        return False, "Tests timed out after 120s"
+        if status_result.returncode != 0:
+            return
 
+        has_changes = bool(status_result.stdout.strip())
+        if has_changes:
+            subprocess.run(
+                ["git", "add", "-A"],
+                capture_output=True, timeout=10, check=False,
+            )
+            subprocess.run(
+                ["git", "commit", "-m",
+                 f"WIP: max iterations ({max_iterations}) reached - saving progress"],
+                capture_output=True, timeout=10, check=False,
+            )
 
-def run_lint(project_type: str) -> tuple[bool, str]:
-    """Run the linter for the detected project type.
-
-    Fail-closed: if the linter is required but not found, returns False.
-
-    Args:
-        project_type: "node", "python", or "unknown".
-
-    Returns:
-        (passed, output) tuple. passed=True only if lint ran and succeeded.
-    """
-    if project_type == "node":
-        cmd = ["npm", "run", "lint"]
-    elif project_type == "python":
-        cmd = ["ruff", "check", "."]
-    else:
-        return False, "Unknown project type \u2014 no linter configured"
-
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=60
+        # Push the branch
+        subprocess.run(
+            ["git", "push", "-u", "origin", branch],
+            capture_output=True, timeout=30, check=False,
         )
-        output = (result.stdout + "\n" + result.stderr).strip()
-        return result.returncode == 0, _tail(output)
-    except FileNotFoundError:
-        return False, f"Linter not found: {cmd[0]}"
-    except subprocess.TimeoutExpired:
-        return False, "Lint timed out after 60s"
 
-
-def run_coverage(project_type: str, threshold: int) -> tuple[bool, str]:
-    """Run test coverage and check against threshold.
-
-    Args:
-        project_type: "node" or "python".
-        threshold: Minimum coverage percentage required.
-
-    Returns:
-        (passed, output) tuple. passed=True only if coverage meets threshold.
-    """
-    if project_type == "python":
-        cmd = ["python3", "-m", "pytest", "--cov", "--cov-fail-under", str(threshold), "-q"]
-    elif project_type == "node":
-        cmd = ["npx", "vitest", "run", "--coverage", "--coverage.thresholds.lines", str(threshold)]
-    else:
-        return False, f"No coverage runner for project type: {project_type}"
-
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=180
+        # Create draft PR
+        task_match = JIRA_KEY_RE.search(branch)
+        task_id = task_match.group() if task_match else "TASK"
+        pr_title = f"WIP: {task_id} - max iterations reached"
+        pr_body = (
+            f"## Auto-created draft PR\n\n"
+            f"The Ralph loop reached {max_iterations} iterations without completing.\n"
+            f"This draft PR preserves the work done so far.\n\n"
+            f"**Iterations completed:** {max_iterations}\n"
+            f"**Branch:** {branch}\n"
         )
-        output = (result.stdout + "\n" + result.stderr).strip()
-        return result.returncode == 0, _tail(output)
-    except FileNotFoundError:
-        return False, f"Coverage runner not found: {cmd[0]}"
-    except subprocess.TimeoutExpired:
-        return False, "Coverage check timed out after 180s"
+
+        subprocess.run(
+            ["gh", "pr", "create", "--draft",
+             "--title", pr_title,
+             "--body", pr_body],
+            capture_output=True, timeout=30, check=False,
+        )
+    except Exception:
+        # Best-effort only — never prevent exit
+        pass
 
 
-def verify_before_exit(requirements: dict, project_types: set[str]) -> tuple[bool, str]:
-    """Run verification checks before allowing exit.
-
-    Fail-closed: required checks that cannot run count as failures.
-
-    Args:
-        requirements: Dict with tests_must_pass, lint_must_pass, coverage_threshold flags.
-        project_types: Detected project types (e.g. {"node", "python"}).
-
-    Returns:
-        (passed, detail) tuple. detail contains failure output for block message.
-    """
-    failures: list[str] = []
-
-    if requirements.get("tests_must_pass", False):
-        if not project_types:
-            failures.append("Tests required but project type could not be detected")
-        else:
-            for project_type in sorted(project_types):
-                passed, output = run_tests(project_type)
-                if not passed:
-                    failures.append(f"Tests failed ({project_type}):\n{output}")
-
-    if requirements.get("lint_must_pass", False):
-        if not project_types:
-            failures.append("Lint required but project type could not be detected")
-        else:
-            for project_type in sorted(project_types):
-                passed, output = run_lint(project_type)
-                if not passed:
-                    failures.append(f"Lint failed ({project_type}):\n{output}")
-
-    coverage_threshold = requirements.get("coverage_threshold")
-    if coverage_threshold and int(coverage_threshold) > 0:
-        if not project_types:
-            failures.append("Coverage required but project type could not be detected")
-        else:
-            for project_type in sorted(project_types):
-                passed, output = run_coverage(project_type, int(coverage_threshold))
-                if not passed:
-                    failures.append(f"Coverage below {coverage_threshold}% ({project_type}):\n{output}")
-
-    if failures:
-        return False, "\n---\n".join(failures)
-    return True, ""
-
-
-def main():
-    """Main hook logic."""
+def main() -> None:
     try:
-        # Read input from stdin
         input_data = sys.stdin.read()
-
         if not input_data.strip():
-            # No input, allow exit
+            # If a loop is already active, missing input must not allow a bypass.
+            if loop_guard_active() or LOOP_FLAG.exists():
+                response = build_continue_message(
+                    "Stop-hook invoked without input while loop is active.",
+                    ["Try again and ensure a transcript is available."],
+                )
+                json.dump(response, sys.stderr)
+                sys.exit(2)
             sys.exit(0)
 
         try:
             hook_input = json.loads(input_data)
         except json.JSONDecodeError:
-            # Invalid JSON, allow exit (fail open)
-            sys.exit(0)
-
-        # Load configuration
-        config = load_config()
-
-        # Get values from input and config
-        transcript = hook_input.get("transcript", "")
-        completion_promise = config.get("completion_promise", "<promise>DONE</promise>")
-        max_iterations = config.get("max_iterations", 25)
-        requirements = config.get("requirements", {})
-
-        # Increment iteration counter
-        current_iteration = increment_iteration()
-
-        # Extract task_id for monitor notifications
-        _task_id = get_task_id()
-
-        # Check 1: Max iterations exceeded
-        if current_iteration >= max_iterations:
-            response = build_continue_message(
-                f"Max iterations ({max_iterations}) reached. Forcing exit.",
-                ["Review the task manually", "Check for infinite loops in logic"]
-            )
-            json.dump(response, sys.stderr)
-            # Notify monitor of forced exit
-            if _task_id:
-                send_task_fail(_task_id, f"Max iterations ({max_iterations}) exceeded")
-            sys.exit(0)  # Allow exit on max iterations
-
-        # Check 2: Promise found in transcript (search ENTIRE transcript)
-        promise_found = (
-            check_promise_in_transcript(transcript, completion_promise)
-            or check_promise_flag_file(completion_promise)
-        )
-
-        if promise_found:
-            # Verification gate: run tests/lint before allowing exit
-            project_types = detect_project_types()
-            passed, detail = verify_before_exit(requirements, project_types)
-            if passed:
-                # Notify monitor of successful completion
-                if _task_id:
-                    send_task_complete(_task_id)
-                sys.exit(0)  # All checks pass — allow exit
-            else:
-                # Verification failed \u2014 block exit with detail
+            if loop_guard_active() or LOOP_FLAG.exists():
                 response = build_continue_message(
-                    "Promise found but verification failed",
-                    [
-                        detail,
-                        "Fix the failing tests/lint issues",
-                        f"Then output {completion_promise} again",
-                    ]
+                    "Stop-hook received invalid JSON while loop is active.",
+                    ["Try again; do not attempt to bypass by breaking hook input."],
                 )
                 json.dump(response, sys.stderr)
                 sys.exit(2)
+            sys.exit(0)
 
-        # Promise not found - block exit and provide guidance
-        suggestions = [
-            "Read docs/CURRENT_TASK.md to review acceptance criteria",
-            "Run the test suite and verify all tests pass",
-            "Check for linting errors with the appropriate linter",
-            f"When all criteria are met, output: {completion_promise}"
-        ]
+        if not should_enforce_exit_policy(hook_input):
+            sys.exit(0)
 
-        # Add iteration info
-        reason = f"Completion criteria not met (iteration {current_iteration}/{max_iterations})"
+        active_loop = bool(loop_guard_active() or LOOP_FLAG.exists() or hook_input.get("completion_promise"))
+        if active_loop:
+            ensure_loop_guard(hook_input)
 
-        response = build_continue_message(reason, suggestions)
-        json.dump(response, sys.stderr)
+        config, has_explicit_config = load_config()
+        requirements = (config.get("requirements") or {}) if isinstance(config, dict) else {}
 
-        # Exit 2 blocks the agent from exiting
-        sys.exit(2)
+        completion_promise = (
+            hook_input.get("completion_promise")
+            or config.get("completion_promise")
+            or DEFAULT_PROMISE
+        )
+        max_iterations = int(config.get("max_iterations", 25))
+        scan_length = int(config.get("scan_length", 5000))
 
+        current_iteration = increment_iteration()
+        _debug(f"{datetime.now().isoformat()} iteration={current_iteration} enforce=true")
+
+        # Monitor integration: Send status updates to the dashboard
+        if MONITOR_AVAILABLE:
+            # Extract task ID from branch name if possible
+            branch = get_git_branch() or ""
+            task_match = JIRA_KEY_RE.search(branch)
+            task_id = task_match.group() if task_match else "TASK"
+
+            if current_iteration == 1:
+                # First iteration - start task and activate JIRA
+                start_task(task_id, f"Working on {task_id}")
+                activate_jira(f"Starting {task_id}...")
+            else:
+                # Subsequent iterations - Claude is working
+                activate_claude(f"Iteration {current_iteration}: Coding...")
+
+        if current_iteration >= max_iterations:
+            # Try to save work before forced exit
+            _save_progress_on_max_iterations(max_iterations)
+
+            json.dump(
+                {
+                    "decision": "allow",
+                    "reason": f"Max iterations ({max_iterations}) reached. Forcing exit. Draft PR created if possible.",
+                    "timestamp": datetime.now().isoformat(),
+                },
+                sys.stderr,
+            )
+            if active_loop:
+                clear_loop_guard()
+            sys.exit(0)
+
+        transcript = get_transcript_text(hook_input, scan_length)
+        promise_found = isinstance(transcript, str) and completion_promise in transcript
+        flag_found = active_loop and check_promise_flag_file(completion_promise)
+
+        if not (promise_found or flag_found):
+            response = build_continue_message(
+                f"Completion criteria not met (iteration {current_iteration}/{max_iterations})",
+                [
+                    "Read CURRENT_TASK.md to review acceptance criteria",
+                    "Run: pytest -q",
+                    "Run: ruff check .",
+                    "Run: ruff format --check .",
+                    f"When all criteria are met, output: {completion_promise}",
+                ],
+            )
+            json.dump(response, sys.stderr)
+            sys.exit(2)
+
+        # Promise is present -> verify required quality gates before allowing exit.
+        tools = resolve_tools()
+        enforce_tools = has_explicit_config or is_git_repo()
+
+        failures: list[str] = []
+        suggestions: list[str] = []
+
+        tests_required = bool(requirements.get("tests_must_pass"))
+        lint_required = bool(requirements.get("lint_must_pass"))
+        coverage_threshold = requirements.get("coverage_threshold")
+        if coverage_threshold is not None:
+            try:
+                coverage_threshold = int(coverage_threshold)
+            except Exception:
+                coverage_threshold = None
+
+        if tests_required and enforce_tools:
+            # Monitor: Show that we're running tests
+            if MONITOR_AVAILABLE:
+                activate_actions("Running pytest...")
+
+            pytest_cmd = [*tools["pytest"], "-q"]
+            if coverage_threshold is not None:
+                pytest_cmd.extend(
+                    [
+                        "--cov=.",
+                        "--cov-report=term-missing",
+                        f"--cov-fail-under={coverage_threshold}",
+                    ]
+                )
+            code, out = run_cmd(pytest_cmd, timeout_s=180)
+            if code != 0:
+                failures.append("pytest failed")
+                suggestions.append(f"Fix failing tests:\n{out}")
+
+        if lint_required and enforce_tools:
+            # Monitor: Show that we're running lint
+            if MONITOR_AVAILABLE:
+                activate_actions("Running ruff check...")
+
+            code, out = run_cmd([*tools["ruff"], "check", "."], timeout_s=120)
+            if code != 0:
+                failures.append("ruff check . failed")
+                suggestions.append(f"Fix Ruff lint:\n{out}")
+
+            code, out = run_cmd([*tools["ruff"], "format", "--check", "."], timeout_s=120)
+            if code != 0:
+                failures.append("ruff format --check . failed")
+                suggestions.append(f"Run formatter:\n{out}")
+
+        if failures:
+            response = build_continue_message(
+                f"Completion promise found, but quality gates failed "
+                f"(iteration {current_iteration}/{max_iterations}): {', '.join(failures)}",
+                suggestions
+                or [
+                    "Run the required checks locally and fix failures",
+                    f"When all criteria are met, output: {completion_promise}",
+                ],
+            )
+            json.dump(response, sys.stderr)
+            sys.exit(2)
+
+        # Monitor: Task completed successfully!
+        if MONITOR_AVAILABLE:
+            complete_task()
+
+        if active_loop:
+            clear_loop_guard()
+        sys.exit(0)
     except Exception as e:
-        # On any error, fail open (allow exit) to prevent stuck state
-        error_response = {
-            "error": str(e),
-            "action": "allow_exit_on_error"
-        }
-        json.dump(error_response, sys.stderr)
+        # Fail-closed when enforcing (bypass vector); fail-open otherwise.
+        if loop_guard_active() or LOOP_FLAG.exists():
+            response = build_continue_message(
+                "Stop-hook error while loop is active; continuing to avoid bypass.",
+                [f"Error: {e}", "Fix the error and try again."],
+            )
+            json.dump(response, sys.stderr)
+            sys.exit(2)
+
+        json.dump({"decision": "allow", "action": "allow_exit_on_error", "error": str(e)}, sys.stderr)
         sys.exit(0)
 
 

@@ -1,0 +1,259 @@
+name: Jules Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+      force:
+        description: "Force a review even if a previous successful run exists"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+  statuses: write
+
+concurrency:
+  group: jules-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  jules-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Prevent recursive loop: block ALL known Jules branch patterns
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (!startsWith(github.head_ref, 'jules-') &&
+       !startsWith(github.head_ref, 'review/') &&
+       !startsWith(github.head_ref, 'update-pr-review') &&
+       !startsWith(github.head_ref, 'automated-review') &&
+       !startsWith(github.head_ref, 'pr-review-') &&
+       !startsWith(github.head_ref, 'review-findings') &&
+       github.actor != 'google-labs-jules[bot]')
+
+    steps:
+      - name: Start timer
+        id: start
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve PR context
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            pr_number="${{ inputs.pr_number }}"
+            pr_json=$(gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" --json number,isDraft,headRefOid)
+            echo "number=$(echo "$pr_json" | jq -r '.number')" >> "$GITHUB_OUTPUT"
+            echo "is_draft=$(echo "$pr_json" | jq -r '.isDraft')" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(echo "$pr_json" | jq -r '.headRefOid')" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "is_draft=${{ github.event.pull_request.draft }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Decide whether to run Jules
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force || 'false' }}
+          ACTOR: ${{ github.actor }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          IS_DRAFT: ${{ steps.pr.outputs.is_draft }}
+        run: |
+          should_run="true"
+          skip_reason=""
+
+          if [ "$FORCE" = "true" ]; then
+            should_run="true"
+          elif [ "$IS_DRAFT" = "true" ]; then
+            should_run="false"
+            skip_reason="draft"
+          elif [[ "$ACTOR" == *"[bot]" ]]; then
+            should_run="false"
+            skip_reason="bot"
+          else
+            api_url="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/jules_review.yml/runs?event=pull_request&per_page=50&head_sha=$HEAD_SHA"
+            if response=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$api_url"); then
+              prior_success=$(echo "$response" | jq -r --arg run_id "$GITHUB_RUN_ID" '[.workflow_runs[] | select(.id|tostring != $run_id) | select(.status=="completed") | select(.conclusion=="success" or .conclusion=="neutral" or .conclusion=="skipped")] | length')
+              if [ "$prior_success" -gt 0 ]; then
+                should_run="false"
+                skip_reason="dedupe"
+              fi
+            else
+              skip_reason="dedupe_unavailable"
+            fi
+          fi
+
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+          echo "skip_reason=$skip_reason" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Jules secret
+        id: secret_check
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        run: |
+          if [ -z "$JULES_API_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "JULES_API_KEY is missing; Jules review will be skipped."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.gate.outputs.should_run == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit author for bot loop
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.gate.outputs.should_run == 'true' }}
+        id: commit_check
+        run: |
+          COMMIT_AUTHOR=$(git log -1 --format='%an')
+          COMMIT_MSG=$(git log -1 --format='%s')
+
+          if [[ "$COMMIT_AUTHOR" == *"[bot]"* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "reason=bot_commit_author ($COMMIT_AUTHOR)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$COMMIT_MSG" == *"[skip-jules-review]"* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "reason=skip_marker_in_message" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "reason=" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.gate.outputs.should_run == 'true' && steps.commit_check.outputs.skip != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build compact Jules payload
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.gate.outputs.should_run == 'true' && steps.commit_check.outputs.skip != 'true' }}
+        id: payload
+        run: |
+          mkdir -p artifacts
+          python scripts/jules_payload.py \
+            --profile QUICK_REVIEW \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "$GITHUB_SHA" \
+            --pr-number "${{ steps.pr.outputs.number }}" \
+            --base-sha "${{ github.event.pull_request.base.sha || '' }}" \
+            --head-sha "${{ steps.pr.outputs.head_sha }}" \
+            --log-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --output-file artifacts/jules_context.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Call Jules API and post review
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.gate.outputs.should_run == 'true' && steps.commit_check.outputs.skip != 'true' }}
+        id: jules
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref || github.head_ref || 'main' }}
+          JULES_CONTEXT: ${{ steps.payload.outputs.jules_context }}
+        run: |
+          python3 scripts/jules_review_api.py
+
+      - name: Set Jules review status
+        if: ${{ always() && steps.gate.outputs.should_run == 'true' && steps.commit_check.outputs.skip != 'true' && steps.pr.outputs.head_sha }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          JULES_RESULT="${{ steps.jules.outcome || 'skipped' }}"
+          if [ "$JULES_RESULT" = "success" ]; then
+            STATE="success"
+            DESC="Jules review completed (API direct)"
+          elif [ "$JULES_RESULT" = "skipped" ]; then
+            STATE="success"
+            DESC="Jules review skipped"
+          else
+            STATE="failure"
+            DESC="Jules review failed or found issues"
+          fi
+          gh api "repos/${{ github.repository }}/statuses/${{ steps.pr.outputs.head_sha }}" \
+            -f state="$STATE" \
+            -f description="$DESC" \
+            -f context="jules-review" || echo "::warning::Failed to set commit status"
+
+      - name: Write metrics artifact
+        if: always()
+        id: metrics
+        env:
+          START_EPOCH: ${{ steps.start.outputs.epoch }}
+          JULES_RESULT: ${{ steps.jules.outcome || 'skipped' }}
+          FILES_CHANGED_COUNT: ${{ steps.payload.outputs.files_changed_count || '0' }}
+          DIFF_BYTES_SENT: ${{ steps.payload.outputs.diff_bytes_sent || '0' }}
+          LOG_LINES_SENT: ${{ steps.payload.outputs.log_lines_sent || '0' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SKIP_REASON: ${{ steps.gate.outputs.skip_reason || '' }}
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+
+          start_epoch = int(os.environ.get("START_EPOCH") or "0")
+          duration_sec = max(0, int(time.time()) - start_epoch) if start_epoch else 0
+
+          metrics = {
+              "workflow_name": "jules_review.yml",
+              "mode": "api_direct_review_comment",
+              "run_id": os.environ.get("GITHUB_RUN_ID"),
+              "sha": os.environ.get("GITHUB_SHA"),
+              "pr_number": os.environ.get("PR_NUMBER", ""),
+              "skip_reason": os.environ.get("SKIP_REASON", ""),
+              "duration_sec": duration_sec,
+              "retries_count": max(0, int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")) - 1),
+              "files_changed_count": int(os.environ.get("FILES_CHANGED_COUNT", "0")),
+              "diff_bytes_sent": int(os.environ.get("DIFF_BYTES_SENT", "0")),
+              "log_lines_sent": int(os.environ.get("LOG_LINES_SENT", "0")),
+              "jules_result": os.environ.get("JULES_RESULT", "skipped"),
+              "fix_outcome": "no_change",
+          }
+
+          Path("artifacts/jules_metrics.json").write_text(
+              json.dumps(metrics, indent=2),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jules-review-metrics-${{ github.run_id }}
+          path: |
+            artifacts/jules_metrics.json
+            artifacts/jules_context.json
+
+      - name: Step summary
+        if: always()
+        run: |
+          echo "## Jules Review Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode: \`api_direct_review_comment\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Result: \`${{ steps.jules.outcome || 'skipped' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Skip reason: \`${{ steps.gate.outputs.skip_reason || '' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Metrics artifact: \`jules-review-metrics-${{ github.run_id }}\`" >> "$GITHUB_STEP_SUMMARY"

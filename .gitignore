@@ -1,27 +1,37 @@
-# Environment and secrets
-.env
-.env.*
-!.env.example
-
-# Claude Code state
-.claude/ralph-state.json
-.claude/ralph-loop.log
-.claude/.ralph_loop_active
-.claude/.promise_done
-
-# Node
-node_modules/
-npm-debug.log*
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-.venv/
-venv/
-*.egg-info/
-dist/
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
 
 # IDE
 .idea/
@@ -34,19 +44,27 @@ build/
 .DS_Store
 Thumbs.db
 
-# Test artifacts
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
+# Database
+instance/
+*.db
 
-# Build artifacts
-*.log
-tmp/
-temp/
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
 
-# Local/temporary files
-.serena/
-.claude/settings-minimal.json
-docs/skills-reference/
-docs/Bygga Agentic Dev Loop-system.docx
+# Secrets (never commit these!)
+*secret*
+*credential*
+*password*
+*.pem
+*.key
+
+# Claude/Ralph Loop runtime files (never commit these!)
+.claude/ralph-state.json
+.claude/stop-hook-debug.log
+.claude/ralph-loop.log
+.claude/.ralph_loop_active
+.claude/.promise_done
+.claude/reviews/

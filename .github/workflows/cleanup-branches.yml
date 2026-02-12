@@ -1,0 +1,115 @@
+name: Cleanup old branches and PRs
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'DELETE ALL BRANCHES' to confirm"
+        required: true
+      dry_run:
+        description: "Dry run (only list what would be deleted)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        if: ${{ inputs.confirm != 'DELETE ALL BRANCHES' }}
+        run: |
+          echo "::error::Confirmation text does not match. You must type 'DELETE ALL BRANCHES' to proceed."
+          exit 1
+
+  close-prs:
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Close all open PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          echo "Closing all open pull requests..."
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "** DRY RUN — no PRs will actually be closed **"
+          fi
+
+          gh pr list --state open --limit 200 --json number,title --jq '.[] | "\(.number)\t\(.title)"' | while IFS=$'\t' read -r pr_number pr_title; do
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[DRY RUN] Would close PR #${pr_number}: ${pr_title}"
+            else
+              echo "Closing PR #${pr_number}: ${pr_title}"
+              gh pr close "$pr_number" --comment "Closing as part of branch cleanup." || echo "Failed to close PR #${pr_number}"
+            fi
+          done
+          echo "Done."
+
+  delete-branches:
+    runs-on: ubuntu-latest
+    needs: close-prs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete old branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          echo "Deleting old branches..."
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "** DRY RUN — no branches will actually be deleted **"
+          fi
+
+          # Branches to keep (never delete these)
+          KEEP_BRANCHES="main"
+
+          # Fetch all remote branches
+          git fetch --prune origin
+
+          # Get all remote branches
+          git branch -r | sed 's|origin/||' | while read branch; do
+            # Skip HEAD pointer
+            if echo "$branch" | grep -q "HEAD ->"; then
+              continue
+            fi
+
+            # Trim whitespace
+            branch=$(echo "$branch" | xargs)
+
+            # Check if branch should be kept
+            should_keep=false
+            for keep in $KEEP_BRANCHES; do
+              if [ "$branch" = "$keep" ]; then
+                should_keep=true
+                break
+              fi
+            done
+
+            if [ "$should_keep" = "true" ]; then
+              echo "KEEPING: $branch"
+              continue
+            fi
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[DRY RUN] Would delete: $branch"
+            else
+              echo "DELETING: $branch"
+              git push origin --delete "$branch" 2>&1 || echo "  Failed to delete $branch"
+            fi
+          done
+
+          echo "Done."
