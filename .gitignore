@@ -61,6 +61,12 @@ instance/
 *.pem
 *.key
 
+# Node
+node_modules/
+
+# FUSE temp files
+.fuse_hidden*
+
 # Claude/Ralph Loop runtime files (never commit these!)
 .claude/ralph-state.json
 .claude/stop-hook-debug.log
