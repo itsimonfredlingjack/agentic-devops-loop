@@ -1,0 +1,352 @@
+name: Self Healing
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: self-healing-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  heal-failure:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_repository.full_name == github.repository }}
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Start timer
+        id: start
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Jules secret
+        id: secret_check
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        run: |
+          if [ -z "$JULES_API_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "JULES_API_KEY is missing; self-healing will be skipped."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout failed revision
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Collect failure capsule
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: capsule
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          mkdir -p artifacts
+          gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed \
+            > artifacts/failed_logs.txt || true
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path("artifacts/failed_logs.txt").read_text(
+              encoding="utf-8", errors="replace"
+          ) if Path("artifacts/failed_logs.txt").exists() else ""
+
+          lines = [line.strip() for line in text.splitlines() if line.strip()]
+          capsule_lines = lines[-60:]
+
+          exit_code = "unknown"
+          for line in reversed(lines):
+              match = re.search(r"exit code\s+(\d+)", line, flags=re.IGNORECASE)
+              if match:
+                  exit_code = match.group(1)
+                  break
+
+          capsule = {
+              "run_id": os.environ.get("RUN_ID"),
+              "head_branch": os.environ.get("HEAD_BRANCH"),
+              "exit_code": exit_code,
+              "log_excerpt": capsule_lines,
+          }
+          Path("artifacts/failure_capsule.json").write_text(
+              json.dumps(capsule, indent=2),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Classify failure
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: classify
+        run: |
+          python scripts/classify_failure.py \
+            --log-file artifacts/failed_logs.txt \
+            --output-file artifacts/failure_classification.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Enforce cooldown
+        if: ${{ steps.secret_check.outputs.available == 'true' }}
+        id: cooldown
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+          COOLDOWN_MINUTES: "30"
+        run: |
+          RUNS_JSON=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow self_healing.yml \
+            --branch "$HEAD_BRANCH" \
+            --limit 20 \
+            --json databaseId,createdAt,status,conclusion 2>/dev/null || echo '[]')
+
+          RUNS_JSON="$RUNS_JSON" python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+
+          runs = json.loads(os.environ.get("RUNS_JSON", "[]"))
+          current_run = int(os.environ.get("CURRENT_RUN_ID", "0"))
+          cooldown_seconds = int(os.environ.get("COOLDOWN_MINUTES", "30")) * 60
+          now = dt.datetime.now(dt.timezone.utc)
+
+          blocked = False
+          reason = ""
+          for run in runs:
+              run_id = int(run.get("databaseId", 0))
+              if run_id == current_run:
+                  continue
+              created_at = run.get("createdAt")
+              if not created_at:
+                  continue
+              created_dt = dt.datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+              age = (now - created_dt).total_seconds()
+              if age < cooldown_seconds:
+                  blocked = True
+                  reason = (
+                      "Cooldown active due to recent self-healing run "
+                      f"#{run_id} ({int(age)}s ago)."
+                  )
+                  break
+
+          output_path = os.environ["GITHUB_OUTPUT"]
+          with open(output_path, "a", encoding="utf-8") as handle:
+              handle.write(f"allowed={'false' if blocked else 'true'}\\n")
+              handle.write(f"reason={reason if blocked else 'cooldown_clear'}\\n")
+          PY
+
+      - name: Build compact Jules payload
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.cooldown.outputs.allowed == 'true' }}
+        id: payload
+        run: |
+          mkdir -p artifacts
+          BASE_SHA=$(git rev-parse "${{ github.event.workflow_run.head_sha }}^" 2>/dev/null || true)
+          python scripts/jules_payload.py \
+            --profile HEALING_FIX \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "${{ github.event.workflow_run.head_sha }}" \
+            --pr-number "$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")" \
+            --base-sha "$BASE_SHA" \
+            --head-sha "${{ github.event.workflow_run.head_sha }}" \
+            --log-file artifacts/failed_logs.txt \
+            --log-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}" \
+            --output-file artifacts/jules_context.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Capture baseline commit
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.cooldown.outputs.allowed == 'true' }}
+        id: baseline
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Invoke Jules remediation
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.cooldown.outputs.allowed == 'true' }}
+        id: jules
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            You are the CI self-healing agent for this repository.
+            Propose or apply the smallest deterministic fix that can recover CI.
+            Do not modify workflow/auth/secret-related files unless ARMORED=true.
+            Prefer a single focused fix over broad refactors.
+            JULES_CONTEXT: ${{ steps.payload.outputs.jules_context }}
+          include_last_commit: true
+          include_commit_log: false
+
+      - name: Guard sensitive file changes
+        if: ${{ always() && steps.secret_check.outputs.available == 'true' && steps.cooldown.outputs.allowed == 'true' }}
+        env:
+          PRE_SHA: ${{ steps.baseline.outputs.sha }}
+          ARMORED: ${{ vars.JULES_ARMORED || 'false' }}
+        run: |
+          mkdir -p artifacts
+          POST_SHA=$(git rev-parse HEAD)
+          if [ "$POST_SHA" != "$PRE_SHA" ]; then
+            git diff --name-only "$PRE_SHA" "$POST_SHA" > artifacts/jules_changed_files.txt
+          else
+            git diff --name-only > artifacts/jules_changed_files.txt
+          fi
+
+          if [ "${ARMORED}" != "true" ] && \
+             rg -q "^(\.github/workflows/|.*auth.*|.*secret.*|.*token.*)" artifacts/jules_changed_files.txt; then
+            echo "Sensitive files changed without ARMORED=true." >&2
+            exit 1
+          fi
+
+      - name: Commit and push Jules fix
+        if: ${{ steps.secret_check.outputs.available == 'true' && steps.cooldown.outputs.allowed == 'true' && steps.jules.outcome == 'success' }}
+        id: commit_fix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SESSION_ID: ${{ steps.jules.outputs.session_id || 'unknown' }}
+          PRE_SHA: ${{ steps.baseline.outputs.sha }}
+        run: |
+          # Check if Jules actually made any changes
+          if [ -z "$(git diff --name-only)" ] && [ -z "$(git diff --staged --name-only)" ]; then
+            echo "No changes detected from Jules. Skipping commit."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Configure git for the commit
+          git config user.name "jules-self-heal[bot]"
+          git config user.email "jules-self-heal[bot]@users.noreply.github.com"
+
+          # Stage and commit
+          git add -A
+          git commit -m "fix(self-heal): auto-fix from Jules session ${SESSION_ID} [skip-jules-review]" \
+            -m "Triggered by CI failure on branch ${HEAD_BRANCH}." \
+            -m "Co-Authored-By: Jules <jules[bot]@users.noreply.github.com>"
+
+          # Push to the branch
+          git push origin HEAD:"${HEAD_BRANCH}"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "Self-healing fix committed and pushed to ${HEAD_BRANCH}"
+
+      - name: Limit self-healing retries
+        if: ${{ steps.commit_fix.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          MAX_RETRIES: "3"
+        run: |
+          # Count recent self-healing commits on this branch
+          HEAL_COUNT=$(git log --oneline --author="jules-self-heal" --since="2 hours ago" "origin/${HEAD_BRANCH}" 2>/dev/null | wc -l || echo 0)
+          echo "Self-healing attempts in last 2h: ${HEAL_COUNT}"
+
+          if [ "$HEAL_COUNT" -ge "$MAX_RETRIES" ]; then
+            echo "::warning::Max self-healing retries (${MAX_RETRIES}) reached for ${HEAD_BRANCH}. Creating issue."
+            gh issue create \
+              --title "Self-healing failed after ${MAX_RETRIES} attempts on ${HEAD_BRANCH}" \
+              --body "The self-healing workflow has attempted ${HEAL_COUNT} fixes on branch \`${HEAD_BRANCH}\` in the last 2 hours without resolving the CI failure. Manual intervention required." \
+              --label "self-healing,needs-attention" || true
+          fi
+
+      - name: Write metrics artifact
+        if: always()
+        env:
+          START_EPOCH: ${{ steps.start.outputs.epoch }}
+          JULES_RESULT: ${{ steps.jules.outcome || 'skipped' }}
+          SESSION_ID: ${{ steps.jules.outputs.session_id || '' }}
+          FILES_CHANGED_COUNT: ${{ steps.payload.outputs.files_changed_count || '0' }}
+          DIFF_BYTES_SENT: ${{ steps.payload.outputs.diff_bytes_sent || '0' }}
+          LOG_LINES_SENT: ${{ steps.payload.outputs.log_lines_sent || '0' }}
+          TAXONOMY: ${{ steps.classify.outputs.taxonomy || 'UNKNOWN' }}
+          FAILING_TARGETS: ${{ steps.classify.outputs.failing_targets || '[]' }}
+          COOLDOWN_REASON: ${{ steps.cooldown.outputs.reason || 'n/a' }}
+          COOLDOWN_ALLOWED: ${{ steps.cooldown.outputs.allowed || 'false' }}
+          FIX_COMMITTED: ${{ steps.commit_fix.outputs.committed || 'false' }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number || '' }}
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+
+          start_epoch = int(os.environ.get("START_EPOCH") or "0")
+          duration_sec = max(0, int(time.time()) - start_epoch) if start_epoch else 0
+
+          if os.environ.get("COOLDOWN_ALLOWED") != "true":
+              fix_outcome = "no_change"
+          elif os.environ.get("FIX_COMMITTED") == "true":
+              fix_outcome = "committed"
+          elif os.environ.get("JULES_RESULT") == "success":
+              fix_outcome = "partial"
+          else:
+              fix_outcome = "no_change"
+
+          metrics = {
+              "workflow_name": "self_healing.yml",
+              "run_id": os.environ.get("GITHUB_RUN_ID"),
+              "sha": os.environ.get("GITHUB_SHA"),
+              "pr_number": os.environ.get("PR_NUMBER", ""),
+              "duration_sec": duration_sec,
+              "retries_count": max(0, int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")) - 1),
+              "files_changed_count": int(os.environ.get("FILES_CHANGED_COUNT", "0")),
+              "diff_bytes_sent": int(os.environ.get("DIFF_BYTES_SENT", "0")),
+              "log_lines_sent": int(os.environ.get("LOG_LINES_SENT", "0")),
+              "jules_session_id": os.environ.get("SESSION_ID", ""),
+              "jules_result": os.environ.get("JULES_RESULT", "skipped"),
+              "fix_outcome": fix_outcome,
+              "taxonomy": os.environ.get("TAXONOMY", "UNKNOWN"),
+              "failing_targets": os.environ.get("FAILING_TARGETS", "[]"),
+              "cooldown_reason": os.environ.get("COOLDOWN_REASON", "n/a"),
+          }
+
+          Path("artifacts/jules_metrics.json").write_text(
+              json.dumps(metrics, indent=2),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jules-self-healing-metrics-${{ github.run_id }}
+          path: |
+            artifacts/jules_metrics.json
+            artifacts/failure_classification.json
+            artifacts/failure_capsule.json
+            artifacts/jules_context.json
+            artifacts/jules_changed_files.txt
+
+      - name: Step summary
+        if: always()
+        run: |
+          echo "## Self-Healing Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Taxonomy: \`${{ steps.classify.outputs.taxonomy || 'UNKNOWN' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cooldown: \`${{ steps.cooldown.outputs.allowed || 'false' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cooldown reason: ${{ steps.cooldown.outputs.reason || 'n/a' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Jules result: \`${{ steps.jules.outcome || 'skipped' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Failing targets: ${{ steps.classify.outputs.failing_targets || '[]' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Failed CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- This run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"

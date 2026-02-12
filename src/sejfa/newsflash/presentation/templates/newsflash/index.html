@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}News Flash - Your Tech Newsletter{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero__container">
+        <h1 class="hero__heading">News Flash</h1>
+        <p class="hero__subtitle">Stay ahead with the latest tech news, delivered to your inbox</p>
+        <a href="{{ url_for('newsflash.subscribe') }}" class="hero__button">Subscribe Now</a>
+    </div>
+</section>
+
+<section class="features">
+    <div class="features__container">
+        <div class="features__card">
+            <h3 class="features__title">Daily Updates</h3>
+            <p class="features__text">Get the latest tech news every morning</p>
+        </div>
+        <div class="features__card">
+            <h3 class="features__title">Curated Content</h3>
+            <p class="features__text">Handpicked articles from trusted sources</p>
+        </div>
+        <div class="features__card">
+            <h3 class="features__title">No Spam</h3>
+            <p class="features__text">Unsubscribe anytime, no questions asked</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

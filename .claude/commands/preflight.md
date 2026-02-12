@@ -31,12 +31,20 @@ git branch --show-current
 ### 3. Jira API Available
 
 ```bash
-# Test Jira connection
-python3 .claude/utils/jira_api.py ping
+source venv/bin/activate && python3 -c "
+from dotenv import load_dotenv
+load_dotenv()
+from src.sejfa.integrations.jira_client import get_jira_client
+client = get_jira_client()
+if client.test_connection():
+    print('✅ Jira connection OK')
+else:
+    print('❌ Jira connection FAILED')
+"
 ```
 
-**Pass if:** Returns Jira user profile
-**Fail if:** Connection error or auth error
+**Pass if:** Output shows "✅ Jira connection OK"
+**Fail if:** Connection error or "❌ Jira connection FAILED"
 
 ### 4. GitHub Auth (can push)
 
@@ -51,9 +59,8 @@ ssh -T git@github.com
 ### 5. Environment Check
 
 Verify these files exist:
-- `.env` (has JIRA_URL and JIRA_TOKEN)
-- `.claude/ralph-config.json`
-- `docs/CURRENT_TASK.md` (should be empty or say "No active task")
+- `.claude/settings.local.json`
+- `CURRENT_TASK.md` (should be empty template or say "No active task")
 
 ## Output Format
 
@@ -81,12 +88,12 @@ PREFLIGHT CHECKS
 
 [✅] Git working tree clean
 [❌] Jira API responding
-     └─ Error: Connection refused
-        Action: Check JIRA_URL in .env
+     └─ Error: Connection failed
+        Action: Check .env file (JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN)
 [✅] GitHub auth working
-[⚠️]  CURRENT_TASK.md exists but not empty
+[⚠️]  CURRENT_TASK.md has active task
      └─ Warning: Old task still active
-        Run: echo "# No active task" > docs/CURRENT_TASK.md
+        Run: /finish-task first
 
 ═════════════════════════════════════════
 ❌ NOT READY FOR /start-task

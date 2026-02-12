@@ -1,0 +1,13 @@
+{% extends "expense_tracker/base.html" %}
+
+{% block title %}Sammanfattning - ExpenseTracker{% endblock %}
+
+{% block content %}
+<h1>Sammanfattning</h1>
+
+<div class="total">
+    <p>Totalt: {{ "%.2f"|format(total) }} kr</p>
+</div>
+
+<p><a href="{{ url_for('expense_tracker.index') }}">Tillbaka till utgifter</a></p>
+{% endblock %}
