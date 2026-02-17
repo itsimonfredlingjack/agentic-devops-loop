@@ -33,14 +33,14 @@ Extract: JIRA_ID, branch_name
 Run verification checks:
 
 ```bash
-# Check tests pass
-pytest -xvs --cov=. --cov-report=term-missing --cov-fail-under=80
+# MASTE aktivera venv forst — annars ImportError!
+source venv/bin/activate && pytest -xvs --cov=src --cov=app.py --cov-report=term-missing --cov-fail-under=80
 
-# Check linting
-ruff check .
+# Check linting (med venv)
+source venv/bin/activate && ruff check .
 
-# Check formatting
-ruff format --check .
+# Check formatting (med venv)
+source venv/bin/activate && ruff format --check .
 ```
 
 If any check fails, DO NOT proceed. Fix the issues first.
@@ -50,12 +50,46 @@ If any check fails, DO NOT proceed. Fix the issues first.
 Review each acceptance criterion in CURRENT_TASK.md.
 All checkboxes must be checked.
 
+### Step 3b: Scope Verification (KRITISKT)
+
+**Denna check forhindrar att du loser FEL uppgift.**
+
+Innan du gar vidare, verifiera att dina andringar matchar ticketens scope:
+
+```bash
+# Lista alla andrade filer i denna branch
+changed_files=$(git diff --name-only main...HEAD)
+echo "=== ANDRADE FILER ==="
+echo "${changed_files}"
+```
+
+**Kontrollera manuellt:**
+
+1. **UI-tickets** ("andra UI", "tema", "design", "frontend"):
+   - MASTE inkludera Flask-templates (se filkarta i CLAUDE.md)
+   - `src/sejfa/newsflash/presentation/templates/` och/eller
+   - `src/expense_tracker/templates/`
+   - Om BARA `static/monitor.html` andrades → **FEL FILER, STOPPA**
+
+2. **Backend-tickets** ("API", "endpoint", "logik"):
+   - MASTE inkludera filer i `src/` (Python-kod)
+   - Om bara templates/HTML andrades → ifrågasätt
+
+3. **Generellt:**
+   - Jamfor andrade filer mot ticketens acceptanskriterier
+   - Om acceptanskriterierna namner produktion/Azure → verifiera att
+     Flask-serverade filer andrades (se filkarta i CLAUDE.md)
+
+**Om scope inte matchar → GA TILLBAKA och andra ratt filer.**
+
 ### Step 4: Final Commit
 
 If there are uncommitted changes:
 
+**⚠️ NEVER use `git add -A` or `git add .` — they stage untracked junk files (.fuse_hidden*, SEJFA_Changelog.docx, etc.)**
+
 ```bash
-git add -A
+git add -u   # Only tracked files — NO untracked junk
 git commit -m "{JIRA_ID}: Final implementation - all tests pass
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>"
@@ -97,18 +131,40 @@ Implements {JIRA_ID}
 echo "Created PR: ${pr_url}"
 ```
 
-### Step 7: Wait for CI and Merge
+### Step 7: Merge PR (MANDATORY — code MUST reach main)
 
-Only after successful PR creation, wait for CI checks to pass, then merge directly:
+**FORBJUDET:**
+- `gh pr checks --watch` (blockerar oandligt)
+- `sleep`-polling i manuella loopar (branner context)
+- Vanta pa `jules-review` (ska vara async/informational, INTE merge-gate)
+- Langa check-loopar som blockerar CLI
+
+**Kopiera och kor detta EXAKT som ett Bash-kommando (byt ut `${pr_url}`):**
 
 ```bash
-gh pr checks "${pr_url}" --watch
-gh pr merge --squash "${pr_url}"
+PR_URL="${pr_url}" && \
+echo "=== ENABLE AUTO-MERGE (NON-BLOCKING) ===" && \
+if gh pr merge --squash --auto "${PR_URL}" 2>/dev/null; then
+  echo "✅ Auto-merge enabled"
+elif gh pr merge --squash --auto --admin "${PR_URL}" 2>/dev/null; then
+  echo "✅ Auto-merge enabled with --admin"
+else
+  echo "❌ Could not enable auto-merge."
+  echo "Run once: gh api -X PATCH repos/<owner>/<repo> -f allow_auto_merge=true"
+  echo "Then retry: gh pr merge --squash --auto \"${PR_URL}\""
+  exit 1
+fi && \
+echo "=== VERIFY ===" && \
+gh pr view "${PR_URL}" --json state,mergedAt,autoMergeRequest,url --jq \
+  '{state: .state, mergedAt: .mergedAt, autoMergeEnabled: (.autoMergeRequest != null), url: .url}'
 ```
 
-**If merge fails** (e.g., review required, branch protection):
-- Log warning: `⚠️ Auto-merge failed — manual merge may be needed`
-- **Continue** with Jira update (Step 8) — do not abort
+**Regler:**
+- Aktivera auto-merge i stallet for att blockera pa check-polling
+- Om auto-merge inte kan aktiveras → **DO NOT output `<promise>DONE</promise>`**
+- Jules Review ska INTE blocka merge eller skapa CLI-vantan
+- Fortsatt till Step 8 nar PR ar `MERGED` ELLER `autoMergeRequest != null`
+- Verifiera ALLTID med `gh pr view --json state,autoMergeRequest` efterat
 
 ### Step 8: Update Jira
 
@@ -152,6 +208,38 @@ except Exception as e:
 "
 ```
 
+Transition to "Done" when review is approved (PR merged):
+
+```bash
+source venv/bin/activate && python3 -c "
+import json
+import subprocess
+from dotenv import load_dotenv
+load_dotenv()
+from src.sejfa.integrations.jira_client import get_jira_client
+
+pr_state = 'OPEN'
+try:
+    raw = subprocess.check_output(
+        ['gh', 'pr', 'view', '{pr_url}', '--json', 'state'],
+        text=True,
+    )
+    pr_state = json.loads(raw).get('state', 'OPEN')
+except Exception as e:
+    print(f'⚠️ Could not read PR state: {e}')
+
+if pr_state == 'MERGED':
+    client = get_jira_client()
+    try:
+        client.transition_issue('{JIRA_ID}', 'Done')
+        print('✅ Transitioned to Done')
+    except Exception as e:
+        print(f'⚠️ Could not transition to Done: {e}')
+else:
+    print('ℹ️ PR not merged yet; keep Jira in In Review')
+"
+```
+
 ### Step 9: Update CURRENT_TASK.md
 
 Mark task as complete:
@@ -160,7 +248,7 @@ Mark task as complete:
 ## Active Task
 
 **Jira ID:** {JIRA_ID}
-**Status:** ✅ Complete - In Review
+**Status:** ✅ Complete - In Review (or Done if PR is already merged)
 **Branch:** {branch_name}
 **PR:** {pr_url}
 **Completed:** {timestamp}
@@ -175,6 +263,11 @@ After merge to main, `deploy.yml` triggers automatically, followed by `post_depl
 4. On failure → rolls back to previous revision + comments Jira "❌ Rolled back"
 
 **The agent does NOT need to verify deployment manually.** The pipeline handles this end-to-end.
+
+Required status order for this project:
+- `transition_issue('{JIRA_ID}', 'In Progress')` when work starts
+- `transition_issue('{JIRA_ID}', 'In Review')` when implementation is complete and awaiting review
+- `transition_issue('{JIRA_ID}', 'Done')` when review is approved
 
 ### Step 10: Output Completion Promise
 

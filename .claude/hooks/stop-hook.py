@@ -45,6 +45,17 @@ except ImportError:
 DEFAULT_PROMISE = "<promise>DONE</promise>"
 JIRA_KEY_RE = re.compile(r"[A-Z]+-[0-9]+")
 
+# UI scope guard — keywords that indicate a UI/theme ticket
+UI_KEYWORDS = re.compile(
+    r"(theme|tema|design|ui|frontend|color|colour|dark|morphism|reskin|style|css)",
+    re.IGNORECASE,
+)
+# Flask-served paths that MUST be touched for UI tickets to affect production
+FLASK_UI_PATHS = (
+    "src/sejfa/newsflash/presentation/",
+    "src/expense_tracker/templates/",
+)
+
 LOOP_FLAG = Path.cwd() / ".claude" / ".ralph_loop_active"
 STATE_FILE = Path.cwd() / ".claude" / "ralph-state.json"
 PROMISE_FLAG_FILE = Path.cwd() / ".claude" / ".promise_done"
@@ -359,7 +370,7 @@ def _save_progress_on_max_iterations(max_iterations: int) -> None:
         has_changes = bool(status_result.stdout.strip())
         if has_changes:
             subprocess.run(
-                ["git", "add", "-A"],
+                ["git", "add", "-u"],
                 capture_output=True, timeout=10, check=False,
             )
             subprocess.run(
@@ -395,6 +406,111 @@ def _save_progress_on_max_iterations(max_iterations: int) -> None:
     except Exception:
         # Best-effort only — never prevent exit
         pass
+
+
+def check_ui_scope() -> tuple[bool, str]:
+    """Verify that UI-themed tickets actually changed Flask-served files.
+
+    Returns (ok, message). ok=False means the scope check failed and the
+    loop should be blocked from exiting.
+    """
+    branch = get_git_branch() or ""
+    if not UI_KEYWORDS.search(branch):
+        return True, ""
+
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "main...HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if result.returncode != 0:
+            return True, ""  # Can't determine — don't block
+        changed = result.stdout.strip().splitlines()
+    except Exception:
+        return True, ""
+
+    if not changed:
+        return True, ""
+
+    touches_flask = any(
+        f.startswith(prefix) for f in changed for prefix in FLASK_UI_PATHS
+    )
+
+    if touches_flask:
+        return True, ""
+
+    only_monitor = all(
+        f in ("static/monitor.html", "CURRENT_TASK.md")
+        or f.startswith("scripts/")
+        or f.startswith(".claude/")
+        or f.startswith("tests/")
+        for f in changed
+    )
+
+    if only_monitor:
+        return False, (
+            f"UI SCOPE GUARD BLOCKED EXIT: Branch '{branch}' looks like a "
+            f"UI/theme ticket but NO Flask template files were changed. "
+            f"Changed files: {changed}. "
+            f"You MUST edit Flask templates in {FLASK_UI_PATHS} for "
+            f"changes to appear on Azure production. "
+            f"See the production file map in CLAUDE.md."
+        )
+
+    return True, ""
+
+
+def check_pr_merged() -> tuple[bool, str]:
+    """Verify that an open PR for this branch is merged or has auto-merge enabled.
+
+    Returns (ok, message). ok=False means the PR is not merged and the loop
+    should be blocked from exiting.
+    """
+    branch = get_git_branch() or ""
+    if not branch or branch in ("main", "master"):
+        return True, ""
+
+    try:
+        # Check if a PR exists for this branch
+        result = subprocess.run(
+            ["gh", "pr", "view", "--json", "state,autoMergeRequest,url"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if result.returncode != 0:
+            # No PR found or gh not available — don't block
+            return True, ""
+
+        pr_data = json.loads(result.stdout.strip())
+        pr_state = pr_data.get("state", "")
+        pr_url = pr_data.get("url", "")
+        auto_merge = pr_data.get("autoMergeRequest")
+
+        if pr_state == "MERGED":
+            return True, ""
+
+        if auto_merge is not None:
+            # Auto-merge is enabled — GitHub will merge when checks pass
+            return True, ""
+
+        if pr_state == "OPEN":
+            return False, (
+                f"PR MERGE GATE BLOCKED EXIT: PR {pr_url} is still OPEN and "
+                f"auto-merge is NOT enabled. The PR must be merged for code to "
+                f"reach main. Try: gh pr merge --squash --admin \"{pr_url}\" "
+                f"or gh pr merge --squash \"{pr_url}\""
+            )
+
+        # CLOSED without merge or other state — warn but don't block
+        return True, ""
+    except Exception:
+        # If we can't check, don't block (fail-open for this gate)
+        return True, ""
 
 
 def main() -> None:
@@ -551,6 +667,39 @@ def main() -> None:
                 or [
                     "Run the required checks locally and fix failures",
                     f"When all criteria are met, output: {completion_promise}",
+                ],
+            )
+            json.dump(response, sys.stderr)
+            sys.exit(2)
+
+        # UI scope verification — prevents completing tickets that changed wrong files
+        scope_ok, scope_msg = check_ui_scope()
+        if not scope_ok:
+            response = build_continue_message(
+                f"UI scope check failed (iteration {current_iteration}/{max_iterations}): {scope_msg}",
+                [
+                    "You changed the WRONG files for this UI ticket!",
+                    "Edit Flask templates in src/sejfa/newsflash/presentation/templates/ "
+                    "and/or src/expense_tracker/templates/",
+                    "Do NOT edit static/monitor.html for app UI tickets",
+                    "See CLAUDE.md 'Produktions-filkarta' for the correct files",
+                    f"When fixed, output: {completion_promise}",
+                ],
+            )
+            json.dump(response, sys.stderr)
+            sys.exit(2)
+
+        # PR merge verification — prevents DONE when PR is not merged
+        pr_ok, pr_msg = check_pr_merged()
+        if not pr_ok:
+            response = build_continue_message(
+                f"PR merge check failed (iteration {current_iteration}/{max_iterations}): {pr_msg}",
+                [
+                    "Your PR is NOT merged! Code has not reached main.",
+                    "Try: gh pr merge --squash --admin <PR_URL>",
+                    "Or: gh pr merge --squash <PR_URL>",
+                    "Verify with: gh pr view --json state -q '.state'",
+                    f"When PR is merged, output: {completion_promise}",
                 ],
             )
             json.dump(response, sys.stderr)

@@ -12,6 +12,7 @@ import json
 import sys
 import os
 from pathlib import Path
+from typing import Optional
 
 # Only run if monitor is enabled
 if os.environ.get("MONITOR_ENABLED", "1") != "1":
@@ -35,7 +36,7 @@ except ImportError:
     sys.exit(0)
 
 
-def get_node_for_tool(tool_name: str, tool_input: dict) -> tuple[str, str] | None:
+def get_node_for_tool(tool_name: str, tool_input: dict) -> Optional[tuple[str, str]]:
     """
     Determine which node should be active based on the tool being used.
 

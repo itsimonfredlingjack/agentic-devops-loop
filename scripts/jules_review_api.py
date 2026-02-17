@@ -11,19 +11,38 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 JULES_API_BASE = "https://jules.googleapis.com/v1alpha"
 POLL_INTERVAL_SEC = 15
-MAX_POLL_SEC = 540  # 9 min (workflow timeout is 20 min)
+MAX_POLL_SEC = 720  # 12 min (workflow timeout is 20 min)
 REQUEST_TIMEOUT_SEC = 30
+SEVERITY_RE = re.compile(
+    r"(?:\[|\*\*)?(?:HIGH|MEDIUM|LOW|CRITICAL)(?:\]|\*\*)?(?:\s|[:\-\u2014]|$)",
+    re.IGNORECASE | re.MULTILINE,
+)
+# Keys that contain the prompt/config, NOT findings — skip during deep search
+_SKIP_KEYS = frozenset({"title", "prompt", "sourceContext", "automationMode"})
+_SEVERITY_WORDS = frozenset({"HIGH", "MEDIUM", "LOW", "CRITICAL"})
 
 
 def _log(msg: str, level: str = "notice") -> None:
     print(f"::{level}::{msg}" if level != "notice" else msg, flush=True)
+
+
+def _set_output(name: str, value: str) -> None:
+    """Write a step output to $GITHUB_OUTPUT (multiline-safe)."""
+    path = os.environ.get("GITHUB_OUTPUT", "")
+    if not path:
+        return
+    with open(path, "a") as f:
+        delimiter = "EOF_REVIEW_BODY"
+        f.write(f"{name}<<{delimiter}\n{value}\n{delimiter}\n")
 
 
 def _jules_request(
@@ -46,9 +65,7 @@ def _jules_request(
             raw = resp.read().decode("utf-8")
             return json.loads(raw) if raw.strip() else {}
     except urllib.error.HTTPError as exc:
-        resp_body = (
-            exc.read().decode("utf-8", errors="replace") if exc.fp else ""
-        )
+        resp_body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         _log(
             f"Jules API {method} {path} -> {exc.code}: {resp_body}",
             "error",
@@ -62,7 +79,7 @@ def _jules_request(
 def derive_source_name(repo: str) -> str:
     """Derive Jules source name from GITHUB_REPOSITORY (owner/repo)."""
     owner, name = repo.split("/", 1)
-    return f"sources/github-{owner}-{name}"
+    return f"sources/github/{owner}/{name}"
 
 
 def list_sources(api_key: str) -> list[dict]:
@@ -95,6 +112,123 @@ def create_session(
     )
 
 
+def _normalize_session_path(session_name: str) -> str:
+    name = session_name.strip()
+    if name.startswith("/"):
+        name = name[1:]
+    if name.startswith("sessions/"):
+        return name
+    return f"sessions/{name}"
+
+
+def list_activities(
+    api_key: str,
+    session_name: str,
+    *,
+    page_size: int = 100,
+    max_pages: int = 10,
+) -> list[dict]:
+    """List activities for a Jules session.
+
+    Jules often puts the agent's actual message content under:
+      /sessions/{id}/activities -> activities[].agentMessaged.agentMessage
+    """
+    session_path = _normalize_session_path(session_name)
+    all_activities: list[dict] = []
+    page_token = ""
+
+    for page in range(max_pages):
+        params: dict[str, str] = {"pageSize": str(page_size)}
+        if page_token:
+            params["pageToken"] = page_token
+        query = urllib.parse.urlencode(params)
+        resp = _jules_request(
+            f"/{session_path}/activities?{query}",
+            api_key=api_key,
+        )
+
+        batch = resp.get("activities", [])
+        if isinstance(batch, list):
+            all_activities.extend([item for item in batch if isinstance(item, dict)])
+
+        token = resp.get("nextPageToken", "")
+        if not isinstance(token, str) or not token.strip():
+            break
+
+        page_token = token.strip()
+        _log(f"Activities pagination: fetching page {page + 2}", "notice")
+
+    return all_activities
+
+
+def _collect_texts(obj: object, *, _depth: int = 0) -> list[str]:
+    if _depth > 20:
+        return []
+    if isinstance(obj, str):
+        return [obj]
+    if isinstance(obj, dict):
+        texts: list[str] = []
+        for val in obj.values():
+            texts.extend(_collect_texts(val, _depth=_depth + 1))
+        return texts
+    if isinstance(obj, list):
+        texts = []
+        for item in obj:
+            texts.extend(_collect_texts(item, _depth=_depth + 1))
+        return texts
+    return []
+
+
+def extract_agent_messages(activities: list[dict]) -> list[str]:
+    """Extract agent message strings from session activities."""
+    messages: list[str] = []
+
+    for activity in activities:
+        agent = activity.get("agentMessaged")
+        if not isinstance(agent, dict):
+            continue
+
+        msg_obj = agent.get("agentMessage")
+        if msg_obj is None:
+            continue
+
+        candidates: list[str] = []
+        if isinstance(msg_obj, str):
+            candidates = [msg_obj]
+        elif isinstance(msg_obj, dict):
+            for key in ("content", "text", "message", "body", "markdown"):
+                val = msg_obj.get(key)
+                if isinstance(val, str) and val.strip():
+                    candidates = [val]
+                    break
+            if not candidates:
+                candidates = _collect_texts(msg_obj)
+        else:
+            candidates = _collect_texts(msg_obj)
+
+        for text in candidates:
+            cleaned = text.strip()
+            if cleaned:
+                messages.append(cleaned)
+
+    return messages
+
+
+def _severity_count(text: str) -> int:
+    return len(SEVERITY_RE.findall(text))
+
+
+def select_best_agent_message(messages: list[str]) -> str | None:
+    if not messages:
+        return None
+
+    severity_messages = [m for m in messages if SEVERITY_RE.search(m)]
+    if severity_messages:
+        return max(severity_messages, key=lambda m: (_severity_count(m), len(m)))
+
+    return messages[-1]
+
+
 def poll_session(api_key: str, session_name: str) -> dict | None:
     """Poll until session completes or timeout."""
     path = session_name if session_name.startswith("/") else f"/{session_name}"
@@ -125,9 +259,224 @@ def poll_session(api_key: str, session_name: str) -> dict | None:
     return None
 
 
+def _deep_find_texts(
+    obj: object,
+    *,
+    skip_keys: frozenset[str] = _SKIP_KEYS,
+    pattern: re.Pattern[str] = SEVERITY_RE,
+    _depth: int = 0,
+) -> list[str]:
+    """Recursively walk a JSON structure and collect strings matching *pattern*.
+
+    Skips keys in *skip_keys* (prompt/title contain the instruction, not findings).
+    Returns de-duplicated list of matching strings, longest first.
+    """
+    if _depth > 20:
+        return []
+
+    hits: list[str] = []
+
+    if isinstance(obj, str):
+        if pattern.search(obj):
+            hits.append(obj.strip())
+    elif isinstance(obj, dict):
+        for key, val in obj.items():
+            if key in skip_keys:
+                continue
+            hits.extend(
+                _deep_find_texts(
+                    val, skip_keys=skip_keys, pattern=pattern, _depth=_depth + 1
+                )
+            )
+    elif isinstance(obj, list):
+        for item in obj:
+            hits.extend(
+                _deep_find_texts(
+                    item, skip_keys=skip_keys, pattern=pattern, _depth=_depth + 1
+                )
+            )
+
+    # De-duplicate preserving order, longest first
+    if _depth == 0:
+        seen: set[str] = set()
+        unique: list[str] = []
+        for text in sorted(hits, key=len, reverse=True):
+            if text not in seen:
+                seen.add(text)
+                unique.append(text)
+        return unique
+
+    return hits
+
+
+_UNIFIED_DIFF_HEADER = "diff --git"
+_DIFF_FINDING_RE = re.compile(
+    r"^(?:\[|\*\*)?(HIGH|MEDIUM|LOW|CRITICAL)",
+    re.IGNORECASE,
+)
+_MAX_DIFF_FINDINGS = 50
+
+
+def _extract_added_lines_from_unified_diff(text: str) -> list[str]:
+    stripped = text.lstrip()
+    if not stripped.startswith(_UNIFIED_DIFF_HEADER):
+        return []
+
+    added: list[str] = []
+    for line in stripped.splitlines():
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        content = line[1:].strip()
+        if content:
+            added.append(content)
+    return added
+
+
+def _extract_diff_findings(text: str) -> list[str]:
+    added = _extract_added_lines_from_unified_diff(text)
+    findings: list[str] = []
+    for line in added:
+        if _DIFF_FINDING_RE.match(line):
+            findings.append(line)
+        if len(findings) >= _MAX_DIFF_FINDINGS:
+            break
+    return findings
+
+
+def _extract_structured_findings(
+    obj: object,
+    *,
+    _depth: int = 0,
+) -> list[str]:
+    """Walk JSON tree and extract dicts that look like structured findings.
+
+    Jules sometimes returns findings as structured objects:
+        {"severity": "HIGH", "file": "foo.py", "description": "..."}
+    rather than pre-formatted text strings.
+
+    Returns formatted strings: [SEVERITY] location — description
+    """
+    if _depth > 20:
+        return []
+
+    results: list[str] = []
+
+    if isinstance(obj, dict):
+        sev = ""
+        loc = ""
+        desc = ""
+        for key, val in obj.items():
+            if not isinstance(val, str):
+                continue
+            key_lower = key.lower()
+            if key_lower == "severity":
+                sev = val.upper().strip()
+            elif key_lower in (
+                "location",
+                "file",
+                "path",
+                "filename",
+                "file_path",
+                "filepath",
+            ):
+                loc = val.strip()
+            elif key_lower in (
+                "description",
+                "message",
+                "detail",
+                "finding",
+                "text",
+                "content",
+                "summary",
+            ):
+                desc = val.strip()
+
+        if sev in _SEVERITY_WORDS and desc:
+            loc = loc or "unknown"
+            results.append(f"[{sev}] {loc} \u2014 {desc}")
+
+        # Recurse into all values regardless
+        for val in obj.values():
+            if isinstance(val, (dict, list)):
+                results.extend(_extract_structured_findings(val, _depth=_depth + 1))
+    elif isinstance(obj, list):
+        for item in obj:
+            results.extend(_extract_structured_findings(item, _depth=_depth + 1))
+
+    return results
+
+
+def _log_session_structure(session: dict, max_depth: int = 3) -> None:
+    """Log the JSON key structure of a session for debugging."""
+
+    def _keys(obj: object, depth: int = 0) -> str:
+        if depth >= max_depth:
+            return "..."
+        if isinstance(obj, dict):
+            parts = []
+            for k, v in obj.items():
+                child = _keys(v, depth + 1)
+                parts.append(f"{k}: {child}" if child else k)
+            return "{" + ", ".join(parts[:10]) + "}"
+        if isinstance(obj, list):
+            if obj:
+                return f"[{_keys(obj[0], depth + 1)} x{len(obj)}]"
+            return "[]"
+        if isinstance(obj, str):
+            return f"str({len(obj)})"
+        return type(obj).__name__
+
+    _log(f"Session structure: {_keys(session)}")
+
+
 def extract_review_text(session: dict) -> str:
-    """Extract readable review text from completed session response."""
+    """Extract readable review text from completed session response.
+
+    Strategy (in priority order):
+    1.  Deep-search for strings containing [SEVERITY] markers
+    1b. Extract structured finding objects (dicts with severity key)
+    2.  Check known structured fields (outputs, plan, response, etc.)
+    2b. Deep-search for ANY substantial text (no severity filter)
+    3.  Fallback: short message (raw JSON only when JULES_DEBUG=1)
+    """
+    debug_enabled = os.environ.get("JULES_DEBUG", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    _log(f"Session response keys: {sorted(session.keys())}")
+    _log_session_structure(session)
     parts: list[str] = []
+
+    # --- Strategy 1: Deep recursive search for severity-tagged strings ---
+    severity_texts = _deep_find_texts(session)
+    if severity_texts:
+        _log(f"Found {len(severity_texts)} text blocks with severity markers")
+        non_diff = [
+            t for t in severity_texts if not t.lstrip().startswith(_UNIFIED_DIFF_HEADER)
+        ]
+        if non_diff:
+            parts.extend(non_diff)
+            return "\n\n".join(parts)
+
+        diff_findings: list[str] = []
+        for text in severity_texts:
+            diff_findings.extend(_extract_diff_findings(text))
+        if diff_findings:
+            _log(f"Extracted {len(diff_findings)} findings from unified diff output")
+            return "\n".join(diff_findings)
+
+    # --- Strategy 1b: Extract structured finding objects ---
+    structured = _extract_structured_findings(session)
+    if structured:
+        _log(
+            f"Found {len(structured)} structured finding objects "
+            "(dict with severity key)"
+        )
+        return "\n\n".join(structured)
+
+    # --- Strategy 2: Check known structured fields ---
 
     # Check outputs array (completed sessions have this)
     outputs = session.get("outputs", [])
@@ -135,6 +484,18 @@ def extract_review_text(session: dict) -> str:
         for output in outputs:
             if not isinstance(output, dict):
                 continue
+            change_set = output.get("changeSet")
+            if isinstance(change_set, dict):
+                diff_texts = _deep_find_texts(
+                    change_set,
+                    pattern=re.compile(r"^diff --git", re.MULTILINE),
+                )
+                findings: list[str] = []
+                for diff_text in diff_texts:
+                    findings.extend(_extract_diff_findings(diff_text))
+                if findings:
+                    _log(f"Extracted {len(findings)} findings from outputs[].changeSet")
+                    return "\n".join(findings)
             pr_info = output.get("pullRequest", {})
             if isinstance(pr_info, dict) and pr_info:
                 title = pr_info.get("title", "")
@@ -161,9 +522,7 @@ def extract_review_text(session: dict) -> str:
                 if isinstance(item, str) and item.strip():
                     step_texts.append(f"- {item.strip()}")
                 elif isinstance(item, dict):
-                    desc = item.get(
-                        "description", item.get("content", "")
-                    )
+                    desc = item.get("description", item.get("content", ""))
                     if desc:
                         step_texts.append(f"- {str(desc).strip()}")
             if step_texts:
@@ -175,12 +534,29 @@ def extract_review_text(session: dict) -> str:
         if val and isinstance(val, str) and val.strip():
             parts.append(val.strip())
 
+    # --- Strategy 2b: Deep-search for ANY substantial text ---
     if not parts:
-        _log("No structured findings found, using raw session data")
-        raw = json.dumps(session, indent=2, ensure_ascii=False)
-        if len(raw) > 3000:
-            raw = raw[:3000] + "\n...(truncated)"
-        parts.append(f"Raw session data:\n```json\n{raw}\n```")
+        all_texts = _deep_find_texts(session, pattern=re.compile(r".{80,}", re.DOTALL))
+        for text in all_texts:
+            if text.lstrip().startswith(_UNIFIED_DIFF_HEADER):
+                continue
+            if "You are the automated PR reviewer" in text:
+                continue
+            if len(text) > 80:
+                parts.append(text)
+                break
+
+    # --- Strategy 3: Raw JSON fallback ---
+    if not parts:
+        parts.append(
+            "Jules session completed, but no findings/review text could be extracted "
+            "from the session response."
+        )
+        if debug_enabled:
+            raw = json.dumps(session, indent=2, ensure_ascii=False)
+            if len(raw) > 15000:
+                raw = raw[:15000] + "\n...(truncated)"
+            parts.append(f"Debug raw session data:\n```json\n{raw}\n```")
 
     return "\n\n".join(parts)
 
@@ -196,8 +572,8 @@ def format_review_body(
     footer = (
         f"\n\n---\n"
         f"*Automated review via Jules API (session: `{session_id}`)*"
-        f"{' | ' + link if link else ''}\n"
-        f"*Mode: `api_direct_review_comment` — no PRs created*"
+        f"{'  | ' + link if link else ''}\n"
+        f"*Mode: `api_direct_review_comment` \u2014 no PRs created*"
     )
 
     max_body = 60000
@@ -256,7 +632,8 @@ def post_review_comment(
         )
         if fallback.returncode != 0:
             _log(
-                f"Fallback comment also failed: {fallback.stderr}", "error"
+                f"Fallback comment also failed: {fallback.stderr}",
+                "error",
             )
             return False
         _log(f"Posted as regular comment on PR #{pr_number}")
@@ -281,7 +658,7 @@ def main() -> int:
         _log("GITHUB_REPOSITORY or PR_NUMBER missing", "error")
         return 1
 
-    # Derive source name from repo (owner/repo -> sources/github-owner-repo)
+    # Derive source name from repo (owner/repo -> sources/github/owner/repo)
     source_name = derive_source_name(repo)
     _log(f"Derived source: {source_name}")
 
@@ -334,15 +711,12 @@ def main() -> int:
         )
         if head_sha:
             post_review_comment(repo, pr_number, head_sha, body)
-        return 1
+        _set_output("review_body", body)
+        return 0
 
     # Extract session ID (API returns "name": "sessions/abc123")
     session_name = session.get("name", "")
-    session_id = (
-        session_name.split("/")[-1]
-        if session_name
-        else session.get("id", "")
-    )
+    session_id = session_name.split("/")[-1] if session_name else session.get("id", "")
     session_url = session.get("url", "")
 
     if not session_id:
@@ -353,7 +727,8 @@ def main() -> int:
         )
         if head_sha:
             post_review_comment(repo, pr_number, head_sha, body)
-        return 1
+        _set_output("review_body", body)
+        return 0
 
     _log(f"Session created: {session_id}")
     if session_url:
@@ -364,15 +739,17 @@ def main() -> int:
     final_session = poll_session(api_key, session_name or session_id)
 
     if final_session is None:
+        timeout_min = MAX_POLL_SEC // 60
         body = (
             "\u23f1\ufe0f **Jules Review** \u2014 "
-            "Session timed out after 9 minutes.\n\n"
+            f"Session timed out after {timeout_min} minutes.\n\n"
             f"Session ID: `{session_id}`\n"
             "Manual review recommended."
         )
         if head_sha:
             post_review_comment(repo, pr_number, head_sha, body)
-        return 1
+        _set_output("review_body", body)
+        return 0
 
     state = final_session.get("state", "UNKNOWN").upper()
     _log(f"Session finished with state: {state}")
@@ -388,19 +765,48 @@ def main() -> int:
         )
         if head_sha:
             post_review_comment(repo, pr_number, head_sha, body)
+        _set_output("review_body", body)
         return 1
 
     # Step 3: Extract findings from session response
     _log("Extracting review findings...")
-    review_text = extract_review_text(final_session)
+    review_text = ""
+    agent_messages: list[str] = []
+    try:
+        activities = list_activities(api_key, final_session.get("name", session_id))
+        agent_messages = extract_agent_messages(activities)
+        selected = select_best_agent_message(agent_messages)
+        if selected:
+            review_text = selected
+        else:
+            _log(
+                "No agent messages found in session activities; falling back to "
+                "session response parsing",
+                "warning",
+            )
+    except Exception as exc:
+        _log(f"Failed to fetch activities: {exc}", "warning")
+
+    if not review_text.strip():
+        review_text = extract_review_text(final_session)
+        if (
+            not agent_messages
+            and "no findings/review text could be extracted" in review_text.lower()
+        ):
+            review_text = (
+                "Jules session completed, but no agent message was found in "
+                "`activities` and no findings could be extracted from the session."
+            )
     review_body = format_review_body(review_text, session_id, session_url)
 
     if not head_sha:
         _log("No HEAD_SHA \u2014 printing review to stdout only")
         print(review_body)
+        _set_output("review_body", review_body)
         return 0
 
     success = post_review_comment(repo, pr_number, head_sha, review_body)
+    _set_output("review_body", review_body)
     return 0 if success else 1
 
 

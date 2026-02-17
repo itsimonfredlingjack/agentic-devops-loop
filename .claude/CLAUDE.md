@@ -4,10 +4,42 @@
 
 1. **Las CURRENT_TASK.md forst** - Det ar ditt externa minne
 2. **Uppdatera CURRENT_TASK.md efter varje iteration** - Logga framsteg
-3. **Kor tester efter varje kodandring** - `pytest -xvs`
+3. **Kor tester efter varje kodandring** - `source venv/bin/activate && pytest -xvs`
 4. **Commit-format:** `GE-XXX: [beskrivning]`
 5. **Branch-namngivning:** `feature/GE-XXX-kort-beskrivning`
 6. **PRODUKTION:** https://gruppett.fredlingautomation.dev (Cloudflare Tunnel -> localhost:5000) - Se [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)
+
+---
+
+## KRITISKT: Produktions-filkarta (vad Azure FAKTISKT serverar)
+
+**Om du andrar UI/frontend MASTE du andra filerna nedan. Annars syns INGENTING pa Azure.**
+
+### Flask-renderade templates (DET HAR ar produktions-UI:t)
+
+| Route | Template-fil |
+|-------|-------------|
+| `/` (root) | `src/sejfa/newsflash/presentation/templates/newsflash/index.html` |
+| `/subscribe` | `src/sejfa/newsflash/presentation/templates/newsflash/subscribe.html` |
+| `/thank-you` | `src/sejfa/newsflash/presentation/templates/newsflash/thank_you.html` |
+| Base layout | `src/sejfa/newsflash/presentation/templates/base.html` |
+| `/expenses/` | `src/expense_tracker/templates/expense_tracker/index.html` |
+| `/expenses/summary` | `src/expense_tracker/templates/expense_tracker/summary.html` |
+| Expense base | `src/expense_tracker/templates/expense_tracker/base.html` |
+
+### VARNING: Filer som INTE serveras av Flask pa Azure
+
+| Fil | Status | Forklaring |
+|-----|--------|------------|
+| `static/monitor.html` | **SERVERAS INTE** | Fristaende HTML, ingen Flask-route. Andra den INTE for UI-tickets. |
+| `static/*.png` | Bilder | Anvands av monitor.html, inte av Flask-templates |
+
+### Regel for UI-tickets
+
+1. **"Andra appens UI"** = Andra Flask-templates ovan
+2. **"Andra monitor dashboard"** = `static/monitor.html` (men det syns INTE pa Azure)
+3. Om en ticket sager "app UI" eller "produktion" — andra ALLTID Flask-templates
+4. Om du ar osaker: kolla `render_template()` anropen i `src/` for att se vad som faktiskt renderas
 
 ---
 
@@ -23,7 +55,7 @@ grupp-ett-github/
 │   ├── sejfa/                  # Huvudpaket
 │   │   ├── core/               # Admin auth, subscriber service
 │   │   ├── integrations/       # Jira API-klient
-│   │   ├── monitor/            # Real-time monitoring dashboard (SocketIO)
+│   │   ├── monitor/            # Monitor API (JSON only, INTE UI — se filkarta ovan)
 │   │   └── utils/              # Health check, security
 │   └── expense_tracker/        # Expense tracking-modul
 │       ├── data/               # Expense model + repository
@@ -35,7 +67,7 @@ grupp-ett-github/
 │   ├── expense_tracker/        # Expense tracker-tester
 │   ├── integrations/           # Jira-integrationstester
 │   └── utils/                  # Utility-tester
-├── static/                     # Frontend-tillgangar (monitor.html, bilder)
+├── static/                     # FRISTAENDE filer — INTE Flask-serverade (se filkarta)
 ├── docs/                       # Dokumentation
 │   ├── DEPLOYMENT.md           # Deployment-guide (Cloudflare Tunnel)
 │   └── jules-playbook.md       # Jules AI review-system
@@ -97,6 +129,24 @@ Dependency injection: Services far sitt repository via `__init__`.
 
 ---
 
+## KRITISKT: Aktivera venv INNAN pytest/ruff
+
+**ALLA `pytest` och `ruff` kommandon MASTE prefixas med `source venv/bin/activate &&`.**
+
+```bash
+# RATT:
+source venv/bin/activate && pytest -xvs
+source venv/bin/activate && ruff check .
+
+# FEL (kommer misslyckas med ImportError):
+pytest -xvs
+ruff check .
+```
+
+Utan venv saknas projektets dependencies → agenten slosar en hel iteration pa att debugga ImportError.
+
+---
+
 ## Arbetsflode
 
 ### 1. Starta ny uppgift
@@ -120,8 +170,8 @@ Dependency injection: Services far sitt repository via `__init__`.
 
 ### 3. Avsluta uppgift
 ```
-1. Alla tester passerar (verifiera med `pytest -xvs`)
-2. Linting passerar (verifiera med `ruff check .`)
+1. Alla tester passerar (verifiera med `source venv/bin/activate && pytest -xvs`)
+2. Linting passerar (verifiera med `source venv/bin/activate && ruff check .`)
 3. Alla acceptanskriterier i CURRENT_TASK.md uppfyllda
 4. Pusha: git push -u origin [branch]
 5. Skapa PR: gh pr create --title "GE-XXX: Beskrivning" --body "..."
@@ -285,7 +335,7 @@ Nar du kor i en Ralph loop (`/ralph-loop`):
 ### Vanliga problem:
 | Symptom | Trolig orsak | Losning |
 |---------|--------------|---------|
-| ImportError | Saknad dependency | Kolla requirements.txt |
+| ImportError | venv ej aktiverad / saknad dependency | `source venv/bin/activate` forst! |
 | AssertionError | Test forvantar fel varde | Granska testlogik |
 | TypeError | Fel argumenttyp | Kolla type hints |
 | FileNotFoundError | Fel path | Anvand Path och relativa paths |
@@ -302,11 +352,11 @@ Nar du kor i en Ralph loop (`/ralph-loop`):
 4. **Om fel finns** - atgarda forst
 
 ```bash
-# Verifiera tester
-pytest -xvs
+# Verifiera tester (MASTE aktivera venv forst!)
+source venv/bin/activate && pytest -xvs
 
 # Verifiera linting
-ruff check .
+source venv/bin/activate && ruff check .
 
 # Verifiera att allt ar committat
 git status
@@ -322,12 +372,12 @@ git status
 # Starta nytt arbete
 git checkout -b feature/GE-XXX-beskrivning
 
-# Kor tester
-pytest -xvs
+# Kor tester (ALLTID med venv!)
+source venv/bin/activate && pytest -xvs
 
-# Kor linting
-ruff check .
-ruff check --fix .  # Auto-fix
+# Kor linting (ALLTID med venv!)
+source venv/bin/activate && ruff check .
+source venv/bin/activate && ruff check --fix .  # Auto-fix
 
 # Committa
 git add [filer]

@@ -718,6 +718,335 @@ class TestSaveProgressOnMaxIterations:
             stop_hook._save_progress_on_max_iterations(25)
 
 
+class TestUIScopeGuard:
+    """Tests for the UI scope verification gate."""
+
+    def test_non_ui_branch_always_passes(self, stop_hook: Any) -> None:
+        """Non-UI branches bypass scope check."""
+        branch = "feature/GE-49-admin-refactor"
+        with patch.object(stop_hook, "get_git_branch", return_value=branch):
+            ok, msg = stop_hook.check_ui_scope()
+        assert ok is True
+        assert msg == ""
+
+    def test_ui_branch_with_flask_templates_passes(self, stop_hook: Any) -> None:
+        """UI branch touching Flask templates passes."""
+        diff = (
+            "src/sejfa/newsflash/presentation/static/css/style.css\nCURRENT_TASK.md\n"
+        )
+        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
+        branch = "feature/GE-55-copilot-dark-theme"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is True
+
+    def test_ui_branch_only_monitor_html_blocks(self, stop_hook: Any) -> None:
+        """UI branch with only monitor.html → BLOCK."""
+        diff = "static/monitor.html\nCURRENT_TASK.md\n"
+        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
+        branch = "feature/GE-61-dark-glassmorphism-theme"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_ui_scope()
+        assert ok is False
+        assert "UI SCOPE GUARD" in msg
+        assert "Flask template" in msg
+
+    def test_tema_keyword_detected(self, stop_hook: Any) -> None:
+        """Swedish 'tema' triggers scope check."""
+        diff = "static/monitor.html\nCURRENT_TASK.md\n"
+        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
+        branch = "feature/GE-52-synthwave-tema"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is False
+
+    def test_design_keyword_detected(self, stop_hook: Any) -> None:
+        """'design' keyword triggers scope check."""
+        diff = "static/monitor.html\n"
+        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
+        branch = "feature/GE-57-beer2-full-design-reskin"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is False
+
+    def test_expense_tracker_templates_pass(self, stop_hook: Any) -> None:
+        """Expense tracker templates satisfy check."""
+        diff = "src/expense_tracker/templates/expense_tracker/index.html\n"
+        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
+        branch = "feature/GE-70-expense-ui-theme"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is True
+
+    def test_git_diff_failure_does_not_block(self, stop_hook: Any) -> None:
+        """Git diff failure → fail-open."""
+        mock_r = MagicMock(
+            returncode=128,
+            stdout="",
+            stderr="fatal: bad ref",
+        )
+        branch = "feature/GE-99-color-fix"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is True
+
+    def test_mixed_files_with_flask_passes(self, stop_hook: Any) -> None:
+        """Both monitor.html AND Flask templates → pass."""
+        diff = (
+            "static/monitor.html\n"
+            "src/sejfa/newsflash/presentation"
+            "/templates/base.html\n"
+            "CURRENT_TASK.md\n"
+        )
+        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
+        branch = "feature/GE-60-simpson-2-theme"
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is True
+
+    def test_no_branch_does_not_block(self, stop_hook: Any) -> None:
+        """Detached HEAD → no block."""
+        with patch.object(stop_hook, "get_git_branch", return_value=None):
+            ok, _ = stop_hook.check_ui_scope()
+        assert ok is True
+
+
+class TestPRMergeGate:
+    """Tests for the PR merge verification gate."""
+
+    def test_main_branch_always_passes(self, stop_hook: Any) -> None:
+        """Main branch bypasses PR check."""
+        with patch.object(stop_hook, "get_git_branch", return_value="main"):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+        assert msg == ""
+
+    def test_master_branch_always_passes(self, stop_hook: Any) -> None:
+        """Master branch bypasses PR check."""
+        with patch.object(stop_hook, "get_git_branch", return_value="master"):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+        assert msg == ""
+
+    def test_no_branch_always_passes(self, stop_hook: Any) -> None:
+        """Detached HEAD → no block."""
+        with patch.object(stop_hook, "get_git_branch", return_value=None):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+
+    def test_merged_pr_passes(self, stop_hook: Any) -> None:
+        """PR with state MERGED passes."""
+        branch = "feature/GE-63-test"
+        pr_json = json.dumps(
+            {
+                "state": "MERGED",
+                "autoMergeRequest": None,
+                "url": "https://github.com/x/y/pull/1",
+            }
+        )
+        mock_r = MagicMock(returncode=0, stdout=pr_json, stderr="")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+        assert msg == ""
+
+    def test_open_pr_without_auto_merge_blocks(self, stop_hook: Any) -> None:
+        """OPEN PR without auto-merge → BLOCK."""
+        branch = "feature/GE-63-test"
+        pr_json = json.dumps(
+            {
+                "state": "OPEN",
+                "autoMergeRequest": None,
+                "url": "https://github.com/x/y/pull/2",
+            }
+        )
+        mock_r = MagicMock(returncode=0, stdout=pr_json, stderr="")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is False
+        assert "PR MERGE GATE" in msg
+        assert "OPEN" in msg
+
+    def test_open_pr_with_auto_merge_passes(self, stop_hook: Any) -> None:
+        """OPEN PR with auto-merge enabled passes."""
+        branch = "feature/GE-63-test"
+        pr_json = json.dumps(
+            {
+                "state": "OPEN",
+                "autoMergeRequest": {
+                    "enabledAt": "2026-01-01T00:00:00Z",
+                },
+                "url": "https://github.com/x/y/pull/3",
+            }
+        )
+        mock_r = MagicMock(returncode=0, stdout=pr_json, stderr="")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+
+    def test_no_pr_found_passes(self, stop_hook: Any) -> None:
+        """No PR for branch → fail-open (don't block)."""
+        branch = "feature/GE-99-wip"
+        mock_r = MagicMock(returncode=1, stdout="", stderr="no PR found")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+
+    def test_gh_unavailable_passes(self, stop_hook: Any) -> None:
+        """gh CLI not installed → fail-open."""
+        branch = "feature/GE-99-wip"
+        err = FileNotFoundError("gh not found")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", side_effect=err),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+
+    def test_closed_pr_passes(self, stop_hook: Any) -> None:
+        """CLOSED PR (without merge) → warn but don't block."""
+        branch = "feature/GE-63-test"
+        pr_json = json.dumps(
+            {
+                "state": "CLOSED",
+                "autoMergeRequest": None,
+                "url": "https://github.com/x/y/pull/4",
+            }
+        )
+        mock_r = MagicMock(returncode=0, stdout=pr_json, stderr="")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+
+    def test_timeout_exception_passes(self, stop_hook: Any) -> None:
+        """Timeout → fail-open."""
+        branch = "feature/GE-63-test"
+        err = subprocess.TimeoutExpired(cmd="gh", timeout=15)
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", side_effect=err),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is True
+
+    def test_block_message_includes_pr_url(self, stop_hook: Any) -> None:
+        """Block message includes PR URL for actionable fix."""
+        branch = "feature/GE-63-fix"
+        pr_url = "https://github.com/org/repo/pull/392"
+        pr_json = json.dumps(
+            {
+                "state": "OPEN",
+                "autoMergeRequest": None,
+                "url": pr_url,
+            }
+        )
+        mock_r = MagicMock(returncode=0, stdout=pr_json, stderr="")
+        with (
+            patch.object(
+                stop_hook,
+                "get_git_branch",
+                return_value=branch,
+            ),
+            patch.object(subprocess, "run", return_value=mock_r),
+        ):
+            ok, msg = stop_hook.check_pr_merged()
+        assert ok is False
+        assert pr_url in msg
+        assert "gh pr merge" in msg
+
+
 class TestResolveTools:
     """Tests for tool resolution (venv detection)."""
 

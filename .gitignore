@@ -61,12 +61,6 @@ instance/
 *.pem
 *.key
 
-# Node
-node_modules/
-
-# FUSE temp files
-.fuse_hidden*
-
 # Claude/Ralph Loop runtime files (never commit these!)
 .claude/ralph-state.json
 .claude/stop-hook-debug.log
@@ -74,3 +68,10 @@ node_modules/
 .claude/.ralph_loop_active
 .claude/.promise_done
 .claude/reviews/
+
+# FUSE mount artifacts (Cowork sandbox)
+.fuse_hidden*
+**/.fuse_hidden*
+
+# Generated docs
+SEJFA_Changelog.docx
