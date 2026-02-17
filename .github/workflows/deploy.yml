@@ -33,7 +33,7 @@ jobs:
           IMAGE_SHA="${{ secrets.ACR_NAME }}.azurecr.io/sejfa:${{ github.sha }}"
           IMAGE_LATEST="${{ secrets.ACR_NAME }}.azurecr.io/sejfa:latest"
 
-          docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
+          docker build --build-arg GIT_SHA=${{ github.sha }} -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
           docker push "$IMAGE_SHA"
           docker push "$IMAGE_LATEST"
 

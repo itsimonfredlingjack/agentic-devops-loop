@@ -3,6 +3,9 @@ FROM python:3.12-slim
 LABEL maintainer="itsimonfredlingjack" \
       description="SEJFA (Secure Enterprise Jira Flask Agent) production container"
 
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+
 RUN groupadd --system appuser \
     && useradd --system --gid appuser --no-create-home --shell /usr/sbin/nologin appuser
 

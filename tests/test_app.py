@@ -86,6 +86,29 @@ class TestHealthEndpoint:
             pytest.fail(f"Invalid ISO-8601 timestamp: {timestamp_str}")
 
 
+class TestVersionEndpoint:
+    """Tests for the version endpoint."""
+
+    def test_version_returns_200(self, client: FlaskClient) -> None:
+        """Test that the version endpoint returns 200 OK."""
+        response = client.get("/version")
+        assert response.status_code == 200
+
+    def test_version_returns_json(self, client: FlaskClient) -> None:
+        """Test that the version endpoint returns JSON."""
+        response = client.get("/version")
+        assert response.content_type == "application/json"
+
+    def test_version_reads_git_sha_from_env(
+        self, client: FlaskClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that the version endpoint reads GIT_SHA from the environment."""
+        monkeypatch.setenv("GIT_SHA", "0123456789abcdef")
+        response = client.get("/version")
+        data = response.get_json()
+        assert data["sha"] == "0123456789abcdef"
+
+
 class TestAppCreation:
     """Tests for app factory function."""
 
@@ -113,3 +136,4 @@ class TestAppCreation:
         assert "/" in rules
         assert "/api" in rules
         assert "/health" in rules
+        assert "/version" in rules

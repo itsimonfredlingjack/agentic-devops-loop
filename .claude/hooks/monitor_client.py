@@ -3,18 +3,28 @@
 Monitor Client - Sends real-time updates to the Agentic Loop Monitor.
 
 This module provides a simple interface for hooks to send state updates
-to the monitor dashboard, triggering visualizations like the Ralph high-five!
+to the monitor dashboard, triggering visualizations like the Ralph high-five.
 """
 
 import json
 import os
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
 from typing import Optional
 
 # Monitor server configuration
-MONITOR_URL = os.environ.get("MONITOR_URL", "http://localhost:5000")
 MONITOR_ENABLED = os.environ.get("MONITOR_ENABLED", "1") == "1"
+MONITOR_URL = os.environ.get(
+    "MONITOR_URL",
+    os.environ.get(
+        "MONITOR_API_URL",
+        "https://grupp-ett-monitor-api.fredlingjacksimon.workers.dev",
+    ),
+)
+API_SECRET = os.environ.get("MONITOR_API_SECRET", os.environ.get("MONITOR_API_KEY", ""))
+USER_AGENT = os.environ.get("MONITOR_USER_AGENT", "GruppEtt-Monitor/1.0")
+MONITOR_DEBUG = os.environ.get("MONITOR_DEBUG", "0") == "1"
 
 # Node mappings for different activities
 NODE_JIRA = "jira"
@@ -24,11 +34,56 @@ NODE_JULES = "jules"
 NODE_ACTIONS = "actions"
 
 
+def _headers() -> dict[str, str]:
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": USER_AGENT,
+    }
+    if API_SECRET:
+        headers["Authorization"] = f"Bearer {API_SECRET}"
+    return headers
+
+
+def _debug(message: str) -> None:
+    if MONITOR_DEBUG:
+        print(f"[monitor_client] {message}", file=sys.stderr)
+
+
+def _post(path: str, payload: dict, timeout: float = 5.0) -> bool:
+    """POST JSON to monitor API. Fails silently."""
+    if not MONITOR_ENABLED:
+        _debug("Monitoring disabled via MONITOR_ENABLED=0")
+        return False
+
+    url = f"{MONITOR_URL.rstrip('/')}{path}"
+    data = json.dumps(payload).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers=_headers(),
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            ok = resp.status == 200
+            if not ok:
+                _debug(f"Unexpected HTTP status {resp.status} from {url}")
+            return ok
+    except urllib.error.HTTPError as exc:
+        _debug(f"HTTP {exc.code} from {url}")
+        return False
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        _debug(f"Request failed to {url}: {exc}")
+        return False
+
+
 def send_update(
     node: str,
     state: str = "active",
     message: str = "",
-    timeout: float = 2.0
+    timeout: float = 5.0,
 ) -> bool:
     """
     Send a state update to the monitor.
@@ -42,31 +97,14 @@ def send_update(
     Returns:
         True if update was sent successfully, False otherwise
     """
-    if not MONITOR_ENABLED:
-        return False
-
-    url = f"{MONITOR_URL}/api/monitor/state"
-    data = json.dumps({
-        "node": node,
-        "state": state,
-        "message": message
-    }).encode("utf-8")
-
-    try:
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status == 200
-    except (urllib.error.URLError, TimeoutError, OSError):
-        # Monitor might not be running - fail silently
-        return False
+    return _post(
+        "/api/monitor/state",
+        {"node": node, "state": state, "message": message},
+        timeout,
+    )
 
 
-def start_task(task_id: str, title: str, timeout: float = 2.0) -> bool:
+def start_task(task_id: str, title: str, timeout: float = 5.0) -> bool:
     """
     Signal that a new task is starting.
 
@@ -77,50 +115,16 @@ def start_task(task_id: str, title: str, timeout: float = 2.0) -> bool:
     Returns:
         True if update was sent successfully
     """
-    if not MONITOR_ENABLED:
-        return False
-
-    url = f"{MONITOR_URL}/api/monitor/task"
-    data = json.dumps({
-        "action": "start",
-        "task_id": task_id,
-        "title": title
-    }).encode("utf-8")
-
-    try:
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status == 200
-    except (urllib.error.URLError, TimeoutError, OSError):
-        return False
+    return _post(
+        "/api/monitor/task",
+        {"action": "start", "task_id": task_id, "title": title},
+        timeout,
+    )
 
 
-def complete_task(timeout: float = 2.0) -> bool:
+def complete_task(timeout: float = 5.0) -> bool:
     """Signal that the current task is complete."""
-    if not MONITOR_ENABLED:
-        return False
-
-    url = f"{MONITOR_URL}/api/monitor/task"
-    data = json.dumps({
-        "action": "complete"
-    }).encode("utf-8")
-
-    try:
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status == 200
-    except (urllib.error.URLError, TimeoutError, OSError):
-        return False
+    return _post("/api/monitor/task", {"action": "complete"}, timeout)
 
 
 def detect_phase_from_tool(tool_name: str, tool_input: dict) -> Optional[tuple[str, str]]:
@@ -167,27 +171,33 @@ def detect_phase_from_tool(tool_name: str, tool_input: dict) -> Optional[tuple[s
 def activate_jira(message: str = "Fetching ticket...") -> bool:
     return send_update(NODE_JIRA, "active", message)
 
+
 def activate_claude(message: str = "Coding...") -> bool:
     return send_update(NODE_CLAUDE, "active", message)
+
 
 def activate_github(message: str = "Pushing changes...") -> bool:
     return send_update(NODE_GITHUB, "active", message)
 
+
 def activate_jules(message: str = "Code review...") -> bool:
     return send_update(NODE_JULES, "active", message)
+
 
 def activate_actions(message: str = "Running CI/CD...") -> bool:
     return send_update(NODE_ACTIONS, "active", message)
 
 
 if __name__ == "__main__":
-    # Test the monitor client
-    import sys
     if len(sys.argv) > 1:
         node = sys.argv[1]
         message = sys.argv[2] if len(sys.argv) > 2 else "Test update"
         result = send_update(node, "active", message)
-        print(f"Sent update to {node}: {'OK' if result else 'FAILED'}")
+        print(f"Sent to {MONITOR_URL}: node={node} -> {'OK' if result else 'FAILED'}")
     else:
+        print(f"Monitor client targeting: {MONITOR_URL}")
+        print(f"Enabled: {MONITOR_ENABLED}")
+        print(f"User-Agent: {USER_AGENT}")
+        print(f"API secret configured: {bool(API_SECRET)}")
         print("Usage: python monitor_client.py <node> [message]")
         print("Nodes: jira, claude, github, jules, actions")

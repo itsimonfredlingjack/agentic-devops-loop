@@ -106,11 +106,26 @@ check_jira() {
   set +e
   jira_output="$($python_bin - <<'PY'
 import os
-import sys
+from pathlib import Path
 
-from dotenv import load_dotenv
 
-load_dotenv()
+def load_env_file(path: str = ".env") -> None:
+    p = Path(path)
+    if not p.exists():
+        return
+
+    for raw in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_env_file()
 required = ("JIRA_URL", "JIRA_EMAIL", "JIRA_API_TOKEN")
 missing = [key for key in required if not os.getenv(key)]
 if missing:

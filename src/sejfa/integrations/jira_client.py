@@ -258,6 +258,67 @@ class JiraClient:
 
         return True
 
+    def create_issue(
+        self,
+        project_key: str,
+        summary: str,
+        description: str = "",
+        issue_type: str = "Sub-task",
+        parent_key: str | None = None,
+        labels: list[str] | None = None,
+    ) -> JiraIssue:
+        """Create a new Jira issue (or sub-task).
+
+        Args:
+            project_key: Project key (e.g., "GE")
+            summary: Issue summary (max 255 chars)
+            description: Plain-text description
+            issue_type: Issue type name (default "Sub-task")
+            parent_key: Parent issue key for sub-tasks (e.g., "GE-35")
+            labels: Optional list of labels
+
+        Returns:
+            Created JiraIssue
+
+        Raises:
+            JiraAPIError: On API errors or validation failure
+        """
+        summary = summary[:255]
+
+        # Build ADF description
+        desc_content = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": description or summary}],
+                }
+            ],
+        }
+
+        fields: dict[str, Any] = {
+            "project": {"key": project_key},
+            "summary": summary,
+            "issuetype": {"name": issue_type},
+            "description": desc_content,
+        }
+
+        if parent_key:
+            fields["parent"] = {"key": parent_key}
+
+        if labels:
+            fields["labels"] = labels
+
+        data = self._request("POST", "/rest/api/3/issue", data={"fields": fields})
+
+        # Fetch the created issue to return full JiraIssue
+        created_key = data.get("key", "")
+        if created_key:
+            return self.get_issue(created_key)
+
+        return JiraIssue.from_api_response(data)
+
     def get_projects(self) -> list[dict[str, Any]]:
         """Get all accessible projects.
 

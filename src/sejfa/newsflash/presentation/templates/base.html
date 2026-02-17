@@ -1,16 +1,686 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}News Flash{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('newsflash.static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Botanical Garden / Organic Zen Theme */
+            --forest: #2E7D32;
+            --forest-75: rgba(46, 125, 50, 0.75);
+            --forest-40: rgba(46, 125, 50, 0.40);
+            --forest-20: rgba(46, 125, 50, 0.20);
+            --forest-10: rgba(46, 125, 50, 0.10);
+            --forest-06: rgba(46, 125, 50, 0.06);
+            --forest-03: rgba(46, 125, 50, 0.03);
+            --sage-bg: #F1F8E9;
+            --parchment: #FAFFF5;
+            --parchment-card: #F7FBF0;
+            --terracotta: #D84315;
+            --terracotta-light: rgba(216, 67, 21, 0.12);
+            --fern: #558B2F;
+            --fern-light: rgba(85, 139, 47, 0.12);
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes dapple-drift {
+            0%   { transform: translate(0%,   0%)   scale(1);    opacity: 0.55; }
+            33%  { transform: translate(3%,   2%)   scale(1.05); opacity: 0.40; }
+            66%  { transform: translate(-2%,  4%)   scale(0.97); opacity: 0.50; }
+            100% { transform: translate(0%,   0%)   scale(1);    opacity: 0.55; }
+        }
+
+        @keyframes leaf-sway {
+            0%,  100% { transform: rotate(0deg)    translateY(0);   }
+            30%        { transform: rotate(1.2deg)  translateY(-2px); }
+            70%        { transform: rotate(-0.8deg) translateY(1px);  }
+        }
+
+        @keyframes sprout {
+            0%   { transform: scale(0.95) translateY(6px); opacity: 0; }
+            100% { transform: scale(1)    translateY(0);   opacity: 1; }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Nunito', 'Segoe UI', sans-serif;
+            background-color: var(--sage-bg);
+            color: var(--forest);
+            position: relative;
+            overflow-x: hidden;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        /* Dappled sunlight — light filtering through leaves */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                radial-gradient(ellipse 180px 110px at 12%  8%,  rgba(255,255,200,0.30) 0%, transparent 70%),
+                radial-gradient(ellipse 220px 150px at 72%  4%,  rgba(255,255,180,0.24) 0%, transparent 70%),
+                radial-gradient(ellipse 130px 200px at 92% 38%,  rgba(255,255,210,0.22) 0%, transparent 70%),
+                radial-gradient(ellipse 200px 110px at 38% 62%,  rgba(255,255,200,0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 160px 180px at  4% 78%,  rgba(255,255,190,0.20) 0%, transparent 70%),
+                radial-gradient(ellipse 110px 130px at 58% 88%,  rgba(255,255,200,0.16) 0%, transparent 70%);
+            animation: dapple-drift 22s ease-in-out infinite;
+        }
+
+        /* Headings — Playfair Display serif for editorial elegance */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 700;
+            color: var(--forest);
+            margin-bottom: 16px;
+            line-height: 1.3;
+            letter-spacing: 0.3px;
+            position: relative;
+        }
+
+        h1 { font-size: 30px; }
+        h2 { font-size: 24px; }
+        h3 { font-size: 19px; }
+        h4 { font-size: 16px; }
+
+        /* Organic vine-gradient underline on headings */
+        h1::after, h2::after {
+            content: '';
+            display: block;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fern), rgba(85,139,47,0.4) 60%, transparent);
+            border-radius: 2px;
+            margin-top: 6px;
+        }
+
+        /* List items use leaf nodes */
+        li::marker {
+            content: '🍃  ';
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            position: relative;
+            z-index: 10;
+            padding: 18px 30px;
+            background: rgba(241, 248, 233, 0.94);
+            border-bottom: 1.5px solid var(--forest-20);
+            box-shadow: 0 4px 20px var(--forest-10), 0 2px 8px var(--forest-06);
+            backdrop-filter: blur(6px);
+        }
+
+        .header::after {
+            content: '🌿';
+            position: absolute;
+            bottom: -13px;
+            right: 44px;
+            font-size: 18px;
+            z-index: 11;
+            pointer-events: none;
+        }
+
+        .header__container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header__logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--forest);
+            letter-spacing: 0.5px;
+        }
+
+        .header__logo::before {
+            content: '🌱 ';
+            font-size: 18px;
+        }
+
+        .header__nav {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .header__link {
+            font-family: 'Nunito', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--forest);
+            text-decoration: none;
+            padding: 8px 22px;
+            border: 1.5px solid var(--forest-40);
+            border-radius: 20px;
+            background: var(--parchment);
+            box-shadow: 0 2px 8px var(--forest-10);
+            transition: all 0.2s ease;
+        }
+
+        .header__link:hover {
+            background: var(--fern-light);
+            border-color: var(--fern);
+            box-shadow: 0 4px 16px var(--forest-20);
+            transform: translateY(-1px);
+        }
+
+        /* ─── MAIN ─── */
+        .main {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            margin: 36px auto;
+            padding: 0 24px;
+            min-height: calc(100vh - 220px);
+        }
+
+        /* ─── FOOTER ─── */
+        .footer {
+            position: relative;
+            z-index: 10;
+            padding: 20px 30px;
+            margin: 40px 0 0;
+            border-top: 1.5px solid var(--forest-20);
+            background: rgba(241, 248, 233, 0.94);
+            box-shadow: 0 -2px 12px var(--forest-06);
+        }
+
+        .footer__container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer__text {
+            font-family: 'Nunito', sans-serif;
+            text-align: center;
+            color: var(--forest-75);
+            font-size: 14px;
+        }
+
+        .footer__text::before { content: '🍃 '; }
+        .footer__text::after  { content: ' 🌿'; }
+
+        /* ─── GLOBAL CARD / PANEL — thick paper / cardstock feel ─── */
+        .card, .panel, [class*="card"], [class*="panel"] {
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            /* Soft, diffused multi-layer shadow to lift off the background */
+            box-shadow:
+                0 2px 4px  var(--forest-20),
+                0 6px 16px var(--forest-10),
+                0 12px 40px var(--forest-06);
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        /* Top vine accent */
+        .card::before, .panel::before,
+        [class*="card"]::before, [class*="panel"]::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20px;
+            width: 48px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--fern), transparent);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .card::after, .panel::after,
+        [class*="card"]::after, [class*="panel"]::after {
+            display: none;
+        }
+
+        .card:hover, .panel:hover,
+        [class*="card"]:hover, [class*="panel"]:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 4px 8px   var(--forest-20),
+                0 12px 28px var(--forest-20),
+                0 24px 56px var(--forest-10);
+        }
+
+        /* ─── BUTTONS ─── */
+        button, .button, input[type="submit"] {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            background: var(--forest);
+            color: #FAFFF5;
+            border: none;
+            padding: 10px 26px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+            box-shadow: 0 3px 12px var(--forest-40);
+        }
+
+        button:hover, .button:hover, input[type="submit"]:hover {
+            background: var(--fern);
+            box-shadow: 0 6px 22px var(--forest-40);
+            transform: translateY(-2px);
+        }
+
+        button:active, .button:active, input[type="submit"]:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px var(--forest-20);
+        }
+
+        button:focus, .button:focus, input[type="submit"]:focus {
+            outline: 2px solid var(--fern);
+            outline-offset: 4px;
+        }
+
+        /* ─── INPUTS ─── */
+        input, textarea, select {
+            background: var(--parchment);
+            border: 1.5px solid var(--forest-40);
+            border-radius: 12px;
+            color: var(--forest);
+            padding: 10px 14px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--fern);
+            box-shadow: 0 0 0 3px var(--fern-light);
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: var(--forest-40);
+            font-style: italic;
+        }
+
+        /* ─── HERO SECTION ─── */
+        .hero {
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .hero__container {
+            max-width: 820px;
+            margin: 0 auto;
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 28px;
+            padding: 50px 44px;
+            position: relative;
+            box-shadow:
+                0 4px 8px   var(--forest-20),
+                0 10px 32px var(--forest-10),
+                0 20px 60px var(--forest-06);
+            animation: leaf-sway 9s ease-in-out infinite;
+        }
+
+        .hero__container::before {
+            content: '🍃';
+            position: absolute;
+            top: 14px;
+            left: 20px;
+            font-size: 20px;
+            opacity: 0.45;
+            transform: rotate(-18deg);
+        }
+
+        .hero__container::after {
+            content: '🌿';
+            position: absolute;
+            bottom: 14px;
+            right: 20px;
+            font-size: 20px;
+            opacity: 0.45;
+            transform: rotate(14deg);
+        }
+
+        .hero__heading {
+            font-size: 42px;
+            margin-bottom: 18px;
+            color: var(--forest);
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+
+        .hero__heading::after {
+            content: '';
+            display: block;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--fern), rgba(85,139,47,0.3), transparent);
+            margin: 8px auto 0;
+            width: 60%;
+            border-radius: 2px;
+        }
+
+        .hero__subtitle {
+            font-size: 17px;
+            color: var(--forest-75);
+            margin-bottom: 34px;
+            line-height: 1.8;
+            font-style: italic;
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+
+        .hero__button {
+            display: inline-block;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            background: var(--forest);
+            color: #FAFFF5;
+            border: none;
+            padding: 14px 42px;
+            text-decoration: none;
+            font-size: 17px;
+            border-radius: 22px;
+            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 18px var(--forest-40);
+        }
+
+        .hero__button::after { content: ' 🌱'; }
+
+        .hero__button:hover {
+            background: var(--fern);
+            box-shadow: 0 8px 30px var(--forest-40);
+            transform: translateY(-3px);
+        }
+
+        .hero__button:active { transform: translateY(1px); }
+
+        /* ─── FEATURES SECTION ─── */
+        .features { padding: 40px 0; }
+
+        .features__container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 28px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .features__card {
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 20px;
+            padding: 32px 26px 28px;
+            position: relative;
+            box-shadow:
+                0 2px 4px   var(--forest-20),
+                0 6px 20px  var(--forest-10),
+                0 12px 40px var(--forest-06);
+            transition: all 0.25s ease;
+            animation: sprout 0.5s ease-out both;
+        }
+
+        .features__card:nth-child(1) { animation-delay: 0.1s; }
+        .features__card:nth-child(2) { animation-delay: 0.2s; }
+        .features__card:nth-child(3) { animation-delay: 0.3s; }
+
+        /* Leaf node at top of each card */
+        .features__card::before {
+            content: '🍃';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 22px;
+        }
+
+        .features__card::after { display: none; }
+
+        .features__card:hover {
+            transform: translateY(-4px);
+            box-shadow:
+                0 4px 10px  var(--forest-20),
+                0 14px 36px var(--forest-20),
+                0 28px 64px var(--forest-10);
+        }
+
+        .features__title {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Playfair Display', Georgia, serif;
+            margin-bottom: 12px;
+            margin-top: 6px;
+            color: var(--forest);
+            letter-spacing: 0.3px;
+            border-bottom: 1px solid var(--forest-10);
+            padding-bottom: 10px;
+        }
+
+        .features__text {
+            font-size: 15px;
+            font-family: 'Nunito', sans-serif;
+            color: var(--forest-75);
+            line-height: 1.8;
+        }
+
+        /* ─── SUBSCRIBE SECTION ─── */
+        .subscribe { padding: 40px 0; }
+
+        .subscribe__container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .subscribe__heading {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+            color: var(--forest);
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+
+        .subscribe__subtitle {
+            font-size: 15px;
+            font-family: 'Playfair Display', Georgia, serif;
+            font-style: italic;
+            color: var(--forest-75);
+            margin-bottom: 28px;
+            text-align: center;
+        }
+
+        .subscribe__form {
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 24px;
+            padding: 36px 32px;
+            position: relative;
+            box-shadow:
+                0 4px 8px   var(--forest-20),
+                0 10px 30px var(--forest-10),
+                0 20px 56px var(--forest-06);
+        }
+
+        .form__group { margin-bottom: 22px; }
+
+        .form__label {
+            display: block;
+            font-family: 'Nunito', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--forest);
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .form__label::before { content: '🍃 '; }
+
+        .form__input { width: 100%; }
+
+        .form__input--error {
+            border-color: var(--terracotta);
+            box-shadow: 0 0 0 3px var(--terracotta-light);
+        }
+
+        .form__button {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 16px;
+            margin-top: 6px;
+        }
+
+        /* ─── FLASH & ERROR MESSAGES ─── */
+        .error-banner, .flash-message {
+            padding: 16px 22px;
+            margin-bottom: 20px;
+            border-radius: 16px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 15px;
+            letter-spacing: 0.2px;
+            position: relative;
+            animation: sprout 0.3s ease-out;
+        }
+
+        .error-banner, .flash-message.error {
+            background: var(--terracotta-light);
+            border: 1px solid var(--terracotta);
+            color: var(--terracotta);
+        }
+
+        .flash-message.success {
+            background: var(--fern-light);
+            border: 1px solid var(--fern);
+            color: var(--fern);
+        }
+
+        .error-banner::before, .flash-message.error::before { content: '🌵 '; }
+        .flash-message.success::before { content: '🌱 '; }
+
+        /* ─── THANK YOU SECTION ─── */
+        .thank-you { padding: 40px 0; }
+
+        .thank-you__container {
+            max-width: 720px;
+            margin: 0 auto;
+            text-align: center;
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 28px;
+            padding: 50px 44px;
+            position: relative;
+            box-shadow:
+                0 4px 8px   var(--forest-20),
+                0 10px 30px var(--forest-10),
+                0 20px 56px var(--forest-06);
+            animation: leaf-sway 10s ease-in-out infinite;
+        }
+
+        .thank-you__container::before {
+            content: '🌿';
+            position: absolute;
+            top: 16px;
+            right: 22px;
+            font-size: 22px;
+            opacity: 0.45;
+        }
+
+        .thank-you__container::after { display: none; }
+
+        .thank-you__heading {
+            font-size: 30px;
+            margin-bottom: 22px;
+            color: var(--forest);
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+
+        .thank-you__text {
+            font-size: 16px;
+            font-family: 'Playfair Display', Georgia, serif;
+            font-style: italic;
+            color: var(--forest-75);
+            margin-bottom: 14px;
+            line-height: 1.8;
+        }
+
+        .thank-you__text strong {
+            color: var(--forest);
+            font-style: normal;
+            text-decoration: underline;
+            text-decoration-style: wavy;
+            text-decoration-color: var(--fern);
+            text-underline-offset: 3px;
+        }
+
+        .thank-you__button {
+            display: inline-block;
+            margin-top: 28px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            background: var(--forest);
+            color: #FAFFF5;
+            border: none;
+            padding: 14px 40px;
+            text-decoration: none;
+            font-size: 16px;
+            border-radius: 22px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px var(--forest-40);
+        }
+
+        .thank-you__button::before { content: '← '; }
+
+        .thank-you__button:hover {
+            background: var(--fern);
+            box-shadow: 0 8px 28px var(--forest-40);
+            transform: translateY(-2px);
+        }
+
+        /* ─── CODE BLOCKS ─── */
+        code, pre, .data, [class*="code"], [class*="data"] {
+            font-family: 'Courier New', monospace;
+            color: var(--forest);
+            background: var(--parchment);
+            border: 1px solid var(--forest-20);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Decorative organic SVG vine — bezier curves as stems/vines -->
+    <svg aria-hidden="true" style="position:fixed;bottom:0;left:0;width:340px;height:320px;pointer-events:none;z-index:0;opacity:0.09;" viewBox="0 0 340 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 320 C 40 240, 80 220, 60 160 C 40 100, 100 80, 90 20" stroke="#2E7D32" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M60 160 C 100 150, 130 120, 160 100" stroke="#2E7D32" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M90 220 C 130 210, 160 190, 180 160" stroke="#558B2F" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="160" cy="100" r="4" fill="#558B2F"/>
+        <circle cx="180" cy="160" r="3.5" fill="#2E7D32"/>
+        <circle cx="60"  cy="160" r="3"   fill="#2E7D32"/>
+    </svg>
+
+    <svg aria-hidden="true" style="position:fixed;top:0;right:0;width:280px;height:260px;pointer-events:none;z-index:0;opacity:0.08;" viewBox="0 0 280 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M280 0 C 240 40, 200 30, 220 90 C 240 150, 180 170, 190 240" stroke="#2E7D32" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M220 90 C 180 80, 150 100, 120 80" stroke="#558B2F" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M190 180 C 160 170, 130 185, 100 170" stroke="#558B2F" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="120" cy="80"  r="4"   fill="#558B2F"/>
+        <circle cx="100" cy="170" r="3.5" fill="#2E7D32"/>
+        <circle cx="220" cy="90"  r="3"   fill="#2E7D32"/>
+    </svg>
+
     <header class="header">
         <div class="header__container">
-            <h1 class="header__logo">News Flash</h1>
+            <h1 class="header__logo">Built with care by Simon</h1>
             <nav class="header__nav">
                 <a href="{{ url_for('newsflash.index') }}" class="header__link">Home</a>
                 <a href="{{ url_for('newsflash.subscribe') }}" class="header__link">Subscribe</a>

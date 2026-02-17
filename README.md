@@ -1,243 +1,194 @@
-# Agentic Dev Loop 🚀
+# SEJFA - Secure Enterprise Jira Flask Agent
 
-> **The Infinite Loop of Autonomous Creation**
-> *Where Claude builds, Jules heals, and code writes itself.*
+![SEJFA Header](static/img/SEJFA-AGENTIC-DEVOPS-LOOP-MAIN-PICTURE.jpeg)
 
-![Build Status](https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions/actions/workflows/ci.yml/badge.svg)
-[![AI: Google Jules](https://img.shields.io/badge/AI-Google_Jules-blue.svg)](/.github/workflows/jules-review.yml)
-[![Agent: Claude Code](https://img.shields.io/badge/Agent-Claude_Code-orange.svg)](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Vibe: Immaculate](https://img.shields.io/badge/Vibe-Immaculate-purple.svg)](https://github.com/itsimonfredlingjack)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.0.0-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
+[![Jira](https://img.shields.io/badge/Jira-Integration-0052CC?style=for-the-badge&logo=jira&logoColor=white)](https://www.atlassian.com/software/jira)
+[![Agentic](https://img.shields.io/badge/Agentic-DevOps%20Loop-FF9900?style=for-the-badge&logo=robotframework&logoColor=white)](https://github.com/your-org/sejfa)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
----
-
-## 🌟 What is the Agentic Dev Loop Magic?
-
-Welcome to the future of software engineering. This isn't just a repository; it's a **Cybernetic Development Ecosystem**.
-
-We have fused **Claude Code (Ralph)**—the relentless builder—with **Google Jules**—the omniscient guardian—to create a self-sustaining loop of creation. You drop a Jira ticket, and the system springs to life: coding, testing, reviewing, and **fixing its own mistakes**.
-
-It is **Self-Healing Infrastructure** meets **Autonomous Velocity**. 🦾💜⚡
+> **"From Jira Ticket to Production — Untouched by Human Hands."**
 
 ---
 
-## 🏗️ The Autonomous Flow
+## About SEJFA
+
+SEJFA is a cutting-edge **Agentic DevOps Loop System**, meticulously crafted by **Filippa, Simon, Jonas Ö, Emma, and Annika**. This project is a living demonstration of the future of software development: a fully autonomous workflow where AI Agents (powered by **Claude Code** and **Ralph Wiggum Loops**) take ownership of the entire lifecycle—from picking up a Jira ticket to deploying a production-ready application on Azure.
+
+### Ideally Suited For:
+- **Autonomous Development:** Exploring the limits of AI-driven coding.
+- **Enterprise Integration:** Seamlessly connecting Jira, GitHub, and Azure.
+- **Real-Time Monitoring:** Visualizing the agent's thought process and actions.
+
+---
+
+## Chaos vs Clarity
+
+![Chaos vs Clarity](static/img/SEJFA-CHAOS-VS-CLARITY.jpeg)
+
+Development can be chaotic. SEJFA brings order through **The Ralph Loop**—a structured, test-driven development cycle that ensures quality at every step. By enforcing strict gates (linting, testing, security scanning) before a task is even considered "complete," SEJFA transforms the unpredictable nature of coding into a streamlined, predictable pipeline.
+
+---
+
+## Key Features
+
+| Feature | Description |
+| :--- | :--- |
+| **Agentic Workflow** | Autonomous task execution with `start-task` and `finish-task` commands, powered by Claude Code. |
+| **Ralph Loop** | A rigorous TDD cycle: Red -> Green -> Refactor -> Verify. Quality is non-negotiable. |
+| **Jira Integration** | Direct two-way sync with Jira. Tickets are fetched, updated, and closed automatically. |
+| **Azure Deployment** | Zero-downtime deployments to **Azure Container Apps** via GitHub Actions. |
+| **Real-Time Monitor** | Watch the agents work in real-time on the Monitoring Dashboard. |
+| **Secure & Scalable** | Built on Flask with Gunicorn, Dockerized for portability, and secured with `safety` scans. |
+
+---
+
+## Architecture
+
+The SEJFA architecture is designed for resilience and autonomy. The **Claude Code Agent** operates within the **Ralph Loop**, interacting with the codebase, running tests, and managing git operations, all while communicating with **Jira** and **Azure**.
 
 ```mermaid
 graph TD
-    A([Dev Input]) --> B(Claude Code)
-    B --> C(PR)
-    C --> D(GitHub Actions)
-    D --> E{👀 Failure?}
-    E -->|Yes| F([Jules Analysis])
-    F --> G(Auto-Fix)
-    G --> H(Merge)
-    E -->|No| H
+    User[Product Owner] -->|Creates Ticket| Jira[Jira]
+    Jira -->|Fetches Task| Agent[Claude Code Agent]
+    subgraph "The Ralph Loop (Development)"
+        Agent -->|Writes Code| Code[Source Code]
+        Code -->|Triggers| Tests[Local Tests]
+        Tests -->|Pass/Fail| Agent
+        Agent -->|Refines| Code
+    end
+    Tests -->|Success| PR[Pull Request]
+    PR -->|Triggers| CI[GitHub Actions CI]
+    CI -->|Lint/Test/Security| Verify[Verification]
+    Verify -->|Merge to Main| Deploy[deploy.yml]
+    Deploy -->|Docker Build & Push| ACR[Azure Container Registry]
+    ACR -->|Auto-deploy| Azure[Azure Container Apps]
+    Azure -->|Live App| EndUser[End User]
 ```
-## 🔄 End-to-End Pipeline - In Detail
-
-The full journey from idea to production looks like this:
-
-```
-1. Jira ticket (GE-xxx)
-        │
-        ▼
-2. /start-task GE-xxx
-   → Claude Code fetches ticket via Jira REST API
-   → Creates branch: feature/GE-xxx-slug
-   → Populates docs/CURRENT_TASK.md
-        │
-        ▼
-3. Ralph Loop (TDD)
-   → Red: writes a failing test
-   → Green: minimal implementation
-   → Refactor
-   → Updates CURRENT_TASK.md
-   → Commit: "GE-xxx: description"
-   → Repeats until all acceptance criteria ✓
-        │
-        ▼
-4. /finish-task
-   → Pushes branch → Creates PR
-   → CI runs (lint, test on Python 3.10–3.13, security scan)
-   → Jules performs AI code review
-        │
-        ▼
-5. Merge to main
-        │
-        ▼
-6. deploy.yml triggers automatically
-   → Docker build → Push to ACR → Deploy to Azure Container Apps
-        │
-        ▼
-7. App is live on Azure
-```
-
-### What Happens After Deploy
-
-Every time a PR is merged to `main`:
-- `deploy.yml` builds a new Docker image tagged with the commit SHA + `latest`.
-- The image is pushed to **Azure Container Registry (ACR)**.
-- **Azure Container Apps** automatically rolls out the new revision with zero-downtime deployment.
-
-This means the app is continuously deployed — it is not rebuilt from scratch each time. Every merge delivers an incremental update to the same running application.
-
-### Viewing the Live App
-
-To find the application URL:
-1. **Azure Portal** → Container Apps → your app → Overview → *Application Url*
-2. Or via CLI:
-   ```bash
-   az containerapp show \
-     --name <APP_NAME> \
-     --resource-group <RESOURCE_GROUP> \
-     --query properties.configuration.ingress.fqdn
-   ```
 
 ---
 
-## 🔥 Key Features
+## Getting Started
 
-| Feature | Benefit |
-|---------|---------|
-| 🤖 **Self-Healing Pipelines** | **Jules** detects CI failures (linting, tests) and hot-patches the code automatically. Zero human latency. |
-| ⚡ **The Infinite Loop** | A perpetual engine of productivity: Jira Ticket ➡️ Claude Dev ➡️ PR ➡️ Jules Review ➡️ Merge. |
-| 🛡️ **AI Security Guardrails** | Built-in protection against prompt injection and unsafe package installs. **Jules** watches the watchmen. |
-| 🧠 **Persistent Memory** | The **Ralph Loop** remembers context across sessions via `CURRENT_TASK.md`. It never forgets. |
-| 🚀 **Next-Gen Velocity** | Skip the boilerplate. Focus on the architecture while the agents handle the implementation details. |
+Follow these steps to set up your own Agentic DevOps environment.
 
----
+### Prerequisites
 
-## 🚀 Launch the Beast
+-   **Python 3.10+**
+-   **Docker** (for local container testing)
+-   **Jira Account** (API token required for agent integration)
+-   **Azure Account** (for deployment)
 
-Initialize the autonomous core.
+### Installation
 
-### 1. Clone the Matrix
+1.  **Clone the Repository**
+    ```bash
+    gh repo clone itsimonfredlingjack/grupp-ett-github
+    cd grupp-ett-github
+    ```
+
+2.  **Set Up Virtual Environment**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Windows: venv\Scripts\activate
+    ```
+
+3.  **Install Dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Configure Environment**
+    Create a `.env` file with your Jira and Azure credentials.
+
+### Running the Application
+
+Start the Flask development server:
 ```bash
-git clone https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions.git
-cd agentic-dev-loop-w-claude-code-and-github-actions
+python app.py
 ```
+Access the application at `http://localhost:5000`.
 
-### 2. Inject Credentials
+### Running Tests
+
+Verify the system integrity with `pytest`:
 ```bash
-cp .env.example .env
-# Open .env and insert your JIRA_API_TOKEN and Agent Secrets
+source venv/bin/activate && pytest -v
 ```
 
-### 3. Arm the Hooks
+---
+
+## Agentic Development Guide
+
+Unlock the power of autonomous coding with the **Ralph Skills** in `.claude/skills`.
+
+### 1. Start a Task
+Initialize a new task from a Jira ticket. This sets up the branch and context.
 ```bash
-./scripts/setup-hooks.sh
+claude -i start-task <JIRA-ID>
 ```
 
-### 4. Ignite the Engine
+### 2. The Ralph Loop
+The agent enters the loop:
+- **Red:** Write a failing test.
+- **Green:** Implement the solution.
+- **Refactor:** Optimize code.
+- **Verify:** Run linting and security checks.
+
+### 3. Finish Task
+Once the loop is complete and all checks pass:
 ```bash
-claude
-# Inside the session: /start-task PROJ-123
+claude -i finish-task
+```
+This pushes the changes, creates a PR, and updates the Jira ticket.
+
+---
+
+## Documentation
+
+-   **[Full Project Documentation](docs/FINAL_DOCUMENTATION.md)** - Comprehensive guide covering architecture, APIs, pipelines, deployment, and more.
+-   **[Jules Playbook](docs/jules-playbook.md)** - Insights into the AI review system.
+-   **[Context Memory](CURRENT_TASK.md)** - The agent's current working memory.
+
+---
+
+## Project Structure
+
+```
+.
+├── .claude/                # Agent Configuration & Skills
+│   ├── hooks/              # Git/Loop Hooks (stop-hook)
+│   └── skills/             # Agent Skills (start-task, finish-task)
+├── app.py                  # Flask Application Entry Point
+├── CURRENT_TASK.md         # Agent Context Memory
+├── src/                    # Source Code
+│   ├── sejfa/              # Main Package
+│   │   ├── core/           # Business Logic
+│   │   ├── integrations/   # External Integrations (Jira)
+│   │   └── monitor/        # Real-time Monitoring
+│   └── expense_tracker/    # Expense Tracking Module
+├── scripts/                # Pipeline Scripts (Jules, CI)
+└── tests/                  # Test Suite (370+ tests)
 ```
 
 ---
 
-## 📁 Directory Structure
+## Contributing
 
-```
-agentic-dev-loop/
-├── .claude/               # 🧠 The Brain (Ralph Config & Memory)
-│   ├── hooks/             # Security enforcement protocols
-│   └── plugins/           # Integrations (MCP optional)
-├── .github/workflows/     # ⚡ The Nervous System
-│   ├── jules-review.yml   # AI Code Reviewer
-│   └── self-healing.yml   # Auto-Remediation Logic
-├── docs/                  # 📜 Knowledge Base
-│   ├── CURRENT_TASK.md    # Active Working Memory
-│   └── monitor/           # Real-time Status Dashboard
-├── document_upload_app/   # 📦 Sample Workload
-├── scripts/               # 🛠️ Utility Belts
-└── src/                   # 🧬 Source Code
-```
-
----
----
-
-## 🤝 Join the Revolution
-
-<div align="center">
-
-**[⭐ Star this Repo](https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions)**
-
-*Architected for Dominance. Built for 2077.*
-
-</div>
-
-<!-- Tracking: [PROJ-123] v3 -->
+We welcome contributions! Please follow the **Ralph Loop** methodology:
+1.  Fork the repository.
+2.  Create a feature branch (`feature/issue-description`).
+3.  Ensure all tests pass.
+4.  Submit a Pull Request.
 
 ---
 
-## 🛠 Development Resources
+## License
 
-<details>
-<summary><strong>📋 Click here to copy the Flask TDD Prompt Template</strong></summary>
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### How to use this template
-Copy the markdown below into a new Jira ticket or Claude prompt to start a new micro-service assignment.
+---
 
-***
-
-# 🚀 Uppdrag: Flask TDD - [APP_NAME]
-
-**Mål:** Bygg en Flask-applikation enligt strikt 3-lagersarkitektur med TDD.
-**Prioritet:** 1. Tester (röda -> gröna). 2. Minimal implementation.
-
-## 🛠 Konfiguration (Fyll i detta)
-
-| Variabel | Värde |
-| :--- | :--- |
-| **App Name** | `[APP_NAME]` |
-| **Modell** | `[CATEGORY]` (t.ex. FINANCE) |
-| **Fält** | `[LIST_OF_FIELDS]` (t.ex. id:int, title:str) |
-| **Service** | `[SERVICE_NAME]` (t.ex. LibraryService) |
-| **Affärsregler** | 1. `[RULE_1]`<br>2. `[RULE_2]` |
-| **Routes** | `GET /`, `POST /add`, `[OTHER_ROUTE]` |
-
-## 📋 Regler & Setup
-
-* **Språk:** Kod/Kommentarer på **Engelska**. UI/Felmeddelanden på **Svenska**.
-* **Databas:** `sqlite:///:memory:` för tester.
-* **Dependency Injection:** Måste användas. Service tar repository i `__init__`.
-
-## 🏗 Arkitektur (LÅST)
-
-Du måste följa denna struktur exakt (Clean Architecture):
-
-1.  **Application Factory:** `create_app(config)` i `app/__init__.py`.
-2.  **Lager 1: Data (`app/data/`)**
-    * Modell (Dataclass/SQLAlchemy).
-    * Repository-protokoll (Abstract Base Class).
-    * `InMemoryRepository` (för tester/MVP).
-3.  **Lager 2: Business (`app/business/`)**
-    * Ren Python-klass (Service).
-    * Får **aldrig** bero på Flask eller HTTP.
-    * Repository injiceras i konstruktorn.
-4.  **Lager 3: Presentation (`app/presentation/`)**
-    * Flask Blueprint.
-    * Hanterar HTTP (request/response), Templates, Forms.
-    * Service injiceras via `app.config` eller factory-mönster.
-
-## ✅ Acceptance Criteria
-
-### Fas 1: Core & Business Logic (Unit Tests)
-- [ ] Projektstruktur skapad.
-- [ ] `[MODEL_NAME]` implementerad.
-- [ ] Repository-protokoll + `InMemoryRepository` skapat.
-- [ ] `[SERVICE_NAME]` implementerad med DI.
-- [ ] **TEST:** Unit-tester (pytest) verifierar alla affärsregler utan Flask.
-
-### Fas 2: Integration & Web (Integration Tests)
-- [ ] `create_app` konfigurerar Flask och injicerar dependencies.
-- [ ] Templates (`base.html` + sidor) skapade med svensk text.
-- [ ] Routes implementerade i Blueprint.
-- [ ] **TEST:** Integrationstester verifierar flöden och HTTP-statuskoder.
-- [ ] `pytest` körs grönt. `ruff check .` passerar.
-
-***
-
-</details>
+*Built with love by the SEJFA Team.*

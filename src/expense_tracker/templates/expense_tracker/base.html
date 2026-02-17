@@ -1,135 +1,472 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ExpenseTracker{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Botanical Garden / Organic Zen Theme */
+            --forest: #2E7D32;
+            --forest-75: rgba(46, 125, 50, 0.75);
+            --forest-40: rgba(46, 125, 50, 0.40);
+            --forest-20: rgba(46, 125, 50, 0.20);
+            --forest-10: rgba(46, 125, 50, 0.10);
+            --forest-06: rgba(46, 125, 50, 0.06);
+            --forest-03: rgba(46, 125, 50, 0.03);
+            --sage-bg: #F1F8E9;
+            --parchment: #FAFFF5;
+            --parchment-card: #F7FBF0;
+            --terracotta: #D84315;
+            --terracotta-light: rgba(216, 67, 21, 0.12);
+            --fern: #558B2F;
+            --fern-light: rgba(85, 139, 47, 0.12);
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes dapple-drift {
+            0%   { transform: translate(0%,  0%)   scale(1);    opacity: 0.55; }
+            33%  { transform: translate(3%,  2%)   scale(1.05); opacity: 0.40; }
+            66%  { transform: translate(-2%, 4%)   scale(0.97); opacity: 0.50; }
+            100% { transform: translate(0%,  0%)   scale(1);    opacity: 0.55; }
+        }
+
+        @keyframes leaf-sway {
+            0%,  100% { transform: rotate(0deg)    translateY(0);   }
+            30%        { transform: rotate(1.2deg)  translateY(-2px); }
+            70%        { transform: rotate(-0.8deg) translateY(1px);  }
+        }
+
+        @keyframes sprout {
+            0%   { transform: scale(0.95) translateY(6px); opacity: 0; }
+            100% { transform: scale(1)    translateY(0);   opacity: 1; }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            min-height: 100vh;
+            font-family: 'Nunito', 'Segoe UI', sans-serif;
+            background-color: var(--sage-bg);
+            color: var(--forest);
+            position: relative;
+            overflow-x: hidden;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1.7;
         }
-        h1 {
-            color: #333;
+
+        /* Dappled sunlight layer */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                radial-gradient(ellipse 180px 110px at 12%  8%,  rgba(255,255,200,0.30) 0%, transparent 70%),
+                radial-gradient(ellipse 220px 150px at 72%  4%,  rgba(255,255,180,0.24) 0%, transparent 70%),
+                radial-gradient(ellipse 130px 200px at 92% 38%,  rgba(255,255,210,0.22) 0%, transparent 70%),
+                radial-gradient(ellipse 200px 110px at 38% 62%,  rgba(255,255,200,0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 160px 180px at  4% 78%,  rgba(255,255,190,0.20) 0%, transparent 70%),
+                radial-gradient(ellipse 110px 130px at 58% 88%,  rgba(255,255,200,0.16) 0%, transparent 70%);
+            animation: dapple-drift 22s ease-in-out infinite;
         }
-        .flash-messages {
+
+        /* Headings — Playfair Display serif */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 700;
+            color: var(--forest);
             margin-bottom: 20px;
+            position: relative;
+            z-index: 10;
+            line-height: 1.3;
+            letter-spacing: 0.3px;
         }
+
+        h1::after, h2::after {
+            content: '';
+            display: block;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fern), rgba(85,139,47,0.4) 60%, transparent);
+            border-radius: 2px;
+            margin-top: 6px;
+        }
+
+        h1 { font-size: 30px; }
+        h2 { font-size: 24px; }
+        h3 { font-size: 19px; }
+
+        /* List items use leaf nodes */
+        li::marker { content: '🍃  '; }
+
+        /* ─── NAV ─── */
+        nav {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            background: rgba(241, 248, 233, 0.94);
+            border-bottom: 1.5px solid var(--forest-20);
+            box-shadow: 0 4px 20px var(--forest-10), 0 2px 8px var(--forest-06);
+            backdrop-filter: blur(6px);
+            padding: 16px 30px;
+            max-width: 100%;
+            margin: 0 0 30px 0;
+        }
+
+        nav::before {
+            content: '🌿 ';
+            font-size: 18px;
+            margin-right: 4px;
+        }
+
+        nav a {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            color: var(--forest);
+            text-decoration: none;
+            padding: 8px 22px;
+            border: 1.5px solid var(--forest-40);
+            border-radius: 20px;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+            display: inline-block;
+            background: var(--parchment);
+            box-shadow: 0 2px 8px var(--forest-10);
+        }
+
+        nav a:hover {
+            background: var(--fern-light);
+            border-color: var(--fern);
+            box-shadow: 0 4px 16px var(--forest-20);
+            transform: translateY(-1px);
+        }
+
+        nav a:active { transform: translateY(1px); }
+
+        /* ─── FLASH MESSAGES ─── */
+        .flash-messages {
+            position: relative;
+            z-index: 10;
+            margin: 0 auto 25px;
+            max-width: 1000px;
+        }
+
         .flash {
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            padding: 16px 22px;
+            margin-bottom: 16px;
+            border-radius: 16px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 15px;
+            letter-spacing: 0.2px;
+            position: relative;
+            animation: sprout 0.3s ease-out;
         }
+
         .flash.error {
-            background-color: #ffebee;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
+            background: var(--terracotta-light);
+            border: 1px solid var(--terracotta);
+            color: var(--terracotta);
         }
+
         .flash.success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
+            background: var(--fern-light);
+            border: 1px solid var(--fern);
+            color: var(--fern);
         }
+
+        .flash.error::before   { content: '🌵 '; }
+        .flash.success::before { content: '🌱 '; }
+
+        /* ─── EXPENSE LIST ─── */
         .expense-list {
             list-style: none;
             padding: 0;
+            position: relative;
+            z-index: 10;
+            max-width: 1000px;
+            margin: 0 auto;
         }
+
         .expense-item {
-            background: white;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 16px;
+            padding: 16px 22px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
+            /* Soft, diffused cardstock shadow */
+            box-shadow:
+                0 2px 4px   var(--forest-20),
+                0 6px 16px  var(--forest-10),
+                0 10px 30px var(--forest-06);
+            transition: all 0.2s ease;
         }
+
+        .expense-item:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 4px 10px  var(--forest-20),
+                0 10px 28px var(--forest-20),
+                0 20px 48px var(--forest-10);
+        }
+
+        /* Leaf node marker — replacing standard dot */
+        .expense-item::before {
+            content: '🍃';
+            font-size: 13px;
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
         .expense-title {
-            font-weight: bold;
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 400;
+            color: var(--forest);
+            font-size: 16px;
+            letter-spacing: 0.2px;
+            padding-left: 6px;
         }
+
         .expense-category {
-            color: #666;
-            font-size: 0.9em;
+            font-family: 'Nunito', sans-serif;
+            color: var(--forest-75);
+            font-size: 14px;
+            font-style: italic;
+            margin-left: 6px;
         }
+
         .expense-amount {
-            font-size: 1.2em;
-            color: #1976d2;
+            font-family: 'Nunito', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--forest);
+            border: 1.5px solid var(--forest-40);
+            padding: 4px 16px;
+            border-radius: 20px;
+            background: var(--parchment);
+            box-shadow: 0 2px 6px var(--forest-10);
         }
+
+        /* ─── FORM ─── */
         form {
-            background: white;
-            padding: 20px;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 24px;
+            padding: 32px 30px;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 10;
+            max-width: 1000px;
+            margin: 0 auto 30px;
+            box-shadow:
+                0 4px 8px   var(--forest-20),
+                0 10px 30px var(--forest-10),
+                0 20px 56px var(--forest-06);
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
+
+        .form-group { margin-bottom: 20px; }
+
         label {
+            font-family: 'Nunito', sans-serif;
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--forest);
+            font-size: 14px;
+            letter-spacing: 0.3px;
         }
+
+        label::before { content: '🍃 '; }
+
         input, select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            padding: 10px 14px;
+            background: var(--parchment);
+            border: 1.5px solid var(--forest-40);
+            border-radius: 12px;
+            color: var(--forest);
+            font-family: 'Nunito', sans-serif;
+            font-size: 15px;
+            transition: all 0.2s ease;
         }
-        button {
-            background-color: #1976d2;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--fern);
+            box-shadow: 0 0 0 3px var(--fern-light);
         }
-        button:hover {
-            background-color: #1565c0;
-        }
-        nav {
-            margin-bottom: 20px;
-        }
-        nav a {
-            color: #1976d2;
-            text-decoration: none;
-            margin-right: 15px;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-        .total {
-            font-size: 2em;
-            color: #1976d2;
-            margin: 20px 0;
-        }
-        .empty-message {
-            color: #666;
+
+        input::placeholder {
+            color: var(--forest-40);
             font-style: italic;
+        }
+
+        button {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            background: var(--forest);
+            color: #FAFFF5;
+            border: none;
+            padding: 10px 32px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 12px var(--forest-40);
+        }
+
+        button:hover {
+            background: var(--fern);
+            box-shadow: 0 6px 22px var(--forest-40);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px var(--forest-20);
+        }
+
+        button:focus {
+            outline: 2px solid var(--fern);
+            outline-offset: 4px;
+        }
+
+        /* ─── TOTAL DISPLAY ─── */
+        .total {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--forest);
+            margin: 40px 0;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            background: var(--parchment-card);
+            border: 1px solid var(--forest-20);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 600px;
+            margin: 40px auto;
+            letter-spacing: 0.3px;
+            box-shadow:
+                0 4px 8px   var(--forest-20),
+                0 10px 30px var(--forest-10),
+                0 20px 56px var(--forest-06);
+            animation: leaf-sway 8s ease-in-out infinite;
+        }
+
+        .total::before {
+            content: '🌿 ';
+            font-size: 22px;
+        }
+
+        /* ─── EMPTY MESSAGE ─── */
+        .empty-message {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-style: italic;
+            color: var(--forest-75);
+            text-align: center;
+            font-size: 16px;
+            position: relative;
+            z-index: 10;
+            background: var(--parchment-card);
+            border: 1px dashed var(--forest-40);
+            border-radius: 16px;
+            padding: 28px;
+            margin: 25px auto;
+            max-width: 500px;
+            box-shadow: 0 4px 16px var(--forest-06);
+        }
+
+        .empty-message::before { content: '🍃 '; }
+        .empty-message::after  { content: ' 🌱'; }
+
+        /* ─── CONTAINER ─── */
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
+        }
+
+        /* ─── LINKS ─── */
+        a {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            color: var(--fern);
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-color: var(--fern);
+            text-underline-offset: 3px;
+            padding: 0;
+            background: transparent;
+            display: inline;
+            letter-spacing: 0.2px;
+            font-size: inherit;
+            transition: text-decoration-style 0.15s ease;
+        }
+
+        a:hover {
+            text-decoration-style: solid;
+            color: var(--forest);
+        }
+
+        /* Nav links styled differently */
+        nav a {
+            text-decoration: none;
+            padding: 8px 22px;
+            display: inline-block;
+            color: var(--forest);
         }
     </style>
 </head>
 <body>
+    <!-- Decorative organic SVG vines — bezier curves as stems -->
+    <svg aria-hidden="true" style="position:fixed;bottom:0;left:0;width:300px;height:280px;pointer-events:none;z-index:0;opacity:0.08;" viewBox="0 0 300 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 280 C 35 210, 70 195, 50 140 C 30 85, 90 65, 80 10" stroke="#2E7D32" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M50 140 C 90 130, 120 105, 150 85" stroke="#558B2F" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M80 200 C 115 190, 145 172, 165 145" stroke="#558B2F" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="150" cy="85"  r="4"   fill="#558B2F"/>
+        <circle cx="165" cy="145" r="3.5" fill="#2E7D32"/>
+        <circle cx="50"  cy="140" r="3"   fill="#2E7D32"/>
+    </svg>
+
     <nav>
         <a href="{{ url_for('expense_tracker.index') }}">Utgifter</a>
         <a href="{{ url_for('expense_tracker.summary') }}">Sammanfattning</a>
     </nav>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-    {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
+    </div>
 </body>
 </html>

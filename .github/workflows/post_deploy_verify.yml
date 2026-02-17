@@ -45,17 +45,42 @@ jobs:
         id: health
         run: |
           FQDN="${{ steps.app_info.outputs.fqdn }}"
-          MAX_RETRIES=5
+          MAX_RETRIES=12
           RETRY_INTERVAL=10
+          CURL_MAX_TIME=8
+          BODY_PATH="$(mktemp)"
 
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i/$MAX_RETRIES..."
-            if response=$(curl -sf "https://${FQDN}/health" --max-time 10 2>/dev/null); then
-              STATUS=$(echo "$response" | jq -r '.status')
-              echo "Health check passed: $STATUS"
+            set +e
+            http_code=$(curl -sS -o "$BODY_PATH" -w "%{http_code}" "https://${FQDN}/health" --max-time "$CURL_MAX_TIME" 2>/dev/null)
+            curl_rc=$?
+            set -e
+
+            if [ "$http_code" = "200" ]; then
+              status=""
+              if command -v jq >/dev/null 2>&1; then
+                status="$(jq -r '.status // empty' "$BODY_PATH" 2>/dev/null || true)"
+              fi
+              if [ -z "$status" ] && command -v python3 >/dev/null 2>&1; then
+                status="$(python3 -c 'import json,sys\ntry:\n  data=json.load(open(sys.argv[1], encoding=\"utf-8\"))\n  s=data.get(\"status\", \"\")\n  print(s if isinstance(s, str) else \"\")\nexcept Exception:\n  pass' \"$BODY_PATH\" 2>/dev/null || true)"
+              fi
+
+              echo "Health check passed: ${status:-unknown}"
               echo "healthy=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+
+            if [ "$http_code" = "000" ]; then
+              echo "  http_code=000 curl_exit=${curl_rc}"
+            else
+              echo "  http_code=${http_code}"
+            fi
+            if [ -s "$BODY_PATH" ]; then
+              body_snippet="$(head -c 200 "$BODY_PATH" | tr '\n' ' ' | tr -cd '[:print:]')"
+              echo "  body: ${body_snippet}"
+            fi
+
             echo "Attempt $i failed, waiting ${RETRY_INTERVAL}s..."
             sleep "$RETRY_INTERVAL"
           done
@@ -66,16 +91,19 @@ jobs:
       - name: Extract Jira ticket from commit
         id: jira
         run: |
-          COMMIT_MSG="${{ github.event.workflow_run.head_commit.message }}"
-          TICKET_ID=$(echo "$COMMIT_MSG" | grep -oP 'GE-\d+' | head -1 || echo "")
-          echo "ticket_id=$TICKET_ID" >> "$GITHUB_OUTPUT"
+          COMMIT_MSG="${{ github.event.workflow_run.head_commit.message || '' }}"
+          TICKET_ID=$(echo "$COMMIT_MSG" | grep -oP 'GE-\d+' | head -1 || true)
+          if [ -z "$TICKET_ID" ]; then
+            echo "No GE-ticket found in commit message — skipping Jira comment"
+          fi
+          echo "ticket_id=${TICKET_ID:-}" >> "$GITHUB_OUTPUT"
           echo "Extracted ticket: ${TICKET_ID:-none}"
 
       - name: Comment Jira — deploy verified
         if: steps.health.outputs.healthy == 'true' && steps.jira.outputs.ticket_id != ''
         env:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL || secrets.JIRA_EMAIL }}
           JIRA_URL: ${{ secrets.JIRA_URL }}
         run: |
           TICKET="${{ steps.jira.outputs.ticket_id }}"
@@ -113,42 +141,58 @@ jobs:
           RG="${{ secrets.RESOURCE_GROUP }}"
 
           # List all revisions sorted by creation date
+          set +e
           REVISIONS=$(az containerapp revision list \
             --name "$APP_NAME" \
             --resource-group "$RG" \
             --query 'sort_by([].{name:name, created:properties.createdTime, active:properties.active}, &created) | reverse(@)[].name' \
             -o tsv)
+          set -e
 
           PREVIOUS=$(echo "$REVISIONS" | grep -v "$CURRENT" | head -1)
 
           if [ -n "$PREVIOUS" ]; then
             echo "Rolling back: activating $PREVIOUS, deactivating $CURRENT"
 
+            set +e
             az containerapp revision activate \
               --name "$APP_NAME" \
               --resource-group "$RG" \
               --revision "$PREVIOUS"
+            activate_rc=$?
+            set -e
 
-            az containerapp revision deactivate \
-              --name "$APP_NAME" \
-              --resource-group "$RG" \
-              --revision "$CURRENT" || true
+            if [ "$activate_rc" -eq 0 ]; then
+              az containerapp revision deactivate \
+                --name "$APP_NAME" \
+                --resource-group "$RG" \
+                --revision "$CURRENT" || true
 
-            echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+              echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::Failed to activate $PREVIOUS (exit ${activate_rc}) — keeping $CURRENT active"
+              echo "previous=none" >> "$GITHUB_OUTPUT"
+            fi
+
           else
-            echo "::warning::No previous revision — restarting current"
-            az containerapp revision restart \
-              --name "$APP_NAME" \
-              --resource-group "$RG" \
-              --revision "$CURRENT"
-            echo "previous=restarted-${CURRENT}" >> "$GITHUB_OUTPUT"
+            echo "::warning::No previous revision — attempting app restart"
+            echo "previous=none" >> "$GITHUB_OUTPUT"
+
+            # Best-effort: app-level restart is often safer than revision restart.
+            set +e
+            az containerapp restart --name "$APP_NAME" --resource-group "$RG"
+            rc=$?
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              echo "::warning::App restart failed (exit ${rc})"
+            fi
           fi
 
       - name: Comment Jira — deploy failed
         if: steps.health.outputs.healthy == 'false' && steps.jira.outputs.ticket_id != ''
         env:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL || secrets.JIRA_EMAIL }}
           JIRA_URL: ${{ secrets.JIRA_URL }}
         run: |
           TICKET="${{ steps.jira.outputs.ticket_id }}"

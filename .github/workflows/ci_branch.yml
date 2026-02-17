@@ -1,5 +1,10 @@
 name: CI Branch
 
+# Fast feedback on feature branches — single Python version only.
+# Full matrix (3.10–3.13) runs via ci.yml on PR to main.
+# This avoids the double-run bottleneck where Claude Code waits
+# for 8+ parallel jobs before merging.
+
 on:
   push:
     branches-ignore: [main]
@@ -7,17 +12,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
@@ -26,47 +27,11 @@ jobs:
           pip install pytest pytest-cov ruff
 
       - name: Run linting
-        run: |
-          ruff check . --output-format=github
+        run: ruff check . --output-format=github
+
+      - name: Run format check
+        run: ruff format --check .
 
       - name: Run tests with coverage
         run: |
-          pytest -xvs --cov=src --cov=app.py --cov-report=xml --cov-report=term-missing --cov-fail-under=80
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install ruff
-        run: pip install ruff
-
-      - name: Run ruff check
-        run: ruff check . --output-format=github
-
-      - name: Run ruff format check
-        run: ruff format --check .
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install safety
-        run: pip install safety
-
-      - name: Check for security vulnerabilities
-        continue-on-error: true
-        run: |
-          pip install flask pytest
-          safety check --full-report
+          pytest -xvs --cov=src --cov=app.py --cov-report=term-missing --cov-fail-under=80

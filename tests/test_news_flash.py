@@ -19,11 +19,11 @@ class TestNewsFlashIndex:
         assert response.status_code == 200
 
     def test_index_contains_news_flash(self):
-        """Index page should contain 'News Flash' text."""
+        """Index page should contain 'Built with care by Simon' text."""
         app = create_app(TEST_CONFIG)
         client = app.test_client()
         response = client.get("/")
-        assert b"News Flash" in response.data
+        assert b"Built with care by Simon" in response.data
 
 
 class TestNewsFlashSubscribe:

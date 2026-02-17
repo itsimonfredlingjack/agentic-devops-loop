@@ -51,8 +51,8 @@ git status --porcelain
 **If git status shows changes:**
 - **STOP immediately**
 - Output: "❌ Working tree is not clean. Commit or stash changes first."
-- Ask user to run: `git add . && git commit -m "WIP: stash before new task"`
-- Or run: `git stash`
+- Ask user to run: `git stash` or `git add -u && git commit -m "WIP: stash before new task"`
+- **NEVER use `git add -A` or `git add .`** — they stage untracked junk files (.fuse_hidden*, SEJFA_Changelog.docx, etc.)
 - **DO NOT PROCEED** with dirty working tree
 
 **Check 2: Currently on main/master branch**
@@ -328,6 +328,11 @@ except Exception as e:
 
 Note: Continue even if transition fails - it's not critical.
 
+Required status order for this project:
+- `transition_issue('{JIRA_ID}', 'In Progress')` when work starts
+- `transition_issue('{JIRA_ID}', 'In Review')` when implementation is complete and awaiting review
+- `transition_issue('{JIRA_ID}', 'Done')` when review is approved
+
 ### Step 8: Add Jira Comment
 
 Log that the agent has started work using the direct API via Bash:
@@ -382,12 +387,11 @@ Then **IMMEDIATELY** (in the same response, without stopping):
 The stop-hook will BLOCK you from exiting until you output `<promise>DONE</promise>`.
 You can only output that promise when ALL of these are true:
 - All acceptance criteria in CURRENT_TASK.md are checked off
-- All tests pass: `pytest -xvs`
-- No linting errors: `ruff check .`
+- All tests pass: `source venv/bin/activate && pytest -xvs`
+- No linting errors: `source venv/bin/activate && ruff check .`
 - Changes committed and pushed
 - PR created via `gh pr create`
-- **CI checks pass: `gh pr checks "$PR_URL" --watch`**
-- **PR merged to main: `gh pr merge --squash "$PR_URL"`**
+- **PR merged or auto-merge enabled** (do NOT wait for `jules-review`)
 - Jira updated
 
 **DO NOT STOP AFTER THIS MESSAGE. START WORKING IMMEDIATELY.**
@@ -424,11 +428,18 @@ This exact format is detected by the stop-hook. Any deviation and exit will be b
 4. [ ] Changes committed
 5. [ ] Branch pushed to remote
 6. [ ] PR created
-7. [ ] **CI checks passed (`gh pr checks` is green)**
-8. [ ] **PR merged to main (`gh pr merge --squash`)**
+7. [ ] **PR merged OR auto-merge enabled** (do NOT wait for `jules-review`)
+8. [ ] **Verified:** `gh pr view --json state,autoMergeRequest` shows `state=MERGED` OR `autoMergeRequest!=null`
 9. [ ] Jira status updated
 
-**⚠️ MERGE IS MANDATORY. If you output DONE without merging the PR, the task is NOT complete. The stop-hook should block this, but if it doesn't, you are LYING about completion.**
+**⚠️ PR MERGE IS MANDATORY. If the PR is not merged, code never reaches main, deploy never triggers, and the task is NOT done.**
+
+**Rules:**
+- Prefer non-blocking auto-merge handoff: `gh pr merge --squash --auto <PR_URL>` (fallback: `gh pr merge --squash --auto --admin <PR_URL>`)
+- Do NOT wait for `jules-review` (async/informational)
+- Do NOT run long wait loops with `gh pr checks --required`
+- Do NOT use `gh pr checks --watch` (it blocks indefinitely)
+- If auto-merge is disabled at repo level, enable once: `gh api -X PATCH repos/<owner>/<repo> -f allow_auto_merge=true`
 
 Only then output the promise on its own line.
 
@@ -450,19 +461,19 @@ After Step 10, you are IN the Ralph Loop. You do NOT stop. You IMMEDIATELY:
 2. **Start TDD:** Write a failing test for the FIRST requirement
 3. **Implement** minimal code to pass the test
 4. **Refactor** if needed
-5. **Run tests:** `pytest -xvs`
+5. **Run tests:** `source venv/bin/activate && pytest -xvs`
 6. **Repeat** for each requirement
 7. **When ALL acceptance criteria are met**, execute the COMPLETE delivery process:
    a. Verify tests + lint pass
    b. Commit all changes
    c. Push branch to remote
    d. Create PR via `gh pr create`
-   e. **Wait for CI: `gh pr checks "$PR_URL" --watch`**
-   f. **Merge PR: `gh pr merge --squash "$PR_URL"`**
+   e. **Merge handoff (non-blocking):** `gh pr merge --squash --auto <PR_URL>` (fallback: `gh pr merge --squash --auto --admin <PR_URL>`)
+   f. **Verify merge state:** `gh pr view --json state,autoMergeRequest` must show `state=MERGED` OR `autoMergeRequest!=null`
    g. Update Jira status
    h. Output `<promise>DONE</promise>`
 
-**Steps e and f are NON-NEGOTIABLE. Without merge, code never reaches main, deploy never triggers, and the task is NOT done.**
+**Step e+f are NON-NEGOTIABLE. Without a merged PR, code never reaches main, deploy never triggers, and the task is NOT done.**
 
 **DO NOT WAIT FOR /finish-task — it runs automatically as part of this loop.**
 
