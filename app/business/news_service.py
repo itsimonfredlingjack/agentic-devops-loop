@@ -1,6 +1,7 @@
 """
 Business logic for news article management.
 """
+
 from datetime import datetime
 
 from app.data.models.news_article import NewsArticle
@@ -9,6 +10,7 @@ from app.data.repositories.news_repository import NewsRepository
 
 class ValidationError(Exception):
     """Raised when business rule validation fails."""
+
     pass
 
 
@@ -20,11 +22,7 @@ class NewsService:
         self.repository = repository
 
     def create_article(
-        self,
-        title: str,
-        content: str,
-        author: str,
-        category: str = None
+        self, title: str, content: str, author: str, category: str = None
     ) -> NewsArticle:
         """
         Create a new news article.
@@ -63,7 +61,7 @@ class NewsService:
             content=content,
             author=author,
             published_date=datetime.now(),
-            category=category
+            category=category,
         )
 
         # Persist and return

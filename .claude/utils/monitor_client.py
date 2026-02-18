@@ -26,6 +26,7 @@ def _flush_pending():
         t.join(timeout=2)
     _pending_threads.clear()
 
+
 atexit.register(_flush_pending)
 
 
@@ -54,8 +55,13 @@ def _post_async(url: str, payload: dict):
     thread.start()
 
 
-def send_event(event_type: str, message: str, source: str = "claude",
-               task_id: str | None = None, metadata: dict | None = None):
+def send_event(
+    event_type: str,
+    message: str,
+    source: str = "claude",
+    task_id: str | None = None,
+    metadata: dict | None = None,
+):
     """Send an event to the monitor (non-blocking)."""
     payload: dict = {
         "event_type": event_type,
@@ -70,9 +76,9 @@ def send_event(event_type: str, message: str, source: str = "claude",
     _post_async(f"{MONITOR_BASE_URL}/api/event", payload)
 
 
-def send_task_start(task_id: str, title: str = "",
-                    branch: str | None = None,
-                    max_iterations: int = 25):
+def send_task_start(
+    task_id: str, title: str = "", branch: str | None = None, max_iterations: int = 25
+):
     """Notify monitor that a task has started (non-blocking)."""
     payload: dict = {
         "task_id": task_id,
@@ -89,11 +95,14 @@ def send_task_start(task_id: str, title: str = "",
     _post_async(f"{MONITOR_BASE_URL}/api/task", payload)
 
 
-def send_task_update(task_id: str, step: int | None = None,
-                     step_name: str | None = None,
-                     step_desc: str | None = None,
-                     status: str | None = None,
-                     iteration: int | None = None):
+def send_task_update(
+    task_id: str,
+    step: int | None = None,
+    step_name: str | None = None,
+    step_desc: str | None = None,
+    status: str | None = None,
+    iteration: int | None = None,
+):
     """Update task state on the monitor (non-blocking)."""
     payload: dict = {
         "task_id": task_id,
@@ -115,24 +124,33 @@ def send_task_update(task_id: str, step: int | None = None,
 
 def send_task_complete(task_id: str):
     """Notify monitor that a task completed (non-blocking)."""
-    _post_async(f"{MONITOR_BASE_URL}/api/task", {
-        "task_id": task_id,
-        "action": "complete",
-    })
+    _post_async(
+        f"{MONITOR_BASE_URL}/api/task",
+        {
+            "task_id": task_id,
+            "action": "complete",
+        },
+    )
 
 
 def send_task_fail(task_id: str, reason: str = ""):
     """Notify monitor that a task failed (non-blocking)."""
-    _post_async(f"{MONITOR_BASE_URL}/api/task", {
-        "task_id": task_id,
-        "action": "fail",
-        "step_desc": reason,
-    })
+    _post_async(
+        f"{MONITOR_BASE_URL}/api/task",
+        {
+            "task_id": task_id,
+            "action": "fail",
+            "step_desc": reason,
+        },
+    )
 
 
 def send_task_reset():
     """Reset the monitor task state (non-blocking)."""
-    _post_async(f"{MONITOR_BASE_URL}/api/task", {
-        "task_id": "_",
-        "action": "reset",
-    })
+    _post_async(
+        f"{MONITOR_BASE_URL}/api/task",
+        {
+            "task_id": "_",
+            "action": "reset",
+        },
+    )

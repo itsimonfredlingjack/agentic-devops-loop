@@ -12,9 +12,7 @@ def check_git_status() -> tuple[bool, str]:
     """Check if working tree is clean."""
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            capture_output=True,
-            text=True
+            ["git", "status", "--porcelain"], capture_output=True, text=True
         )
         if result.returncode != 0:
             return False, "Git command failed"
@@ -31,9 +29,7 @@ def check_git_branch() -> tuple[bool, str]:
     """Check if on main/master branch."""
     try:
         result = subprocess.run(
-            ["git", "branch", "--show-current"],
-            capture_output=True,
-            text=True
+            ["git", "branch", "--show-current"], capture_output=True, text=True
         )
         if result.returncode != 0:
             return False, "Git command failed"
@@ -125,11 +121,7 @@ def run_preflight() -> dict:
 
 def format_output(checks: dict) -> str:
     """Format checks for display."""
-    lines = [
-        "PREFLIGHT CHECKS",
-        "═" * 40,
-        ""
-    ]
+    lines = ["PREFLIGHT CHECKS", "═" * 40, ""]
 
     all_pass = True
     for check_name, (passed, message) in checks.items():

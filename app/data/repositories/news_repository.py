@@ -1,6 +1,7 @@
 """
 Repository pattern for NewsArticle persistence.
 """
+
 from typing import Protocol
 
 from app.data.models.news_article import NewsArticle

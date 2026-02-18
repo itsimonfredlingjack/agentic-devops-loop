@@ -19,15 +19,13 @@ DANGEROUS_PATTERNS = [
     r"new\s+instructions?:",
     r"system\s*prompt:",
     r"</?(system|user|assistant)>",
-
     # Shell injection patterns
-    r"\$\([^)]+\)",           # $(command)
-    r"`[^`]+`",               # `command`
-    r";\s*\w+",               # ; command
-    r"\|\s*\w+",              # | command
-    r"&&\s*\w+",              # && command
-    r"\|\|\s*\w+",            # || command
-
+    r"\$\([^)]+\)",  # $(command)
+    r"`[^`]+`",  # `command`
+    r";\s*\w+",  # ; command
+    r"\|\s*\w+",  # | command
+    r"&&\s*\w+",  # && command
+    r"\|\|\s*\w+",  # || command
     # Code execution patterns
     r"eval\s*\(",
     r"exec\s*\(",
@@ -103,10 +101,7 @@ def sanitize_jira_ticket(ticket: dict) -> dict:
 
 
 def create_safe_task_context(
-    jira_id: str,
-    summary: str,
-    description: str,
-    acceptance_criteria: str | None = None
+    jira_id: str, summary: str, description: str, acceptance_criteria: str | None = None
 ) -> str:
     """
     Create a safe task context block for prompts.
@@ -195,7 +190,7 @@ def extract_acceptance_criteria(description: str | None) -> list[str]:
     header_match = _HEADER_RE.search(description)
     if header_match:
         # Extract the block after the header until a blank line or end
-        after_header = description[header_match.end():]
+        after_header = description[header_match.end() :]
         for line in after_header.split("\n"):
             line = line.strip()
             if not line:

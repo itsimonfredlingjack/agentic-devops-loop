@@ -2,6 +2,7 @@
 Integration tests for news article routes.
 Tests use Flask test client.
 """
+
 import pytest
 
 from app import create_app
@@ -10,7 +11,7 @@ from app import create_app
 @pytest.fixture
 def app():
     """Create and configure test app."""
-    app = create_app('testing')
+    app = create_app("testing")
     yield app
 
 
@@ -25,31 +26,37 @@ class TestArticleListRoute:
 
     def test_get_empty_article_list(self, client):
         """Should display page with title when no articles exist."""
-        response = client.get('/')
+        response = client.get("/")
 
         assert response.status_code == 200
-        assert 'Nyhetsarkiv' in response.get_data(as_text=True)
+        assert "Nyhetsarkiv" in response.get_data(as_text=True)
 
     def test_get_article_list_with_articles(self, client):
         """Should display article titles when articles exist."""
         # Create test articles
-        client.post('/article/new', data={
-            'title': 'Första artikeln',
-            'content': 'Detta är första artikelns innehåll.',
-            'author': 'Test Författare'
-        })
-        client.post('/article/new', data={
-            'title': 'Andra artikeln',
-            'content': 'Detta är andra artikelns innehåll.',
-            'author': 'Test Författare'
-        })
+        client.post(
+            "/article/new",
+            data={
+                "title": "Första artikeln",
+                "content": "Detta är första artikelns innehåll.",
+                "author": "Test Författare",
+            },
+        )
+        client.post(
+            "/article/new",
+            data={
+                "title": "Andra artikeln",
+                "content": "Detta är andra artikelns innehåll.",
+                "author": "Test Författare",
+            },
+        )
 
-        response = client.get('/')
+        response = client.get("/")
 
         assert response.status_code == 200
         html = response.get_data(as_text=True)
-        assert 'Första artikeln' in html
-        assert 'Andra artikeln' in html
+        assert "Första artikeln" in html
+        assert "Andra artikeln" in html
 
 
 class TestArticleCreationForm:
@@ -57,13 +64,13 @@ class TestArticleCreationForm:
 
     def test_get_new_article_form(self, client):
         """Should display form with required fields."""
-        response = client.get('/article/new')
+        response = client.get("/article/new")
 
         assert response.status_code == 200
         html = response.get_data(as_text=True)
-        assert 'Titel' in html or 'title' in html.lower()
-        assert 'Innehåll' in html or 'content' in html.lower()
-        assert 'Författare' in html or 'author' in html.lower()
+        assert "Titel" in html or "title" in html.lower()
+        assert "Innehåll" in html or "content" in html.lower()
+        assert "Författare" in html or "author" in html.lower()
 
 
 class TestArticleCreation:
@@ -71,26 +78,33 @@ class TestArticleCreation:
 
     def test_create_valid_article_redirects_to_list(self, client):
         """Should create article and redirect to list on success."""
-        response = client.post('/article/new', data={
-            'title': 'Test Artikel',
-            'content': 'Detta är testartikels innehåll.',
-            'author': 'Test Författare'
-        }, follow_redirects=False)
+        response = client.post(
+            "/article/new",
+            data={
+                "title": "Test Artikel",
+                "content": "Detta är testartikels innehåll.",
+                "author": "Test Författare",
+            },
+            follow_redirects=False,
+        )
 
         assert response.status_code == 302
-        assert response.location == '/'
+        assert response.location == "/"
 
     def test_create_article_with_empty_title_returns_error(self, client):
         """Should return 400 with error message for empty title."""
-        response = client.post('/article/new', data={
-            'title': '',
-            'content': 'Valid content here.',
-            'author': 'Test Author'
-        })
+        response = client.post(
+            "/article/new",
+            data={
+                "title": "",
+                "content": "Valid content here.",
+                "author": "Test Author",
+            },
+        )
 
         assert response.status_code == 400
         html = response.get_data(as_text=True)
-        assert 'Titel får inte vara tom' in html
+        assert "Titel får inte vara tom" in html
 
 
 class TestArticleDetail:
@@ -99,22 +113,25 @@ class TestArticleDetail:
     def test_get_existing_article_detail(self, client):
         """Should display full article content."""
         # Create article first
-        client.post('/article/new', data={
-            'title': 'Detail Test',
-            'content': 'This is the full content of the article.',
-            'author': 'Test Author'
-        })
+        client.post(
+            "/article/new",
+            data={
+                "title": "Detail Test",
+                "content": "This is the full content of the article.",
+                "author": "Test Author",
+            },
+        )
 
-        response = client.get('/article/1')
+        response = client.get("/article/1")
 
         assert response.status_code == 200
         html = response.get_data(as_text=True)
-        assert 'Detail Test' in html
-        assert 'This is the full content of the article.' in html
-        assert 'Test Author' in html
+        assert "Detail Test" in html
+        assert "This is the full content of the article." in html
+        assert "Test Author" in html
 
     def test_get_nonexistent_article_returns_404(self, client):
         """Should return 404 for non-existent article."""
-        response = client.get('/article/999')
+        response = client.get("/article/999")
 
         assert response.status_code == 404

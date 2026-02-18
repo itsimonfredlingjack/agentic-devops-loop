@@ -194,14 +194,14 @@ def transition_issue(creds: dict, issue_key: str, status_name: str) -> None:
             break
 
     if transition_id is None:
-        raise JiraAPIError(
-            f"Status '{status_name}' not found for issue {issue_key}"
-        )
+        raise JiraAPIError(f"Status '{status_name}' not found for issue {issue_key}")
 
     # Execute transition
     _api_request(
-        creds, "POST", f"/issue/{issue_key}/transitions",
-        data={"transition": {"id": transition_id}}
+        creds,
+        "POST",
+        f"/issue/{issue_key}/transitions",
+        data={"transition": {"id": transition_id}},
     )
 
 
@@ -225,9 +225,7 @@ def add_comment(creds: dict, issue_key: str, text: str) -> dict | None:
             "content": [
                 {
                     "type": "paragraph",
-                    "content": [
-                        {"type": "text", "text": text}
-                    ],
+                    "content": [{"type": "text", "text": text}],
                 }
             ],
         }

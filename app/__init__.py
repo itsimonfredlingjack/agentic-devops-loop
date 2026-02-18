@@ -1,6 +1,7 @@
 """
 Flask application factory.
 """
+
 import os
 
 from flask import Flask
@@ -10,7 +11,7 @@ from app.data.repositories.news_repository import InMemoryNewsRepository
 from config import config
 
 
-def create_app(config_name='default'):
+def create_app(config_name="default"):
     """
     Application factory pattern.
 
@@ -21,7 +22,7 @@ def create_app(config_name='default'):
         Configured Flask application
     """
     # Set template folder to app/presentation/templates
-    template_dir = os.path.join(os.path.dirname(__file__), 'presentation', 'templates')
+    template_dir = os.path.join(os.path.dirname(__file__), "presentation", "templates")
     app = Flask(__name__, template_folder=template_dir)
     app.config.from_object(config[config_name])
 
@@ -30,10 +31,33 @@ def create_app(config_name='default'):
     service = NewsService(repository)
 
     # Store service in app config for access in routes
-    app.config['news_service'] = service
+    app.config["news_service"] = service
 
     # Register blueprints
     from app.presentation.routes.news_routes import news_bp
-    app.register_blueprint(news_bp)
+    from app.presentation.routes.system_routes import system_bp
+    from src.sejfa.newsflash.business.subscription_service import SubscriptionService
+    from src.sejfa.newsflash.data.models import db
+    from src.sejfa.newsflash.data.subscriber_repository import SubscriberRepository
+    from src.sejfa.newsflash.presentation.routes import create_newsflash_blueprint
+
+    # Initialize extensions
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+
+    app.register_blueprint(news_bp, url_prefix="/legacy")
+    app.register_blueprint(system_bp)
+
+    # Register News Flash blueprint
+    # In a real app, these dependencies should be injected or managed via a container
+    # For testing, we instantiate them here to ensure the blueprint is registered
+    subscriber_repository = SubscriberRepository()
+    subscription_service = SubscriptionService(repository=subscriber_repository)
+    newsflash_blueprint = create_newsflash_blueprint(
+        subscription_service=subscription_service
+    )
+
+    app.register_blueprint(newsflash_blueprint)
 
     return app

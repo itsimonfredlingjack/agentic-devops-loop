@@ -16,6 +16,7 @@ import jira_api
 # Credential loading
 # ---------------------------------------------------------------------------
 
+
 class TestLoadCredentials:
     """Test credential loading from .env files."""
 
@@ -82,11 +83,13 @@ class TestLoadCredentials:
 # Auth header
 # ---------------------------------------------------------------------------
 
+
 class TestBuildAuthHeader:
     """Test Basic auth header construction."""
 
     def test_auth_header_is_base64_encoded(self):
         import base64
+
         creds = {"url": "https://x.atlassian.net", "username": "u", "token": "t"}
         headers = jira_api.build_headers(creds)
         expected = base64.b64encode(b"u:t").decode()
@@ -103,15 +106,15 @@ class TestBuildAuthHeader:
 # get-issue
 # ---------------------------------------------------------------------------
 
+
 class TestGetIssue:
     """Test get_issue() makes correct API call."""
 
     @patch("jira_api.urlopen")
     def test_get_issue_calls_correct_url(self, mock_urlopen):
-        response_body = json.dumps({
-            "key": "PROJ-1",
-            "fields": {"summary": "Test issue"}
-        }).encode()
+        response_body = json.dumps(
+            {"key": "PROJ-1", "fields": {"summary": "Test issue"}}
+        ).encode()
         mock_resp = MagicMock()
         mock_resp.read.return_value = response_body
         mock_resp.__enter__ = lambda s: s
@@ -130,9 +133,9 @@ class TestGetIssue:
     @patch("jira_api.urlopen")
     def test_get_issue_handles_http_error(self, mock_urlopen):
         from urllib.error import HTTPError
+
         mock_urlopen.side_effect = HTTPError(
-            url="http://x", code=404, msg="Not Found",
-            hdrs=None, fp=None
+            url="http://x", code=404, msg="Not Found", hdrs=None, fp=None
         )
         creds = {"url": "https://test.atlassian.net", "username": "u", "token": "t"}
         with pytest.raises(jira_api.JiraAPIError, match="404"):
@@ -143,18 +146,21 @@ class TestGetIssue:
 # transition-issue
 # ---------------------------------------------------------------------------
 
+
 class TestTransitionIssue:
     """Test transition_issue() makes correct API calls."""
 
     @patch("jira_api.urlopen")
     def test_transition_fetches_then_posts(self, mock_urlopen):
         # First call: GET transitions
-        transitions_body = json.dumps({
-            "transitions": [
-                {"id": "31", "to": {"name": "In Progress"}},
-                {"id": "41", "to": {"name": "Done"}},
-            ]
-        }).encode()
+        transitions_body = json.dumps(
+            {
+                "transitions": [
+                    {"id": "31", "to": {"name": "In Progress"}},
+                    {"id": "41", "to": {"name": "Done"}},
+                ]
+            }
+        ).encode()
         # Second call: POST transition
         post_resp_body = b""
 
@@ -186,9 +192,9 @@ class TestTransitionIssue:
 
     @patch("jira_api.urlopen")
     def test_transition_unknown_status_raises(self, mock_urlopen):
-        transitions_body = json.dumps({
-            "transitions": [{"id": "31", "to": {"name": "In Progress"}}]
-        }).encode()
+        transitions_body = json.dumps(
+            {"transitions": [{"id": "31", "to": {"name": "In Progress"}}]}
+        ).encode()
         resp = MagicMock()
         resp.read.return_value = transitions_body
         resp.__enter__ = lambda s: s
@@ -203,6 +209,7 @@ class TestTransitionIssue:
 # ---------------------------------------------------------------------------
 # add-comment
 # ---------------------------------------------------------------------------
+
 
 class TestAddComment:
     """Test add_comment() makes correct API call with ADF format."""
@@ -234,6 +241,7 @@ class TestAddComment:
 # ---------------------------------------------------------------------------
 # CLI interface
 # ---------------------------------------------------------------------------
+
 
 class TestCLI:
     """Test the CLI entrypoint dispatches commands correctly."""

@@ -136,8 +136,11 @@ def dispatch(
 
 
 def _build_comment_cmd(
-    backend: str, shell_script: str, python_module: str,
-    issue_key: str, text: str,
+    backend: str,
+    shell_script: str,
+    python_module: str,
+    issue_key: str,
+    text: str,
 ) -> list[str]:
     if backend == "shell":
         return ["bash", shell_script, "add-comment", issue_key, text]
@@ -145,8 +148,11 @@ def _build_comment_cmd(
 
 
 def _build_transition_cmd(
-    backend: str, shell_script: str, python_module: str,
-    issue_key: str, status: str,
+    backend: str,
+    shell_script: str,
+    python_module: str,
+    issue_key: str,
+    status: str,
 ) -> list[str]:
     if backend == "shell":
         return ["bash", shell_script, "transition-issue", issue_key, status]
@@ -188,7 +194,9 @@ def main() -> None:
     try:
         result = subprocess.run(
             ["git", "log", "-1", "--format=%B"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         message = result.stdout.strip()
     except Exception:

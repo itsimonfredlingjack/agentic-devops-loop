@@ -2,6 +2,7 @@
 Unit tests for NewsService business logic.
 Tests use InMemoryRepository for isolation.
 """
+
 from datetime import datetime
 
 import pytest
@@ -23,7 +24,7 @@ class TestNewsServiceValidation:
         article = self.service.create_article(
             title="Testartikel",
             content="Detta är en testartikels innehåll som är långt nog.",
-            author="Test Författare"
+            author="Test Författare",
         )
 
         assert article.id is not None
@@ -38,7 +39,7 @@ class TestNewsServiceValidation:
             self.service.create_article(
                 title="",
                 content="Valid content here that is long enough.",
-                author="Test Author"
+                author="Test Author",
             )
 
         assert str(exc_info.value) == "Titel får inte vara tom"
@@ -49,7 +50,7 @@ class TestNewsServiceValidation:
             self.service.create_article(
                 title="   ",
                 content="Valid content here that is long enough.",
-                author="Test Author"
+                author="Test Author",
             )
 
         assert str(exc_info.value) == "Titel får inte vara tom"
@@ -58,9 +59,7 @@ class TestNewsServiceValidation:
         """Should reject content shorter than 10 characters."""
         with pytest.raises(ValidationError) as exc_info:
             self.service.create_article(
-                title="Valid Title",
-                content="Short",
-                author="Test Author"
+                title="Valid Title", content="Short", author="Test Author"
             )
 
         assert str(exc_info.value) == "Innehåll måste vara minst 10 tecken"
@@ -71,7 +70,7 @@ class TestNewsServiceValidation:
             self.service.create_article(
                 title="Valid Title",
                 content="Valid content here that is long enough.",
-                author=""
+                author="",
             )
 
         assert str(exc_info.value) == "Författare får inte vara tom"
@@ -82,7 +81,7 @@ class TestNewsServiceValidation:
         self.service.create_article(
             title="Duplicate Title",
             content="First article content that is long enough.",
-            author="First Author"
+            author="First Author",
         )
 
         # Second article with same title fails
@@ -90,7 +89,7 @@ class TestNewsServiceValidation:
             self.service.create_article(
                 title="Duplicate Title",
                 content="Second article content that is long enough.",
-                author="Second Author"
+                author="Second Author",
             )
 
         assert str(exc_info.value) == "En artikel med denna titel finns redan"
@@ -114,17 +113,17 @@ class TestNewsServiceRetrieval:
         article1 = self.service.create_article(
             title="First Article",
             content="First article content that is long enough.",
-            author="Author One"
+            author="Author One",
         )
         article2 = self.service.create_article(
             title="Second Article",
             content="Second article content that is long enough.",
-            author="Author Two"
+            author="Author Two",
         )
         article3 = self.service.create_article(
             title="Third Article",
             content="Third article content that is long enough.",
-            author="Author Three"
+            author="Author Three",
         )
 
         articles = self.service.get_all_articles()
@@ -139,7 +138,7 @@ class TestNewsServiceRetrieval:
         created = self.service.create_article(
             title="Test Article",
             content="Test article content that is long enough.",
-            author="Test Author"
+            author="Test Author",
         )
 
         retrieved = self.service.get_article_by_id(created.id)

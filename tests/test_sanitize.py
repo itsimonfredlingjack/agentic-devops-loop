@@ -24,39 +24,23 @@ class TestExtractAcceptanceCriteriaHeader:
 
     def test_definition_of_done_header(self):
         desc = (
-            "Description here.\n\n"
-            "Definition of Done:\n"
-            "1. Tests pass\n"
-            "2. Docs updated\n"
+            "Description here.\n\nDefinition of Done:\n1. Tests pass\n2. Docs updated\n"
         )
         result = sanitize.extract_acceptance_criteria(desc)
         assert result == ["Tests pass", "Docs updated"]
 
     def test_ac_abbreviation_header(self):
-        desc = (
-            "Summary.\n\n"
-            "AC:\n"
-            "- Feature works\n"
-            "- No regressions\n"
-        )
+        desc = "Summary.\n\nAC:\n- Feature works\n- No regressions\n"
         result = sanitize.extract_acceptance_criteria(desc)
         assert result == ["Feature works", "No regressions"]
 
     def test_header_with_numbered_list(self):
-        desc = (
-            "Acceptance Criteria:\n"
-            "1. First item\n"
-            "2. Second item\n"
-            "3. Third item\n"
-        )
+        desc = "Acceptance Criteria:\n1. First item\n2. Second item\n3. Third item\n"
         result = sanitize.extract_acceptance_criteria(desc)
         assert result == ["First item", "Second item", "Third item"]
 
     def test_header_case_insensitive(self):
-        desc = (
-            "acceptance criteria:\n"
-            "- lowercase header\n"
-        )
+        desc = "acceptance criteria:\n- lowercase header\n"
         result = sanitize.extract_acceptance_criteria(desc)
         assert result == ["lowercase header"]
 
@@ -65,21 +49,13 @@ class TestExtractCheckboxItems:
     """Pattern 2: Checkbox items anywhere in description."""
 
     def test_unchecked_checkboxes(self):
-        desc = (
-            "Some text\n"
-            "- [ ] Write tests\n"
-            "- [ ] Implement feature\n"
-            "More text\n"
-        )
+        desc = "Some text\n- [ ] Write tests\n- [ ] Implement feature\nMore text\n"
         result = sanitize.extract_acceptance_criteria(desc)
         assert "Write tests" in result
         assert "Implement feature" in result
 
     def test_mixed_checked_unchecked(self):
-        desc = (
-            "- [x] Already done\n"
-            "- [ ] Still pending\n"
-        )
+        desc = "- [x] Already done\n- [ ] Still pending\n"
         result = sanitize.extract_acceptance_criteria(desc)
         assert "Already done" in result
         assert "Still pending" in result
@@ -151,22 +127,12 @@ class TestEdgeCases:
         assert "ignore previous instructions" not in result[1]
 
     def test_deduplication_preserves_order(self):
-        desc = (
-            "Acceptance Criteria:\n"
-            "- First\n"
-            "- Second\n"
-            "- First\n"
-            "- Third\n"
-        )
+        desc = "Acceptance Criteria:\n- First\n- Second\n- First\n- Third\n"
         result = sanitize.extract_acceptance_criteria(desc)
         assert result == ["First", "Second", "Third"]
 
     def test_combined_patterns_no_duplicates(self):
-        desc = (
-            "Acceptance Criteria:\n"
-            "- [ ] Write tests\n"
-            "- [ ] Deploy to staging\n"
-        )
+        desc = "Acceptance Criteria:\n- [ ] Write tests\n- [ ] Deploy to staging\n"
         result = sanitize.extract_acceptance_criteria(desc)
         # Should not duplicate because checkboxes are under the header
         assert len(result) == len(set(result))
