@@ -75,3 +75,4 @@ instance/
 
 # Generated docs
 SEJFA_Changelog.docx
+node_modules/

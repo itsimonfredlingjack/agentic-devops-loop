@@ -1,7 +1,7 @@
 [project]
-name = "grupp-ett-github"
+name = "agentic-devops-loop"
 version = "0.1.0"
-description = "Agentic Dev Loop - skolprojekt"
+description = "Autonomous AI-driven DevOps pipeline — from Jira ticket to Azure deployment, untouched by human hands"
 requires-python = ">=3.10"
 dependencies = [
     "flask>=3.0.0",
