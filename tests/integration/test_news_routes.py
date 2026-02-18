@@ -26,16 +26,17 @@ class TestArticleListRoute:
 
     def test_get_empty_article_list(self, client):
         """Should display page with title when no articles exist."""
-        response = client.get("/")
+        # Legacy news app is now mounted at /legacy
+        response = client.get("/legacy/")
 
         assert response.status_code == 200
         assert "Nyhetsarkiv" in response.get_data(as_text=True)
 
     def test_get_article_list_with_articles(self, client):
         """Should display article titles when articles exist."""
-        # Create test articles
+        # Create test articles via legacy path
         client.post(
-            "/article/new",
+            "/legacy/article/new",
             data={
                 "title": "Första artikeln",
                 "content": "Detta är första artikelns innehåll.",
@@ -43,7 +44,7 @@ class TestArticleListRoute:
             },
         )
         client.post(
-            "/article/new",
+            "/legacy/article/new",
             data={
                 "title": "Andra artikeln",
                 "content": "Detta är andra artikelns innehåll.",
@@ -51,7 +52,7 @@ class TestArticleListRoute:
             },
         )
 
-        response = client.get("/")
+        response = client.get("/legacy/")
 
         assert response.status_code == 200
         html = response.get_data(as_text=True)
@@ -64,7 +65,7 @@ class TestArticleCreationForm:
 
     def test_get_new_article_form(self, client):
         """Should display form with required fields."""
-        response = client.get("/article/new")
+        response = client.get("/legacy/article/new")
 
         assert response.status_code == 200
         html = response.get_data(as_text=True)
@@ -79,7 +80,7 @@ class TestArticleCreation:
     def test_create_valid_article_redirects_to_list(self, client):
         """Should create article and redirect to list on success."""
         response = client.post(
-            "/article/new",
+            "/legacy/article/new",
             data={
                 "title": "Test Artikel",
                 "content": "Detta är testartikels innehåll.",
@@ -89,12 +90,14 @@ class TestArticleCreation:
         )
 
         assert response.status_code == 302
-        assert response.location == "/"
+        # Redirect location is usually relative or absolute depending on Flask config
+        # With url_prefix, it should redirect to /legacy/
+        assert "/legacy/" in response.location
 
     def test_create_article_with_empty_title_returns_error(self, client):
         """Should return 400 with error message for empty title."""
         response = client.post(
-            "/article/new",
+            "/legacy/article/new",
             data={
                 "title": "",
                 "content": "Valid content here.",
@@ -114,7 +117,7 @@ class TestArticleDetail:
         """Should display full article content."""
         # Create article first
         client.post(
-            "/article/new",
+            "/legacy/article/new",
             data={
                 "title": "Detail Test",
                 "content": "This is the full content of the article.",
@@ -122,7 +125,7 @@ class TestArticleDetail:
             },
         )
 
-        response = client.get("/article/1")
+        response = client.get("/legacy/article/1")
 
         assert response.status_code == 200
         html = response.get_data(as_text=True)
@@ -132,6 +135,6 @@ class TestArticleDetail:
 
     def test_get_nonexistent_article_returns_404(self, client):
         """Should return 404 for non-existent article."""
-        response = client.get("/article/999")
+        response = client.get("/legacy/article/999")
 
         assert response.status_code == 404

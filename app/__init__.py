@@ -36,6 +36,10 @@ def create_app(config_name="default"):
     # Register blueprints
     from app.presentation.routes.news_routes import news_bp
     from app.presentation.routes.system_routes import system_bp
+    from src.expense_tracker.business.service import ExpenseService
+    from src.expense_tracker.data.repository import InMemoryExpenseRepository
+    from src.expense_tracker.presentation.routes import create_expense_blueprint
+    from src.sejfa.core.presentation.routes import create_admin_blueprint
     from src.sejfa.newsflash.business.subscription_service import SubscriptionService
     from src.sejfa.newsflash.data.models import db
     from src.sejfa.newsflash.data.subscriber_repository import SubscriberRepository
@@ -50,14 +54,21 @@ def create_app(config_name="default"):
     app.register_blueprint(system_bp)
 
     # Register News Flash blueprint
-    # In a real app, these dependencies should be injected or managed via a container
-    # For testing, we instantiate them here to ensure the blueprint is registered
     subscriber_repository = SubscriberRepository()
     subscription_service = SubscriptionService(repository=subscriber_repository)
     newsflash_blueprint = create_newsflash_blueprint(
         subscription_service=subscription_service
     )
-
     app.register_blueprint(newsflash_blueprint)
+
+    # Register Admin Blueprint
+    admin_blueprint = create_admin_blueprint(subscriber_repository)
+    app.register_blueprint(admin_blueprint)
+
+    # Register Expense Tracker blueprint
+    expense_repository = InMemoryExpenseRepository()
+    expense_service = ExpenseService(expense_repository)
+    expense_blueprint = create_expense_blueprint(expense_service)
+    app.register_blueprint(expense_blueprint, url_prefix="/expenses")
 
     return app
