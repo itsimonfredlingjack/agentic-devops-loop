@@ -43,7 +43,8 @@ def load_credentials(env_path: str | None = None) -> dict:
         ValueError: If required credentials are missing.
     """
     env_vars: dict[str, str] = {}
-    for key in ("JIRA_URL", "JIRA_USERNAME", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_TOKEN"):
+    keys = ("JIRA_URL", "JIRA_USERNAME", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_TOKEN")
+    for key in keys:
         value = os.environ.get(key)
         if value:
             env_vars[key] = value
@@ -118,7 +119,9 @@ def build_headers(creds: dict) -> dict:
     }
 
 
-def _api_request(creds: dict, method: str, path: str, data: dict | None = None) -> dict | None:
+def _api_request(
+    creds: dict, method: str, path: str, data: dict | None = None
+) -> dict | None:
     """Make an authenticated Jira API request.
 
     Args:
@@ -270,7 +273,10 @@ def cli(args: list[str]) -> int:
     """
     if not args:
         print("Usage: jira_api.py <command> [args...]", file=sys.stderr)
-        print("Commands: ping, get-issue, transition-issue, add-comment, search", file=sys.stderr)
+        print(
+            "Commands: ping, get-issue, transition-issue, add-comment, search",
+            file=sys.stderr,
+        )
         return 1
 
     command = args[0]
@@ -303,7 +309,10 @@ def cli(args: list[str]) -> int:
 
         elif command == "transition-issue":
             if len(args) < 3:
-                print("Usage: jira_api.py transition-issue ISSUE_KEY STATUS", file=sys.stderr)
+                print(
+                    "Usage: jira_api.py transition-issue ISSUE_KEY STATUS",
+                    file=sys.stderr,
+                )
                 return 1
             transition_issue(creds, args[1], args[2])
             print(f"Transitioned {args[1]} to {args[2]}")
@@ -311,7 +320,9 @@ def cli(args: list[str]) -> int:
 
         elif command == "add-comment":
             if len(args) < 3:
-                print("Usage: jira_api.py add-comment ISSUE_KEY 'text'", file=sys.stderr)
+                print(
+                    "Usage: jira_api.py add-comment ISSUE_KEY 'text'", file=sys.stderr
+                )
                 return 1
             add_comment(creds, args[1], args[2])
             print(f"Comment added to {args[1]}")
@@ -328,7 +339,10 @@ def cli(args: list[str]) -> int:
 
         else:
             print(f"Unknown command: {command}", file=sys.stderr)
-            print("Commands: ping, get-issue, transition-issue, add-comment, search", file=sys.stderr)
+            print(
+                "Commands: ping, get-issue, transition-issue, add-comment, search",
+                file=sys.stderr,
+            )
             return 1
 
     except JiraAPIError as e:

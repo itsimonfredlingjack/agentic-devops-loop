@@ -1,7 +1,7 @@
 [project]
-name = "agentic-devops-loop"
+name = "grupp-ett-github"
 version = "0.1.0"
-description = "Autonomous AI-driven DevOps pipeline — from Jira ticket to Azure deployment, untouched by human hands"
+description = "Agentic Dev Loop - skolprojekt"
 requires-python = ">=3.10"
 dependencies = [
     "flask>=3.0.0",
@@ -25,6 +25,7 @@ exclude = [
     ".git",
     ".pytest_cache",
     "migrations",
+    "node_modules",
 ]
 line-length = 88
 target-version = "py310"

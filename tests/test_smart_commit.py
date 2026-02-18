@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / ".claude" / "uti
 
 import smart_commit
 
-
 # ---------------------------------------------------------------------------
 # Jira ID extraction
 # ---------------------------------------------------------------------------
@@ -45,7 +44,9 @@ class TestParseDirectives:
     """Parse smart commit directives from message."""
 
     def test_comment_directive(self):
-        directives = smart_commit.parse_directives("PROJ-1: stuff #comment This is a comment")
+        directives = smart_commit.parse_directives(
+            "PROJ-1: stuff #comment This is a comment"
+        )
         assert ("comment", "This is a comment") in directives
 
     def test_status_directive_in_progress(self):

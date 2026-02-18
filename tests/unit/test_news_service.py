@@ -2,11 +2,12 @@
 Unit tests for NewsService business logic.
 Tests use InMemoryRepository for isolation.
 """
-import pytest
 from datetime import datetime
+
+import pytest
+
 from app.business.news_service import NewsService, ValidationError
 from app.data.repositories.news_repository import InMemoryNewsRepository
-from app.data.models.news_article import NewsArticle
 
 
 class TestNewsServiceValidation:

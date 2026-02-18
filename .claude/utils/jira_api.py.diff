@@ -1,0 +1,78 @@
+<<<<<<< SEARCH
+    env_vars: dict[str, str] = {}
+    for key in ("JIRA_URL", "JIRA_USERNAME", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_TOKEN"):
+        value = os.environ.get(key)
+=======
+    env_vars: dict[str, str] = {}
+    keys = ("JIRA_URL", "JIRA_USERNAME", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_TOKEN")
+    for key in keys:
+        value = os.environ.get(key)
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+def _api_request(creds: dict, method: str, path: str, data: dict | None = None) -> dict | None:
+    """Make an authenticated Jira API request.
+=======
+def _api_request(
+    creds: dict, method: str, path: str, data: dict | None = None
+) -> dict | None:
+    """Make an authenticated Jira API request.
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    if not args:
+        print("Usage: jira_api.py <command> [args...]", file=sys.stderr)
+        print("Commands: ping, get-issue, transition-issue, add-comment, search", file=sys.stderr)
+        return 1
+=======
+    if not args:
+        print("Usage: jira_api.py <command> [args...]", file=sys.stderr)
+        print(
+            "Commands: ping, get-issue, transition-issue, add-comment, search",
+            file=sys.stderr,
+        )
+        return 1
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        elif command == "transition-issue":
+            if len(args) < 3:
+                print("Usage: jira_api.py transition-issue ISSUE_KEY STATUS", file=sys.stderr)
+                return 1
+            transition_issue(creds, args[1], args[2])
+=======
+        elif command == "transition-issue":
+            if len(args) < 3:
+                print(
+                    "Usage: jira_api.py transition-issue ISSUE_KEY STATUS",
+                    file=sys.stderr,
+                )
+                return 1
+            transition_issue(creds, args[1], args[2])
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        elif command == "add-comment":
+            if len(args) < 3:
+                print("Usage: jira_api.py add-comment ISSUE_KEY 'text'", file=sys.stderr)
+                return 1
+            add_comment(creds, args[1], args[2])
+=======
+        elif command == "add-comment":
+            if len(args) < 3:
+                print(
+                    "Usage: jira_api.py add-comment ISSUE_KEY 'text'", file=sys.stderr
+                )
+                return 1
+            add_comment(creds, args[1], args[2])
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        else:
+            print(f"Unknown command: {command}", file=sys.stderr)
+            print("Commands: ping, get-issue, transition-issue, add-comment, search", file=sys.stderr)
+            return 1
+=======
+        else:
+            print(f"Unknown command: {command}", file=sys.stderr)
+            print(
+                "Commands: ping, get-issue, transition-issue, add-comment, search",
+                file=sys.stderr,
+            )
+            return 1
+>>>>>>> REPLACE

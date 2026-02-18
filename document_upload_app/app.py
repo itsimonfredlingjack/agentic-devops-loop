@@ -1,7 +1,8 @@
 """Flask application for document upload with glass morphism design."""
-from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 from pathlib import Path
+
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 

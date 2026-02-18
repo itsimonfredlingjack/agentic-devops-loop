@@ -17,7 +17,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-
 # Maps directive keywords to (action_type, value)
 _STATUS_MAP = {
     "in-progress": "In Progress",
@@ -120,9 +119,13 @@ def dispatch(
     for action_type, value in directives:
         try:
             if action_type == "comment":
-                cmd = _build_comment_cmd(backend, shell_script, python_module, issue_key, value)
+                cmd = _build_comment_cmd(
+                    backend, shell_script, python_module, issue_key, value
+                )
             elif action_type == "transition":
-                cmd = _build_transition_cmd(backend, shell_script, python_module, issue_key, value)
+                cmd = _build_transition_cmd(
+                    backend, shell_script, python_module, issue_key, value
+                )
             else:
                 continue
 

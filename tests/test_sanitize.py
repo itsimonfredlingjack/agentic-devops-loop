@@ -133,7 +133,9 @@ class TestEdgeCases:
         assert result == []
 
     def test_no_criteria_found(self):
-        result = sanitize.extract_acceptance_criteria("Just a plain description with no criteria.")
+        result = sanitize.extract_acceptance_criteria(
+            "Just a plain description with no criteria."
+        )
         assert result == []
 
     def test_injection_patterns_removed(self):

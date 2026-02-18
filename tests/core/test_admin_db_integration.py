@@ -14,12 +14,7 @@ from src.sejfa.newsflash.data.models import Subscriber, db
 @pytest.fixture
 def app():
     """Create test app with in-memory SQLite database."""
-    app = create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        }
-    )
+    app = create_app("testing")
     return app
 
 

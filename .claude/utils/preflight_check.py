@@ -3,13 +3,12 @@
 Preflight validation for starting new tasks.
 """
 
-import subprocess
 import json
+import subprocess
 from pathlib import Path
-from typing import Dict, Tuple
 
 
-def check_git_status() -> Tuple[bool, str]:
+def check_git_status() -> tuple[bool, str]:
     """Check if working tree is clean."""
     try:
         result = subprocess.run(
@@ -28,7 +27,7 @@ def check_git_status() -> Tuple[bool, str]:
         return False, str(e)
 
 
-def check_git_branch() -> Tuple[bool, str]:
+def check_git_branch() -> tuple[bool, str]:
     """Check if on main/master branch."""
     try:
         result = subprocess.run(
@@ -48,7 +47,7 @@ def check_git_branch() -> Tuple[bool, str]:
         return False, str(e)
 
 
-def check_env_file() -> Tuple[bool, str]:
+def check_env_file() -> tuple[bool, str]:
     """Check if .env exists and has Jira credentials."""
     env_path = Path.cwd() / ".env"
 
@@ -76,7 +75,7 @@ def check_env_file() -> Tuple[bool, str]:
         return False, str(e)
 
 
-def check_current_task() -> Tuple[bool, str]:
+def check_current_task() -> tuple[bool, str]:
     """Check CURRENT_TASK.md state."""
     task_file = Path.cwd() / "docs" / "CURRENT_TASK.md"
 
@@ -95,7 +94,7 @@ def check_current_task() -> Tuple[bool, str]:
         return False, str(e)
 
 
-def check_ralph_config() -> Tuple[bool, str]:
+def check_ralph_config() -> tuple[bool, str]:
     """Check if ralph-config.json exists and valid."""
     config_path = Path.cwd() / ".claude" / "ralph-config.json"
 
@@ -111,7 +110,7 @@ def check_ralph_config() -> Tuple[bool, str]:
         return False, f"ralph-config.json invalid: {str(e)}"
 
 
-def run_preflight() -> Dict:
+def run_preflight() -> dict:
     """Run all preflight checks."""
     checks = {
         "Git status": check_git_status(),
@@ -124,7 +123,7 @@ def run_preflight() -> Dict:
     return checks
 
 
-def format_output(checks: Dict) -> str:
+def format_output(checks: dict) -> str:
     """Format checks for display."""
     lines = [
         "PREFLIGHT CHECKS",

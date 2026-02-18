@@ -2,10 +2,12 @@
 Flask application factory.
 """
 import os
+
 from flask import Flask
-from config import config
+
 from app.business.news_service import NewsService
 from app.data.repositories.news_repository import InMemoryNewsRepository
+from config import config
 
 
 def create_app(config_name='default'):

@@ -3,6 +3,7 @@ Integration tests for news article routes.
 Tests use Flask test client.
 """
 import pytest
+
 from app import create_app
 
 

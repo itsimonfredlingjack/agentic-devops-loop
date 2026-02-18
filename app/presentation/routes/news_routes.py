@@ -1,7 +1,8 @@
 """
 Routes for news article presentation.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, current_app
+from flask import Blueprint, current_app, redirect, render_template, request, url_for
+
 from app.business.news_service import ValidationError
 
 news_bp = Blueprint('news', __name__)

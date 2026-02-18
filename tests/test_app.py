@@ -13,12 +13,7 @@ def client() -> FlaskClient:
     Returns:
         FlaskClient: Test client instance.
     """
-    app = create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        }
-    )
+    app = create_app("testing")
     with app.test_client() as client:
         yield client
 
@@ -116,22 +111,12 @@ class TestAppCreation:
         """Test that create_app returns a Flask instance."""
         from flask import Flask
 
-        app = create_app(
-            {
-                "TESTING": True,
-                "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-            }
-        )
+        app = create_app("testing")
         assert isinstance(app, Flask)
 
     def test_create_app_has_routes(self) -> None:
         """Test that created app has expected routes."""
-        app = create_app(
-            {
-                "TESTING": True,
-                "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-            }
-        )
+        app = create_app("testing")
         rules = [rule.rule for rule in app.url_map.iter_rules()]
         assert "/" in rules
         assert "/api" in rules

@@ -1,7 +1,8 @@
 """
 Repository pattern for NewsArticle persistence.
 """
-from typing import Protocol, Optional
+from typing import Protocol
+
 from app.data.models.news_article import NewsArticle
 
 
@@ -12,7 +13,7 @@ class NewsRepository(Protocol):
         """Add article to repository and return it with assigned ID."""
         ...
 
-    def get_by_id(self, article_id: int) -> Optional[NewsArticle]:
+    def get_by_id(self, article_id: int) -> NewsArticle | None:
         """Retrieve article by ID, or None if not found."""
         ...
 
@@ -40,7 +41,7 @@ class InMemoryNewsRepository:
         self._next_id += 1
         return article
 
-    def get_by_id(self, article_id: int) -> Optional[NewsArticle]:
+    def get_by_id(self, article_id: int) -> NewsArticle | None:
         """Retrieve article by ID, or None if not found."""
         return self._articles.get(article_id)
 

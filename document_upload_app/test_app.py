@@ -1,6 +1,8 @@
 """Tests for the document upload Flask app."""
-import pytest
 from datetime import datetime
+
+import pytest
+
 from app import app, format_filename
 
 

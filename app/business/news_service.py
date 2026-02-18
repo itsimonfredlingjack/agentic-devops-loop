@@ -2,6 +2,7 @@
 Business logic for news article management.
 """
 from datetime import datetime
+
 from app.data.models.news_article import NewsArticle
 from app.data.repositories.news_repository import NewsRepository
 
