@@ -72,6 +72,10 @@ instance/
 # Node
 node_modules/
 
+# Rust/Tauri
+target/
+Cargo.lock
+
 # FUSE mount artifacts (Cowork sandbox)
 .fuse_hidden*
 **/.fuse_hidden*
