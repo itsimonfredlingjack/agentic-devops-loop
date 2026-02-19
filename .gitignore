@@ -78,3 +78,6 @@ node_modules/
 
 # Generated docs
 SEJFA_Changelog.docx
+
+# Poetry (project uses requirements.txt)
+poetry.lock
