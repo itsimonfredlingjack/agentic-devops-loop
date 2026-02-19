@@ -1,6 +1,6 @@
 # AGENTIC DEVOPS LOOP — OPERATIV DOKUMENTATION
 
-> Single source of truth för grupp-ett-github (SEJFA).
+> Single source of truth för agentic-devops-loop.
 > Senast verifierad: 2026-02-11 mot faktisk repo-audit.
 > Alla påståenden i detta dokument är verifierade mot repots faktiska innehåll om inte markerade med ⚠️.
 
@@ -10,7 +10,7 @@
 
 ### Vad det ÄR
 
-En Flask-applikation ("SEJFA") med en agentic DevOps-loop byggd ovanpå Claude Code. Hela idén är att automatisera flödet från Jira-ticket till deploy utan manuell intervention.
+En voice pipeline (FastAPI) med en agentic DevOps-loop byggd ovanpå Claude Code. Hela idén är att automatisera flödet från Jira-ticket till deploy utan manuell intervention.
 
 ### Vad som BORDE hända
 
@@ -22,7 +22,7 @@ Jira ticket (GE-xxx)
     → CI kör (lint + test)
     → Jules AI reviewar PR
     → gh pr merge --squash (direkt efter CI passerar)
-    → deploy.yml bygger Docker → ACR → Azure Container Apps
+    → deploy.yml bygger och deployer
     → post_deploy_verify.yml hälsokontroll (5 retries × 10s)
     → OK? → Jira-kommentar "✅ Deployed & Verified"
     → FAIL? → Rollback till föregående revision + Jira-kommentar "❌ Rolled back"
@@ -72,7 +72,7 @@ Filer: `.github/workflows/ci.yml`, `.github/workflows/ci_branch.yml`
 Fil: `.github/workflows/deploy.yml`
 
 - Triggas på push till `main`
-- Bygger Docker image → pushar till Azure Container Registry → deployer till Azure Container Apps
+- Bygger och deployer applikationen.
 - Fungerar — MEN triggas bara om något mergas till main, vilket inte sker automatiskt.
 
 #### Branch Cleanup
@@ -82,13 +82,10 @@ Fil: `.github/workflows/cleanup-branches.yml`
 - Har dry-run-läge och `production` environment gate.
 
 #### Applikationsarkitektur
-Tre-lager Flask-app med ren separation:
-- `src/sejfa/newsflash/` — data/business/presentation (SQLAlchemy)
-- `src/expense_tracker/` — data/business/presentation (in-memory)
-- `src/sejfa/core/` — admin auth, subscriber service (legacy)
-- `src/sejfa/monitor/` — monitor service + routes (server-sidan finns men hooks skickar inget)
-
-243 tester. SQLAlchemy + Flask-Migrate. Gunicorn.
+Voice pipeline (FastAPI) med modulär separation:
+- `src/voice_pipeline/` — transcriber, intent extraction, Jira integration, pipeline orchestration
+- `src/sejfa/integrations/` — Jira API-klient
+- `src/sejfa/monitor/` — monitor service (hooks skickar inget just nu)
 
 ---
 
@@ -108,7 +105,7 @@ Tre-lager Flask-app med ren separation:
 
 #### Problem 3: Monitor-dashboard är död
 
-**Symptom:** Dashboarden på `gruppett.fredlingautomation.dev/static/monitor.html` visar inget.
+**Symptom:** Monitor-dashboarden visar inget.
 
 **Analys:**
 Två hooks ska skicka uppdateringar till dashboarden:
@@ -117,7 +114,7 @@ Två hooks ska skicka uppdateringar till dashboarden:
 
 Båda importerar från `monitor_client.py` som ligger i samma mapp. ~~Men **Python hittar inte filen** pga trasig import-path.~~ ✅ Import-path fixad (2026-02-11): Båda hooks har nu `sys.path.insert(0, str(HOOKS_DIR))` innan importen.
 
-**Kvarvarande problem:** `monitor_client.py` pratar med `http://localhost:5000` — fungerar bara om Flask-appen körs på samma maskin som Claude Code. I Cowork-sandbox eller CI-kontext nås servern aldrig. Fail-silent dock (try/except), så det skadar inget.
+**Kvarvarande problem:** `monitor_client.py` pratar med en lokal server — fungerar bara om appen körs på samma maskin som Claude Code. I Cowork-sandbox eller CI-kontext nås servern aldrig. Fail-silent dock (try/except), så det skadar inget.
 
 #### Problem 4: Jules-integration är overifierad
 
@@ -155,9 +152,7 @@ Problem:
 
 ### ⚠️ SÄKERHETSPROBLEM
 
-1. **Hardcoded credentials** — `src/sejfa/core/admin_auth.py` har default admin/admin123
-2. **`self_healing.yml` RCE-risk** — `contents: write` + checkout av untrusted code
-3. **Flask secret key** — troligen hardcoded i `app.py` (ej verifierat i audit men flaggat tidigare)
+1. **`self_healing.yml` RCE-risk** — `contents: write` + checkout av untrusted code
 
 ---
 
@@ -168,7 +163,7 @@ Problem:
 |-----|--------|----------|
 | `ci.yml` | ✅ | Lint + test på PRs/push till main |
 | `ci_branch.yml` | ✅ | Lint + test på feature branches |
-| `deploy.yml` | ✅ (men triggas aldrig pga ingen merge) | Docker → ACR → Azure |
+| `deploy.yml` | ✅ (men triggas aldrig pga ingen merge) | Docker build & deploy |
 | `post_deploy_verify.yml` | ✅ NY | Hälsokontroll → rollback vid fail → Jira-uppdatering |
 | `cleanup-branches.yml` | ✅ | Städar mergade branches dagligen |
 | `jules_review.yml` | ❓ Overifierad (✅ statuses: write fixad, ✅ recursion guard tillagd) | AI code review på PRs |
@@ -181,7 +176,7 @@ Problem:
 |-----|--------|----------|
 | `stop-hook.py` | ✅ Logiken funkar, ✅ monitor-import fixad | Ralph Loop enforcer |
 | `monitor_hook.py` | ✅ Import fixad, ❌ server onåbar i sandbox/CI | Ska skicka tool-use events till dashboard |
-| `monitor_client.py` | ✅ Hittas av hooks (sys.path fix), ❌ localhost:5000 onåbar | HTTP-klient för monitor API |
+| `monitor_client.py` | ✅ Hittas av hooks (sys.path fix), ❌ lokal server onåbar | HTTP-klient för monitor API |
 | `prevent-push.py` | ⚠️ Läser fel CURRENT_TASK.md | Blockerar push vid no-push markers |
 
 ### Skills (2 st)
@@ -226,9 +221,7 @@ Problem:
 
 ### För Cockpit-Claude (orchestration)
 1. Lita BARA på denna fil för systembeskrivning
-2. Repot finns på: `https://github.com/itsimonfredlingjack/grupp-ett-github.git`
-3. Förväxla INTE med Simons privata repo: `https://github.com/itsimonfredlingjack/agentic-dev-loop-w-claude-code-and-github-actions.git`
-4. Deploy sker via Cloudflare Tunnel → `gruppett.fredlingautomation.dev`
+2. Repot finns på: `https://github.com/itsimonfredlingjack/agentic-devops-loop.git`
 
 ---
 
@@ -243,7 +236,6 @@ Problem:
 | 5 | Verifiera Jules action-referens | Kolla Actions-historik | Om ogiltig funkar inget Jules-relaterat |
 | 6 | ~~Claude avslutar innan finish-task~~ | ✅ LÖST | finish-task inlinad i start-task loopen |
 | 7 | self_healing.yml säkerhetsrisk | Medium (ta bort contents: write) | RCE-risk |
-| 8 | Hardcoded credentials | Medium | Säkerhetsrisk |
 | 9 | ~~Jules 403 vid commit status~~ | ✅ LÖST | `statuses: write` tillagd i jules_review.yml |
 | 10 | ~~Post-deploy verification saknas~~ | ✅ LÖST | `post_deploy_verify.yml` — hälsokontroll + rollback + Jira |
 | 11 | ~~Jules skapar PRs istf kommentarer~~ | ✅ LÖST | jules-action ersatt med direkt Jules API (session utan automationMode) |

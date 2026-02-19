@@ -10,8 +10,8 @@ All failures are silently ignored to never block Claude.
 import atexit
 import json
 import threading
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 MONITOR_BASE_URL = "https://agent-monitor.fredlingautomation.dev"
 TIMEOUT_SECONDS = 3

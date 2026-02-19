@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / ".claude" / "uti
 
 import smart_commit
 
-
 # ---------------------------------------------------------------------------
 # Jira ID extraction
 # ---------------------------------------------------------------------------

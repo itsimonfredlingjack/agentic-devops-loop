@@ -32,12 +32,13 @@ if str(HOOKS_DIR) not in sys.path:
 # Monitor integration - sends real-time updates to the dashboard
 try:
     from monitor_client import (
-        activate_claude,
         activate_actions,
+        activate_claude,
         activate_jira,
-        start_task,
         complete_task,
+        start_task,
     )
+
     MONITOR_AVAILABLE = True
 except ImportError:
     MONITOR_AVAILABLE = False
@@ -45,16 +46,6 @@ except ImportError:
 DEFAULT_PROMISE = "<promise>DONE</promise>"
 JIRA_KEY_RE = re.compile(r"[A-Z]+-[0-9]+")
 
-# UI scope guard — keywords that indicate a UI/theme ticket
-UI_KEYWORDS = re.compile(
-    r"(theme|tema|design|ui|frontend|color|colour|dark|morphism|reskin|style|css)",
-    re.IGNORECASE,
-)
-# Flask-served paths that MUST be touched for UI tickets to affect production
-FLASK_UI_PATHS = (
-    "src/sejfa/newsflash/presentation/",
-    "src/expense_tracker/templates/",
-)
 
 LOOP_FLAG = Path.cwd() / ".claude" / ".ralph_loop_active"
 STATE_FILE = Path.cwd() / ".claude" / "ralph-state.json"
@@ -362,7 +353,10 @@ def _save_progress_on_max_iterations(max_iterations: int) -> None:
         # Check for uncommitted changes
         status_result = subprocess.run(
             ["git", "status", "--porcelain"],
-            capture_output=True, text=True, timeout=10, check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
         )
         if status_result.returncode != 0:
             return
@@ -371,18 +365,28 @@ def _save_progress_on_max_iterations(max_iterations: int) -> None:
         if has_changes:
             subprocess.run(
                 ["git", "add", "-u"],
-                capture_output=True, timeout=10, check=False,
+                capture_output=True,
+                timeout=10,
+                check=False,
             )
             subprocess.run(
-                ["git", "commit", "-m",
-                 f"WIP: max iterations ({max_iterations}) reached - saving progress"],
-                capture_output=True, timeout=10, check=False,
+                [
+                    "git",
+                    "commit",
+                    "-m",
+                    f"WIP: max iterations ({max_iterations}) reached - saving progress",
+                ],
+                capture_output=True,
+                timeout=10,
+                check=False,
             )
 
         # Push the branch
         subprocess.run(
             ["git", "push", "-u", "origin", branch],
-            capture_output=True, timeout=30, check=False,
+            capture_output=True,
+            timeout=30,
+            check=False,
         )
 
         # Create draft PR
@@ -398,69 +402,14 @@ def _save_progress_on_max_iterations(max_iterations: int) -> None:
         )
 
         subprocess.run(
-            ["gh", "pr", "create", "--draft",
-             "--title", pr_title,
-             "--body", pr_body],
-            capture_output=True, timeout=30, check=False,
+            ["gh", "pr", "create", "--draft", "--title", pr_title, "--body", pr_body],
+            capture_output=True,
+            timeout=30,
+            check=False,
         )
     except Exception:
         # Best-effort only — never prevent exit
         pass
-
-
-def check_ui_scope() -> tuple[bool, str]:
-    """Verify that UI-themed tickets actually changed Flask-served files.
-
-    Returns (ok, message). ok=False means the scope check failed and the
-    loop should be blocked from exiting.
-    """
-    branch = get_git_branch() or ""
-    if not UI_KEYWORDS.search(branch):
-        return True, ""
-
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "main...HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        if result.returncode != 0:
-            return True, ""  # Can't determine — don't block
-        changed = result.stdout.strip().splitlines()
-    except Exception:
-        return True, ""
-
-    if not changed:
-        return True, ""
-
-    touches_flask = any(
-        f.startswith(prefix) for f in changed for prefix in FLASK_UI_PATHS
-    )
-
-    if touches_flask:
-        return True, ""
-
-    only_monitor = all(
-        f in ("static/monitor.html", "CURRENT_TASK.md")
-        or f.startswith("scripts/")
-        or f.startswith(".claude/")
-        or f.startswith("tests/")
-        for f in changed
-    )
-
-    if only_monitor:
-        return False, (
-            f"UI SCOPE GUARD BLOCKED EXIT: Branch '{branch}' looks like a "
-            f"UI/theme ticket but NO Flask template files were changed. "
-            f"Changed files: {changed}. "
-            f"You MUST edit Flask templates in {FLASK_UI_PATHS} for "
-            f"changes to appear on Azure production. "
-            f"See the production file map in CLAUDE.md."
-        )
-
-    return True, ""
 
 
 def check_pr_merged() -> tuple[bool, str]:
@@ -502,8 +451,8 @@ def check_pr_merged() -> tuple[bool, str]:
             return False, (
                 f"PR MERGE GATE BLOCKED EXIT: PR {pr_url} is still OPEN and "
                 f"auto-merge is NOT enabled. The PR must be merged for code to "
-                f"reach main. Try: gh pr merge --squash --admin \"{pr_url}\" "
-                f"or gh pr merge --squash \"{pr_url}\""
+                f'reach main. Try: gh pr merge --squash --admin "{pr_url}" '
+                f'or gh pr merge --squash "{pr_url}"'
             )
 
         # CLOSED without merge or other state — warn but don't block
@@ -542,7 +491,9 @@ def main() -> None:
         if not should_enforce_exit_policy(hook_input):
             sys.exit(0)
 
-        active_loop = bool(loop_guard_active() or LOOP_FLAG.exists() or hook_input.get("completion_promise"))
+        active_loop = bool(
+            loop_guard_active() or LOOP_FLAG.exists() or hook_input.get("completion_promise")
+        )
         if active_loop:
             ensure_loop_guard(hook_input)
 
@@ -672,23 +623,6 @@ def main() -> None:
             json.dump(response, sys.stderr)
             sys.exit(2)
 
-        # UI scope verification — prevents completing tickets that changed wrong files
-        scope_ok, scope_msg = check_ui_scope()
-        if not scope_ok:
-            response = build_continue_message(
-                f"UI scope check failed (iteration {current_iteration}/{max_iterations}): {scope_msg}",
-                [
-                    "You changed the WRONG files for this UI ticket!",
-                    "Edit Flask templates in src/sejfa/newsflash/presentation/templates/ "
-                    "and/or src/expense_tracker/templates/",
-                    "Do NOT edit static/monitor.html for app UI tickets",
-                    "See CLAUDE.md 'Produktions-filkarta' for the correct files",
-                    f"When fixed, output: {completion_promise}",
-                ],
-            )
-            json.dump(response, sys.stderr)
-            sys.exit(2)
-
         # PR merge verification — prevents DONE when PR is not merged
         pr_ok, pr_msg = check_pr_merged()
         if not pr_ok:
@@ -722,7 +656,9 @@ def main() -> None:
             json.dump(response, sys.stderr)
             sys.exit(2)
 
-        json.dump({"decision": "allow", "action": "allow_exit_on_error", "error": str(e)}, sys.stderr)
+        json.dump(
+            {"decision": "allow", "action": "allow_exit_on_error", "error": str(e)}, sys.stderr
+        )
         sys.exit(0)
 
 

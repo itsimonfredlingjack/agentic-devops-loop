@@ -4,90 +4,54 @@
 
 1. **Las CURRENT_TASK.md forst** - Det ar ditt externa minne
 2. **Uppdatera CURRENT_TASK.md efter varje iteration** - Logga framsteg
-3. **Kor tester efter varje kodandring** - `source venv/bin/activate && pytest -xvs`
-4. **Commit-format:** `GE-XXX: [beskrivning]`
-5. **Branch-namngivning:** `feature/GE-XXX-kort-beskrivning`
-6. **PRODUKTION:** https://gruppett.fredlingautomation.dev (Cloudflare Tunnel -> localhost:5000) - Se [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)
-
----
-
-## KRITISKT: Produktions-filkarta (vad Azure FAKTISKT serverar)
-
-**Om du andrar UI/frontend MASTE du andra filerna nedan. Annars syns INGENTING pa Azure.**
-
-### Flask-renderade templates (DET HAR ar produktions-UI:t)
-
-| Route | Template-fil |
-|-------|-------------|
-| `/` (root) | `src/sejfa/newsflash/presentation/templates/newsflash/index.html` |
-| `/subscribe` | `src/sejfa/newsflash/presentation/templates/newsflash/subscribe.html` |
-| `/thank-you` | `src/sejfa/newsflash/presentation/templates/newsflash/thank_you.html` |
-| Base layout | `src/sejfa/newsflash/presentation/templates/base.html` |
-| `/expenses/` | `src/expense_tracker/templates/expense_tracker/index.html` |
-| `/expenses/summary` | `src/expense_tracker/templates/expense_tracker/summary.html` |
-| Expense base | `src/expense_tracker/templates/expense_tracker/base.html` |
-
-### VARNING: Filer som INTE serveras av Flask pa Azure
-
-| Fil | Status | Forklaring |
-|-----|--------|------------|
-| `static/monitor.html` | **SERVERAS INTE** | Fristaende HTML, ingen Flask-route. Andra den INTE for UI-tickets. |
-| `static/*.png` | Bilder | Anvands av monitor.html, inte av Flask-templates |
-
-### Regel for UI-tickets
-
-1. **"Andra appens UI"** = Andra Flask-templates ovan
-2. **"Andra monitor dashboard"** = `static/monitor.html` (men det syns INTE pa Azure)
-3. Om en ticket sager "app UI" eller "produktion" — andra ALLTID Flask-templates
-4. Om du ar osaker: kolla `render_template()` anropen i `src/` for att se vad som faktiskt renderas
+3. **Kor tester efter varje kodandring** - `source venv/bin/activate && pytest tests/ -xvs`
+4. **Commit-format:** `DEV-XXX: [beskrivning]`
+5. **Branch-namngivning:** `feature/DEV-XXX-kort-beskrivning`
 
 ---
 
 ## Projektstruktur
 
 ```
-grupp-ett-github/
-├── app.py                      # Flask application entry point (create_app factory)
-├── requirements.txt            # Python dependencies
-├── pyproject.toml              # Ruff, pytest, coverage config
-├── Dockerfile                  # Production image (Python 3.12-slim)
+agentic-devops-loop/
+├── .claude/                      # Agent-konfiguration
+│   ├── commands/                 # CLI-kommandon (preflight.md)
+│   ├── hooks/                    # Git/loop hooks
+│   ├── skills/                   # Agent skills (start-task, finish-task)
+│   ├── plugins/                  # MCP server configurations
+│   ├── utils/                    # Helper utilities (sanitize, preflight)
+│   ├── settings.json             # Hook & permission config
+│   ├── ralph-config.json         # Ralph loop-konfiguration
+│   └── package-allowlist.json    # Allowed packages
+├── .github/workflows/            # CI/CD pipelines
+├── .githooks/                    # Local git hooks (commit-msg, pre-push)
+├── scripts/                      # Helper scripts
 ├── src/
-│   ├── sejfa/                  # Huvudpaket
-│   │   ├── core/               # Admin auth, subscriber service
-│   │   ├── integrations/       # Jira API-klient
-│   │   ├── monitor/            # Monitor API (JSON only, INTE UI — se filkarta ovan)
-│   │   └── utils/              # Health check, security
-│   └── expense_tracker/        # Expense tracking-modul
-│       ├── data/               # Expense model + repository
-│       ├── business/           # ExpenseService
-│       └── presentation/       # Blueprint + templates
-├── tests/                      # Testsvit (235+ tester)
-│   ├── agent/                  # Agent/Ralph loop-tester
-│   ├── core/                   # Admin & core-tester
-│   ├── expense_tracker/        # Expense tracker-tester
-│   ├── integrations/           # Jira-integrationstester
-│   └── utils/                  # Utility-tester
-├── static/                     # FRISTAENDE filer — INTE Flask-serverade (se filkarta)
-├── docs/                       # Dokumentation
-│   ├── DEPLOYMENT.md           # Deployment-guide (Cloudflare Tunnel)
-│   └── jules-playbook.md       # Jules AI review-system
-├── .claude/                    # Agent-konfiguration
-│   ├── commands/               # CLI-kommandon (preflight.md)
-│   ├── hooks/                  # Git/loop hooks
-│   ├── skills/                 # Agent skills (start-task, finish-task)
-│   └── ralph-config.json       # Ralph loop-konfiguration
-└── .github/workflows/          # CI/CD pipelines
+│   ├── voice_pipeline/           # FastAPI voice-to-Jira pipeline
+│   │   ├── main.py               # FastAPI app entry point (uvicorn)
+│   │   ├── config.py             # Pipeline configuration
+│   │   ├── transcriber/          # Whisper speech-to-text
+│   │   ├── intent/               # Ollama intent extraction
+│   │   ├── jira/                 # Jira ticket creation
+│   │   ├── pipeline/             # Pipeline orchestration
+│   │   └── security/             # Input validation & sanitization
+│   └── sejfa/                    # Shared utilities
+│       ├── integrations/         # Jira API-klient
+│       ├── monitor/              # Monitor service
+│       └── utils/                # Security utilities
+├── tests/
+│   ├── voice_pipeline/           # Voice pipeline tests (64 tests)
+│   ├── agent/                    # Agent/Ralph loop-tester
+│   ├── integrations/             # Jira-integrationstester
+│   └── utils/                    # Utility-tester
+├── docs/                         # Dokumentation
+│   ├── GUIDELINES.md             # Agent behavior reference
+│   └── QUICKSTART.md             # Setup guide
+├── Dockerfile                    # Production image (uvicorn, port 8000)
+├── docker-compose.yml            # Container orchestration
+├── pyproject.toml                # FastAPI dependencies, ruff, pytest config
+└── requirements.txt              # Pinned dependencies
 ```
-
-### Arkitektur: Clean 3-Layer
-
-Alla moduler foljer strikt 3-lagersarkitektur:
-
-1. **Data** - Modeller (dataclass) + Repository (in-memory)
-2. **Business** - Service med validering (INGEN Flask har!)
-3. **Presentation** - Flask Blueprint + templates
-
-Dependency injection: Services far sitt repository via `__init__`.
 
 ---
 
@@ -95,17 +59,14 @@ Dependency injection: Services far sitt repository via `__init__`.
 
 | Endpoint | Metod | Beskrivning |
 |----------|-------|-------------|
-| `/` | GET | Root greeting (JSON) |
 | `/health` | GET | Health check |
-| `/admin/login` | POST | Admin-inloggning |
-| `/admin` | GET | Admin dashboard (auth) |
-| `/admin/statistics` | GET | Statistik (auth) |
-| `/admin/subscribers` | GET/POST | Lista/skapa subscribers (auth) |
-| `/admin/subscribers/<id>` | GET/PUT/DELETE | Hantera subscriber (auth) |
-| `/admin/subscribers/search` | GET | Sok subscribers (auth) |
-| `/admin/subscribers/export` | GET | Exportera CSV (auth) |
-| `/expenses/` | GET | Expense tracker |
-| `/monitor` | GET | Real-time monitoring dashboard |
+| `/api/transcribe` | POST | Transcribe audio file to text (Whisper) |
+| `/api/extract` | POST | Extract Jira intent from text (Ollama) |
+| `/api/pipeline/run` | POST | Full pipeline: audio -> text -> intent -> Jira |
+| `/api/pipeline/clarify` | POST | Handle clarification response in ambiguity loop |
+| `/ws/status` | WS | WebSocket for real-time pipeline status updates |
+
+**Port:** 8000 (FastAPI + uvicorn)
 
 ---
 
@@ -135,15 +96,15 @@ Dependency injection: Services far sitt repository via `__init__`.
 
 ```bash
 # RATT:
-source venv/bin/activate && pytest -xvs
+source venv/bin/activate && pytest tests/ -xvs
 source venv/bin/activate && ruff check .
 
 # FEL (kommer misslyckas med ImportError):
-pytest -xvs
+pytest tests/ -xvs
 ruff check .
 ```
 
-Utan venv saknas projektets dependencies → agenten slosar en hel iteration pa att debugga ImportError.
+Utan venv saknas projektets dependencies -> agenten slosar en hel iteration pa att debugga ImportError.
 
 ---
 
@@ -152,7 +113,7 @@ Utan venv saknas projektets dependencies → agenten slosar en hel iteration pa 
 ### 1. Starta ny uppgift
 ```
 1. Hamta ticket fran Jira via direkta API (src.sejfa.integrations.jira_client.py)
-2. Skapa branch: git checkout -b feature/GE-XXX-beskrivning
+2. Skapa branch: git checkout -b feature/DEV-XXX-beskrivning
 3. Populera CURRENT_TASK.md med ticket-info
 4. (Valfritt) Uppdatera Jira-status till "In Progress"
 ```
@@ -165,16 +126,16 @@ Utan venv saknas projektets dependencies → agenten slosar en hel iteration pa 
 4. Kor test - verifiera att det PASSERAR (gron)
 5. Refaktorera vid behov (utan att bryta tester)
 6. Uppdatera CURRENT_TASK.md med framsteg
-7. Committa med format: GE-XXX: beskrivning
+7. Committa med format: DEV-XXX: beskrivning
 ```
 
 ### 3. Avsluta uppgift
 ```
-1. Alla tester passerar (verifiera med `source venv/bin/activate && pytest -xvs`)
+1. Alla tester passerar (verifiera med `source venv/bin/activate && pytest tests/ -xvs`)
 2. Linting passerar (verifiera med `source venv/bin/activate && ruff check .`)
 3. Alla acceptanskriterier i CURRENT_TASK.md uppfyllda
 4. Pusha: git push -u origin [branch]
-5. Skapa PR: gh pr create --title "GE-XXX: Beskrivning" --body "..."
+5. Skapa PR: gh pr create --title "DEV-XXX: Beskrivning" --body "..."
 6. Uppdatera Jira-status till "In Review"
 7. Output: DONE (eller <promise>DONE</promise> i Ralph loop)
 ```
@@ -185,7 +146,7 @@ Utan venv saknas projektets dependencies → agenten slosar en hel iteration pa 
 
 ### Format
 ```
-GE-XXX: Kort beskrivning (max 72 tecken)
+DEV-XXX: Kort beskrivning (max 72 tecken)
 
 - Detaljpunkt 1
 - Detaljpunkt 2
@@ -217,18 +178,18 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 ### Coverage
 - **Lokal:** 80% minimum (`pyproject.toml: fail_under = 80`)
 - **CI:** 70% minimum (GitHub Actions gate)
-- Kalla: `src/` och `app.py`
+- Kalla: `src/`
 - Branch coverage: aktiverat
 
 ### Ruff-konfiguration
-- **Linjelangd:** 88 tecken (Black-kompatibel)
+- **Linjelangd:** 100 tecken
 - **Regler:** E, F, W, I, N, UP, B, C4
-- **Target:** Python 3.10
+- **Target:** Python 3.11
 - **Exkluderar:** `.claude/hooks/*`, `venv`, `.venv`
 
 ### Python-versioner
-- **Minimum:** Python 3.10
-- **CI testar:** 3.10, 3.11, 3.12, 3.13
+- **Minimum:** Python 3.11
+- **CI testar:** 3.11, 3.12, 3.13
 
 ---
 
@@ -237,7 +198,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 ### Python
 - Type hints pa alla funktionssignaturer
 - Docstrings for publika funktioner (Google-stil)
-- Max 88 tecken per rad (Ruff standard)
+- Max 100 tecken per rad (Ruff standard)
 - Anvand `pathlib.Path` over `os.path`
 - Tester i `tests/` katalogen med `test_` prefix
 
@@ -248,12 +209,12 @@ from pathlib import Path
 import json
 
 # 2. Third-party
-from flask import Flask
+from fastapi import FastAPI, HTTPException
 import pytest
 
 # 3. Local
-from src.sejfa.core.admin_auth import AdminAuthService
-from src.expense_tracker.business.service import ExpenseService
+from src.voice_pipeline.config import Settings
+from src.sejfa.integrations.jira_client import get_jira_client
 ```
 
 ### Namnkonventioner
@@ -353,7 +314,7 @@ Nar du kor i en Ralph loop (`/ralph-loop`):
 
 ```bash
 # Verifiera tester (MASTE aktivera venv forst!)
-source venv/bin/activate && pytest -xvs
+source venv/bin/activate && pytest tests/ -xvs
 
 # Verifiera linting
 source venv/bin/activate && ruff check .
@@ -370,10 +331,10 @@ git status
 
 ```bash
 # Starta nytt arbete
-git checkout -b feature/GE-XXX-beskrivning
+git checkout -b feature/DEV-XXX-beskrivning
 
 # Kor tester (ALLTID med venv!)
-source venv/bin/activate && pytest -xvs
+source venv/bin/activate && pytest tests/ -xvs
 
 # Kor linting (ALLTID med venv!)
 source venv/bin/activate && ruff check .
@@ -381,18 +342,21 @@ source venv/bin/activate && ruff check --fix .  # Auto-fix
 
 # Committa
 git add [filer]
-git commit -m "GE-XXX: Beskrivning"
+git commit -m "DEV-XXX: Beskrivning"
 
 # Pusha och skapa PR
 git push -u origin HEAD
-gh pr create --title "GE-XXX: Titel" --body "Beskrivning"
+gh pr create --title "DEV-XXX: Titel" --body "Beskrivning"
 
 # Se Jira-ticket (via direkta API)
 source venv/bin/activate && python3 -c "
 from dotenv import load_dotenv; load_dotenv()
 from src.sejfa.integrations.jira_client import get_jira_client
 client = get_jira_client()
-issue = client.get_issue('GE-XXX')
+issue = client.get_issue('DEV-XXX')
 print(f'{issue.key}: {issue.summary}')
 "
+
+# Starta applikationen lokalt
+source venv/bin/activate && uvicorn src.voice_pipeline.main:app --host 0.0.0.0 --port 8000 --reload
 ```

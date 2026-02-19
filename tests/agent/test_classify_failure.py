@@ -27,7 +27,7 @@ def test_classify_lint_error() -> None:
 
 
 def test_classify_test_failure() -> None:
-    lines = ["pytest -q", "FAILED tests/core/test_admin_auth.py::test_admin_login"]
+    lines = ["pytest -q", "FAILED tests/voice_pipeline/test_pipeline.py::test_admin_login"]
     assert module.classify(lines, rerun_passed=False) == "TEST_FAIL"
 
 
@@ -38,9 +38,9 @@ def test_flaky_when_rerun_passes() -> None:
 
 def test_extract_failing_targets() -> None:
     lines = [
-        "FAILED tests/core/test_admin_auth.py::test_admin_login - AssertionError",
-        "::error file=src/sejfa/core/admin_auth.py,line=42,col=1::failure",
+        "FAILED tests/voice_pipeline/test_pipeline.py::test_admin_login - AssertionError",
+        "::error file=src/voice_pipeline/main.py,line=42,col=1::failure",
     ]
     targets = module.extract_failing_targets(lines)
-    assert "tests/core/test_admin_auth.py::test_admin_login" in targets
-    assert "src/sejfa/core/admin_auth.py" in targets
+    assert "tests/voice_pipeline/test_pipeline.py::test_admin_login" in targets
+    assert "src/voice_pipeline/main.py" in targets

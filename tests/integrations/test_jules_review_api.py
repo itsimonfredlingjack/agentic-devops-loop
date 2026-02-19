@@ -61,7 +61,7 @@ def test_extract_review_text_strips_unified_diff_and_returns_only_added_lines() 
         @@ -1,6 +1,6 @@
         -## Critical Severity
         -### 1. Deletion of Monitor Hooks
-        +[HIGH] tests/newsflash/test_color_scheme.py:16 — Quote the environment variable
+        +[HIGH] tests/voice_pipeline/test_pipeline.py:16 — Quote the environment variable
         +[MEDIUM] app.py:111 — Add a return type hint
         +[LOW] foo.py:1 — Minor suggestion
         +[LOW] bar.py:2 — Minor suggestion
@@ -73,8 +73,7 @@ def test_extract_review_text_strips_unified_diff_and_returns_only_added_lines() 
 
     assert extracted == "\n".join(
         [
-            "[HIGH] tests/newsflash/test_color_scheme.py:16 — "
-            "Quote the environment variable",
+            "[HIGH] tests/voice_pipeline/test_pipeline.py:16 — Quote the environment variable",
             "[MEDIUM] app.py:111 — Add a return type hint",
             "[LOW] foo.py:1 — Minor suggestion",
             "[LOW] bar.py:2 — Minor suggestion",

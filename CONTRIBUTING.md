@@ -2,34 +2,46 @@
 
 ## Code Structure
 
-This repository follows a modular structure to separate core logic, integrations, and agent utilities.
+This repository follows a modular structure separating the voice pipeline application from shared utilities and agent infrastructure.
 
-### `src/sejfa/core/`
-Place business logic, data models, and core services here.
-Examples: Authentication, Subscriber management, Database models.
+### `src/voice_pipeline/`
+The FastAPI voice-to-Jira pipeline application.
+- `main.py` - FastAPI app entry point
+- `config.py` - Pipeline configuration (Whisper, Ollama, Jira settings)
+- `transcriber/` - Whisper speech-to-text transcription
+- `intent/` - Ollama-based intent extraction
+- `jira/` - Jira ticket creation from extracted intent
+- `pipeline/` - Pipeline orchestration and ambiguity loop
+- `security/` - Input validation and sanitization
 
 ### `src/sejfa/integrations/`
-Place external API clients and integration logic here.
-Examples: Jira client, Slack client, GitHub integration.
+External API clients and integration logic.
+Examples: Jira client.
 
 ### `src/sejfa/utils/`
-Place general utility functions and helpers here.
+General utility functions and helpers.
 Examples: Security sanitization, string formatting.
 
-### `agent/`
-Place agent-specific files here.
-- `plans/`: Memory of completed tasks/plans.
-- `ralph-prompts.md`: Instructions for the autonomous agent.
+### `src/sejfa/monitor/`
+Monitor service for real-time loop observation.
 
 ## Testing
 
 Mirror the source structure in `tests/`.
-- `tests/core/`: Tests for `src/sejfa/core/`
-- `tests/integrations/`: Tests for `src/sejfa/integrations/`
-- `tests/utils/`: Tests for `src/sejfa/utils/`
-- `tests/agent/`: Tests for agent scripts and hooks.
+- `tests/voice_pipeline/` - Tests for `src/voice_pipeline/` (64 tests)
+- `tests/integrations/` - Tests for `src/sejfa/integrations/`
+- `tests/utils/` - Tests for `src/sejfa/utils/`
+- `tests/agent/` - Tests for agent scripts and hooks.
+
+Run tests:
+```bash
+source venv/bin/activate && pytest tests/ -xvs
+```
 
 ## Guidelines
 
-- Keep the root directory clean. Only `app.py`, `CURRENT_TASK.md` (agent memory), and config files should be here.
-- Do not modify `.claude/` unless necessary for agent configuration.
+- Keep the root directory clean. Only config files (`pyproject.toml`, `Dockerfile`, etc.) should be here.
+- Do not modify `.claude/hooks/` or `.github/` without review.
+- Follow TDD: write a failing test before implementing.
+- Use `DEV-XXX: Description` format for commit messages.
+- Create feature branches: `feature/DEV-XXX-description`.

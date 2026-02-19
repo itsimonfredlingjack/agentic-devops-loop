@@ -18,12 +18,12 @@ class TestParseFindingsUnit:
     """Unit tests for finding parser."""
 
     def test_parse_high_severity(self) -> None:
-        body = "[HIGH] app.py:42 \u2014 SQL injection risk in query builder"
+        body = "[HIGH] main.py:42 \u2014 SQL injection risk in query builder"
         findings = parse_findings(body)
 
         assert len(findings) == 1
         assert findings[0].severity == "HIGH"
-        assert findings[0].location == "app.py:42"
+        assert findings[0].location == "main.py:42"
         assert "SQL injection" in findings[0].description
 
     def test_parse_multiple_severities(self) -> None:
@@ -69,22 +69,22 @@ class TestFindingBody:
     """Tests for Finding.body() method with origin references."""
 
     def test_body_without_origin(self) -> None:
-        f = Finding("HIGH", "app.py:1", "Bug found")
+        f = Finding("HIGH", "main.py:1", "Bug found")
         body = f.body()
 
         assert "Severity: HIGH" in body
-        assert "Location: app.py:1" in body
+        assert "Location: main.py:1" in body
         assert "Origin" not in body
 
     def test_body_with_origin_key(self) -> None:
-        f = Finding("HIGH", "app.py:1", "Bug found")
-        body = f.body(origin_key="GE-35")
+        f = Finding("HIGH", "main.py:1", "Bug found")
+        body = f.body(origin_key="DEV-35")
 
         assert "Origin:" in body
-        assert "Ticket: GE-35" in body
+        assert "Ticket: DEV-35" in body
 
     def test_body_with_pr_number(self) -> None:
-        f = Finding("HIGH", "app.py:1", "Bug found")
+        f = Finding("HIGH", "main.py:1", "Bug found")
         body = f.body(pr_number="42")
 
         assert "PR: #42" in body

@@ -11,7 +11,6 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from typing import Optional
 
 # Monitor server configuration
 MONITOR_ENABLED = os.environ.get("MONITOR_ENABLED", "1") == "1"
@@ -23,7 +22,7 @@ MONITOR_URL = os.environ.get(
     ),
 )
 API_SECRET = os.environ.get("MONITOR_API_SECRET", os.environ.get("MONITOR_API_KEY", ""))
-USER_AGENT = os.environ.get("MONITOR_USER_AGENT", "GruppEtt-Monitor/1.0")
+USER_AGENT = os.environ.get("MONITOR_USER_AGENT", "AgenticLoop-Monitor/1.0")
 MONITOR_DEBUG = os.environ.get("MONITOR_DEBUG", "0") == "1"
 
 # Node mappings for different activities
@@ -127,7 +126,7 @@ def complete_task(timeout: float = 5.0) -> bool:
     return _post("/api/monitor/task", {"action": "complete"}, timeout)
 
 
-def detect_phase_from_tool(tool_name: str, tool_input: dict) -> Optional[tuple[str, str]]:
+def detect_phase_from_tool(tool_name: str, tool_input: dict) -> tuple[str, str] | None:
     """
     Detect which phase the agent is in based on the tool being used.
 

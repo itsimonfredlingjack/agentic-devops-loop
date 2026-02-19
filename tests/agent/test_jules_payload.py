@@ -29,7 +29,7 @@ def test_mask_line_redacts_sensitive_values() -> None:
 def test_is_excluded_path_filters_vendor_and_binaries() -> None:
     assert module.is_excluded_path("vendor/pkg/file.py")
     assert module.is_excluded_path("assets/logo.png")
-    assert not module.is_excluded_path("src/sejfa/core/admin_auth.py")
+    assert not module.is_excluded_path("src/voice_pipeline/main.py")
 
 
 def test_build_compact_diff_selects_top_file_by_size(monkeypatch) -> None:

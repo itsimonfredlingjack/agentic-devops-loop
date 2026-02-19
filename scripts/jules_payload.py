@@ -222,7 +222,7 @@ def risk_areas_for_path(path: str) -> list[str]:
         risks.add("tests")
     if lowered.endswith(("requirements.txt", "pyproject.toml")):
         risks.add("dependencies")
-    if lowered.endswith(("app.py",)):
+    if lowered.endswith(("main.py",)):
         risks.add("entrypoint")
 
     if not risks:
@@ -245,9 +245,7 @@ def build_compact_diff(
 
     for file_info in selected_files:
         path = str(file_info["path"])
-        raw_patch = run_git(
-            ["diff", "--unified=3", f"{base_sha}..{head_sha}", "--", path]
-        )
+        raw_patch = run_git(["diff", "--unified=3", f"{base_sha}..{head_sha}", "--", path])
         hunks = split_hunks(raw_patch)
         chosen_hunks = hunks[: budget.max_hunks_per_file]
 
@@ -325,9 +323,7 @@ def extract_error_snippets(lines: list[str], budget: ProfileBudget) -> list[str]
         if re.search(r"(?i)error|exception|traceback|failed|assert", line)
     ]
     if not interesting:
-        interesting = [
-            mask_line(line.strip()) for line in lines[-budget.max_log_lines :]
-        ]
+        interesting = [mask_line(line.strip()) for line in lines[-budget.max_log_lines :]]
 
     snippets: list[str] = []
     for line in interesting:
@@ -440,9 +436,7 @@ def main() -> int:
     sensitive_paths = [
         item["path"]
         for item in patch_index
-        if any(
-            marker in str(item["path"]).lower() for marker in SENSITIVE_FILE_PATTERNS
-        )
+        if any(marker in str(item["path"]).lower() for marker in SENSITIVE_FILE_PATTERNS)
     ]
 
     context: dict[str, object] = {

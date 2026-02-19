@@ -9,8 +9,6 @@ Protects against prompt injection by:
 """
 
 import re
-from typing import Optional
-
 
 # Patterns that could be injection attempts
 DANGEROUS_PATTERNS = [
@@ -108,7 +106,7 @@ def create_safe_task_context(
     jira_id: str,
     summary: str,
     description: str,
-    acceptance_criteria: Optional[str] = None
+    acceptance_criteria: str | None = None
 ) -> str:
     """
     Create a safe task context block for prompts.
@@ -229,8 +227,8 @@ def extract_acceptance_criteria(description: str | None) -> list[str]:
 
 # CLI interface for testing
 if __name__ == "__main__":
-    import sys
     import json
+    import sys
 
     if len(sys.argv) > 1:
         # Read from file or stdin

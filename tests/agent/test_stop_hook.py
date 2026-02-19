@@ -329,9 +329,7 @@ class TestHookInputParsing:
 
     def test_valid_json_input(self) -> None:
         """Valid JSON should parse correctly."""
-        input_data = json.dumps(
-            {"transcript": "Some transcript text", "session_id": "test-123"}
-        )
+        input_data = json.dumps({"transcript": "Some transcript text", "session_id": "test-123"})
 
         parsed = json.loads(input_data)
         assert parsed["transcript"] == "Some transcript text"
@@ -571,9 +569,7 @@ class TestQualityGates:
         assert "--cov-fail-under=80" in cmd_args
 
     @patch.object(subprocess, "run")
-    def test_pytest_failure_blocks_exit(
-        self, mock_run: MagicMock, stop_hook: Any
-    ) -> None:
+    def test_pytest_failure_blocks_exit(self, mock_run: MagicMock, stop_hook: Any) -> None:
         """When pytest fails, the hook should report failure."""
         mock_run.return_value = MagicMock(
             returncode=1,
@@ -615,9 +611,7 @@ class TestQualityGates:
         assert "--check" in cmd_args
 
     @patch.object(subprocess, "run")
-    def test_ruff_failure_blocks_exit(
-        self, mock_run: MagicMock, stop_hook: Any
-    ) -> None:
+    def test_ruff_failure_blocks_exit(self, mock_run: MagicMock, stop_hook: Any) -> None:
         """When ruff fails, the hook should report failure."""
         mock_run.return_value = MagicMock(
             returncode=1,
@@ -629,9 +623,7 @@ class TestQualityGates:
         assert code != 0
 
     @patch.object(subprocess, "run")
-    def test_coverage_threshold_passed_to_pytest(
-        self, mock_run: MagicMock, stop_hook: Any
-    ) -> None:
+    def test_coverage_threshold_passed_to_pytest(self, mock_run: MagicMock, stop_hook: Any) -> None:
         """Coverage threshold from config should be passed as --cov-fail-under."""
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
@@ -716,148 +708,6 @@ class TestSaveProgressOnMaxIterations:
         ):
             # Should not raise
             stop_hook._save_progress_on_max_iterations(25)
-
-
-class TestUIScopeGuard:
-    """Tests for the UI scope verification gate."""
-
-    def test_non_ui_branch_always_passes(self, stop_hook: Any) -> None:
-        """Non-UI branches bypass scope check."""
-        branch = "feature/GE-49-admin-refactor"
-        with patch.object(stop_hook, "get_git_branch", return_value=branch):
-            ok, msg = stop_hook.check_ui_scope()
-        assert ok is True
-        assert msg == ""
-
-    def test_ui_branch_with_flask_templates_passes(self, stop_hook: Any) -> None:
-        """UI branch touching Flask templates passes."""
-        diff = (
-            "src/sejfa/newsflash/presentation/static/css/style.css\nCURRENT_TASK.md\n"
-        )
-        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
-        branch = "feature/GE-55-copilot-dark-theme"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is True
-
-    def test_ui_branch_only_monitor_html_blocks(self, stop_hook: Any) -> None:
-        """UI branch with only monitor.html → BLOCK."""
-        diff = "static/monitor.html\nCURRENT_TASK.md\n"
-        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
-        branch = "feature/GE-61-dark-glassmorphism-theme"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, msg = stop_hook.check_ui_scope()
-        assert ok is False
-        assert "UI SCOPE GUARD" in msg
-        assert "Flask template" in msg
-
-    def test_tema_keyword_detected(self, stop_hook: Any) -> None:
-        """Swedish 'tema' triggers scope check."""
-        diff = "static/monitor.html\nCURRENT_TASK.md\n"
-        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
-        branch = "feature/GE-52-synthwave-tema"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is False
-
-    def test_design_keyword_detected(self, stop_hook: Any) -> None:
-        """'design' keyword triggers scope check."""
-        diff = "static/monitor.html\n"
-        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
-        branch = "feature/GE-57-beer2-full-design-reskin"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is False
-
-    def test_expense_tracker_templates_pass(self, stop_hook: Any) -> None:
-        """Expense tracker templates satisfy check."""
-        diff = "src/expense_tracker/templates/expense_tracker/index.html\n"
-        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
-        branch = "feature/GE-70-expense-ui-theme"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is True
-
-    def test_git_diff_failure_does_not_block(self, stop_hook: Any) -> None:
-        """Git diff failure → fail-open."""
-        mock_r = MagicMock(
-            returncode=128,
-            stdout="",
-            stderr="fatal: bad ref",
-        )
-        branch = "feature/GE-99-color-fix"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is True
-
-    def test_mixed_files_with_flask_passes(self, stop_hook: Any) -> None:
-        """Both monitor.html AND Flask templates → pass."""
-        diff = (
-            "static/monitor.html\n"
-            "src/sejfa/newsflash/presentation"
-            "/templates/base.html\n"
-            "CURRENT_TASK.md\n"
-        )
-        mock_r = MagicMock(returncode=0, stdout=diff, stderr="")
-        branch = "feature/GE-60-simpson-2-theme"
-        with (
-            patch.object(
-                stop_hook,
-                "get_git_branch",
-                return_value=branch,
-            ),
-            patch.object(subprocess, "run", return_value=mock_r),
-        ):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is True
-
-    def test_no_branch_does_not_block(self, stop_hook: Any) -> None:
-        """Detached HEAD → no block."""
-        with patch.object(stop_hook, "get_git_branch", return_value=None):
-            ok, _ = stop_hook.check_ui_scope()
-        assert ok is True
 
 
 class TestPRMergeGate:

@@ -71,8 +71,27 @@ Jira Ticket → Claude Code (Ralph Loop) → GitHub Actions → Jules AI Review 
 │   ├── commit-msg                   # Validates JIRA-ID: format
 │   └── pre-push                     # Validates branch naming
 │
+├── src/
+│   ├── voice_pipeline/              # FastAPI voice-to-Jira pipeline
+│   │   ├── main.py                  # FastAPI app (uvicorn entry point)
+│   │   ├── config.py                # Pipeline configuration
+│   │   ├── transcriber/             # Whisper speech-to-text
+│   │   ├── intent/                  # Ollama intent extraction
+│   │   ├── jira/                    # Jira ticket creation
+│   │   ├── pipeline/                # Pipeline orchestration
+│   │   └── security/                # Input validation
+│   └── sejfa/                       # Shared utilities
+│       ├── integrations/            # Jira API client
+│       ├── monitor/                 # Monitor service
+│       └── utils/                   # Security utilities
+│
+├── tests/
+│   ├── voice_pipeline/              # Voice pipeline tests (64 tests)
+│   ├── agent/                       # Agent/Ralph loop tests
+│   ├── integrations/                # Jira integration tests
+│   └── utils/                       # Utility tests
+│
 ├── docs/
-│   ├── CURRENT_TASK.md              # Agent persistent memory
 │   ├── GUIDELINES.md                # Detailed agent guidance
 │   └── QUICKSTART.md                # Setup guide
 │
@@ -81,8 +100,10 @@ Jira Ticket → Claude Code (Ralph Loop) → GitHub Actions → Jules AI Review 
 │   ├── create-branch.sh
 │   └── create-pr.sh
 │
-├── Dockerfile                        # Container configuration
+├── Dockerfile                        # Production image (uvicorn, port 8000)
 ├── docker-compose.yml
+├── pyproject.toml                    # FastAPI dependencies, ruff, pytest config
+├── requirements.txt                  # Pinned dependencies
 └── README.md
 ```
 
@@ -164,27 +185,25 @@ Example: `[PROJ-123] Add user authentication`
 ### Running Tests
 
 ```bash
-# Python
-pytest -xvs                    # Stop on first failure, verbose
-pytest --cov=src               # With coverage
-pytest path/to/test_file.py    # Single file
-
-# Node
-npm test                       # Run all tests
-npm test -- path/to/test.js   # Single file
+# Activate venv first (required)
+source venv/bin/activate && pytest tests/ -xvs    # Stop on first failure, verbose
+source venv/bin/activate && pytest --cov=src       # With coverage
+source venv/bin/activate && pytest path/to/test_file.py  # Single file
 ```
 
 ### Linting
 
 ```bash
-# Python
-ruff check .                   # Check for issues
-ruff check --fix .            # Auto-fix
-ruff format .                  # Format code
+# Activate venv first (required)
+source venv/bin/activate && ruff check .           # Check for issues
+source venv/bin/activate && ruff check --fix .     # Auto-fix
+source venv/bin/activate && ruff format .           # Format code
+```
 
-# Node
-npm run lint                   # Check
-npm run lint -- --fix         # Auto-fix
+### Running the Application
+
+```bash
+source venv/bin/activate && uvicorn src.voice_pipeline.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Git Operations
@@ -226,7 +245,7 @@ Files in these paths require human review via CODEOWNERS:
 - `/.claude/hooks/` - Security-critical hooks
 - `/Dockerfile`, `docker-compose.yml`
 - `/.env`, `/.env.*`, `/secrets/`
-- Lock files (`package-lock.json`, `poetry.lock`, etc.)
+- Lock files (`requirements.txt`, `pyproject.toml` dependency sections)
 
 ---
 
@@ -238,8 +257,7 @@ Only packages in `.claude/package-allowlist.json` can be installed.
 
 ```json
 {
-  "npm": ["jest", "vitest", "@playwright/test", "eslint", "prettier", "typescript", "@types/*"],
-  "pip": ["pytest", "pytest-cov", "ruff", "mypy", "httpx"]
+  "pip": ["pytest", "pytest-cov", "pytest-asyncio", "pytest-mock", "ruff", "mypy", "httpx"]
 }
 ```
 
@@ -310,17 +328,6 @@ def process_data(items: list[str]) -> dict[str, int]:
         Dictionary mapping items to their counts
     """
     return {item: items.count(item) for item in set(items)}
-```
-
-### TypeScript
-```typescript
-// Explicit return types
-function processData(items: string[]): Record<string, number> {
-  return items.reduce((acc, item) => {
-    acc[item] = (acc[item] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-}
 ```
 
 ---

@@ -17,7 +17,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-
 # Maps directive keywords to (action_type, value)
 _STATUS_MAP = {
     "in-progress": "In Progress",

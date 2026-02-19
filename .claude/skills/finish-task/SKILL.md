@@ -34,7 +34,7 @@ Run verification checks:
 
 ```bash
 # MASTE aktivera venv forst — annars ImportError!
-source venv/bin/activate && pytest -xvs --cov=src --cov=app.py --cov-report=term-missing --cov-fail-under=80
+source venv/bin/activate && pytest -xvs --cov=src --cov-report=term-missing --cov-fail-under=80
 
 # Check linting (med venv)
 source venv/bin/activate && ruff check .
@@ -65,20 +65,11 @@ echo "${changed_files}"
 
 **Kontrollera manuellt:**
 
-1. **UI-tickets** ("andra UI", "tema", "design", "frontend"):
-   - MASTE inkludera Flask-templates (se filkarta i CLAUDE.md)
-   - `src/sejfa/newsflash/presentation/templates/` och/eller
-   - `src/expense_tracker/templates/`
-   - Om BARA `static/monitor.html` andrades → **FEL FILER, STOPPA**
-
-2. **Backend-tickets** ("API", "endpoint", "logik"):
+1. **Backend-tickets** ("API", "endpoint", "logik"):
    - MASTE inkludera filer i `src/` (Python-kod)
-   - Om bara templates/HTML andrades → ifrågasätt
 
-3. **Generellt:**
+2. **Generellt:**
    - Jamfor andrade filer mot ticketens acceptanskriterier
-   - Om acceptanskriterierna namner produktion/Azure → verifiera att
-     Flask-serverade filer andrades (se filkarta i CLAUDE.md)
 
 **Om scope inte matchar → GA TILLBAKA och andra ratt filer.**
 
