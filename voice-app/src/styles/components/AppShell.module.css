@@ -1,0 +1,64 @@
+.shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-md);
+  gap: var(--space-md);
+}
+
+/* ── Animated background blobs ── */
+.blobs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  animation: blob-drift 20s ease-in-out infinite;
+}
+
+.blob1 {
+  width: 300px;
+  height: 300px;
+  background: var(--coral);
+  top: -60px;
+  right: -40px;
+  animation-delay: 0s;
+}
+
+.blob2 {
+  width: 250px;
+  height: 250px;
+  background: var(--blue);
+  bottom: -30px;
+  left: -50px;
+  animation-delay: -7s;
+}
+
+.blob3 {
+  width: 200px;
+  height: 200px;
+  background: var(--green);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -14s;
+}

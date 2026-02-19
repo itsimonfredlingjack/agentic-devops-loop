@@ -4,6 +4,15 @@ import { usePipelineStore } from "./stores/pipelineStore";
 import { connectWebSocket, disconnectWebSocket } from "./lib/ws";
 import type { LoopEvent } from "./lib/ws";
 
+import { AppShell } from "./components/AppShell";
+import { Header } from "./components/Header";
+import { RecordButton } from "./components/RecordButton";
+import { TranscriptionCard } from "./components/TranscriptionCard";
+import { ClarificationDialog } from "./components/ClarificationDialog";
+import { LoopEventsTimeline } from "./components/LoopEventsTimeline";
+import { LogPanel } from "./components/LogPanel";
+import { SettingsDrawer } from "./components/SettingsDrawer";
+
 function App() {
   const {
     status,
@@ -16,11 +25,11 @@ function App() {
     setTranscription,
     appendLog,
     setServerUrl,
-    setClarification,
     clearClarification,
+    setClarification,
   } = usePipelineStore();
 
-  const [clarifyInput, setClarifyInput] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const serverUrlRef = useRef(serverUrl);
   serverUrlRef.current = serverUrl;
 
@@ -54,7 +63,6 @@ function App() {
 
   const handleToggle = async () => {
     if (status === "recording") {
-      // Stop recording, send audio
       try {
         setStatus("processing");
         appendLog("[client] Stopping mic...");
@@ -77,7 +85,6 @@ function App() {
         setStatus("error");
       }
     } else {
-      // Start recording
       try {
         appendLog("[client] Starting mic...");
         await invoke("start_mic");
@@ -90,10 +97,10 @@ function App() {
     }
   };
 
-  const handleClarifySubmit = async () => {
-    if (!clarification || !clarifyInput.trim()) return;
+  const handleClarifySubmit = async (answer: string) => {
+    if (!clarification) return;
 
-    appendLog(`[client] Sending clarification: ${clarifyInput}`);
+    appendLog(`[client] Sending clarification: ${answer}`);
     setStatus("processing");
 
     try {
@@ -102,7 +109,7 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: clarification.sessionId,
-          text: clarifyInput,
+          text: answer,
         }),
       });
 
@@ -123,115 +130,41 @@ function App() {
         );
         setStatus("done");
       }
-
-      setClarifyInput("");
     } catch (err) {
       appendLog(`[client] Clarification error: ${err}`);
       setStatus("error");
     }
   };
 
-  const buttonLabel =
-    status === "recording"
-      ? "Stop Recording"
-      : status === "processing"
-        ? "Processing..."
-        : "Start Recording";
-
   return (
-    <div>
-      <h3>SEJFA Voice Pipeline</h3>
+    <AppShell>
+      <Header status={status} onSettingsClick={() => setSettingsOpen(true)} />
 
-      <div>
-        <label>
-          Server URL:{" "}
-          <input
-            type="text"
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
-            style={{ width: 300 }}
-          />
-        </label>
-      </div>
+      <TranscriptionCard text={transcription} />
 
-      <div>
-        <button
-          onClick={handleToggle}
-          disabled={status === "processing" || status === "clarifying"}
-        >
-          {buttonLabel}
-        </button>
-        <span> Status: {status}</span>
-      </div>
-
-      <div>
-        <strong>Transcription:</strong>
-        <pre>{transcription || "(none)"}</pre>
-      </div>
+      <RecordButton status={status} onClick={handleToggle} />
 
       {clarification && (
-        <div style={{ border: "1px solid #666", padding: 8, margin: "8px 0" }}>
-          <strong>Clarification needed (round {clarification.round}):</strong>
-          <p>Partial summary: {clarification.partialSummary}</p>
-          <ul>
-            {clarification.questions.map((q, i) => (
-              <li key={i}>{q}</li>
-            ))}
-          </ul>
-          <input
-            type="text"
-            value={clarifyInput}
-            onChange={(e) => setClarifyInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleClarifySubmit()}
-            placeholder="Type your answer..."
-            style={{ width: 400 }}
-          />
-          <button
-            onClick={handleClarifySubmit}
-            disabled={status === "processing"}
-          >
-            Send
-          </button>
-        </div>
+        <ClarificationDialog
+          questions={clarification.questions}
+          partialSummary={clarification.partialSummary}
+          round={clarification.round}
+          disabled={status === "processing"}
+          onSubmit={handleClarifySubmit}
+        />
       )}
 
-      {loopEvents.length > 0 && (
-        <div style={{ border: "1px solid #444", padding: 8, margin: "8px 0" }}>
-          <strong>Ralph Loop Events:</strong>
-          <ul style={{ listStyle: "none", padding: 0, margin: "4px 0" }}>
-            {loopEvents.map((e, i) => (
-              <li key={i} style={{ padding: "2px 0" }}>
-                <span style={{ color: "#888" }}>[{e.timestamp}]</span>{" "}
-                {e.type === "ticket_queued" && (
-                  <span>
-                    Queued <strong>{e.issueKey}</strong>
-                    {e.summary ? ` — ${e.summary}` : ""}
-                  </span>
-                )}
-                {e.type === "loop_started" && (
-                  <span>
-                    Loop started for <strong>{e.issueKey}</strong>
-                  </span>
-                )}
-                {e.type === "loop_completed" && (
-                  <span>
-                    Loop completed for <strong>{e.issueKey}</strong>{" "}
-                    {e.success ? "(success)" : "(failed)"}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <LoopEventsTimeline events={loopEvents} />
 
-      <div>
-        <strong>Pipeline Log:</strong>
-        <pre style={{ maxHeight: 300, overflow: "auto" }}>
-          {log.join("\n") || "(no events)"}
-        </pre>
-      </div>
-    </div>
+      <LogPanel entries={log} />
+
+      <SettingsDrawer
+        open={settingsOpen}
+        serverUrl={serverUrl}
+        onServerUrlChange={setServerUrl}
+        onClose={() => setSettingsOpen(false)}
+      />
+    </AppShell>
   );
 }
 

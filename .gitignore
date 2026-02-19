@@ -1,84 +1,10 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
+node_modules/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
+*.local
+.env
+.env.*
+__pycache__/
+*.pyc
 venv/
 .venv/
-ENV/
-env/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Database
-instance/
-*.db
-
-# Environment files
-.env
-.env.local
-.env.*.local
-*.env
-
-# Secrets (never commit these!)
-*secret*
-*credential*
-*password*
-*.pem
-*.key
-
-# Claude/Ralph Loop runtime files (never commit these!)
-.claude/ralph-state.json
-.claude/stop-hook-debug.log
-.claude/ralph-loop.log
-.claude/.ralph_loop_active
-.claude/.promise_done
-.claude/reviews/
-
-# Node
-node_modules/
-
-# Rust/Tauri
 target/
-Cargo.lock
-
-# FUSE mount artifacts (Cowork sandbox)
-.fuse_hidden*
-**/.fuse_hidden*
-
-# Generated docs
-SEJFA_Changelog.docx

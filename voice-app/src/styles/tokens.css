@@ -1,0 +1,48 @@
+:root {
+  /* Background */
+  --bg-gradient-from: #1a1a2e;
+  --bg-gradient-to: #16213e;
+
+  /* Glass surfaces */
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-bg-hover: rgba(255, 255, 255, 0.09);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+  --glass-blur: blur(12px);
+
+  /* Linux fallback (no backdrop-filter) */
+  --glass-bg-solid: rgba(30, 30, 60, 0.85);
+
+  /* Accent colors */
+  --coral: #e94560;
+  --blue: #4a9eff;
+  --green: #4ade80;
+  --yellow: #facc15;
+  --red: #f87171;
+
+  /* Text */
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --text-tertiary: rgba(255, 255, 255, 0.38);
+
+  /* Font */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+}
