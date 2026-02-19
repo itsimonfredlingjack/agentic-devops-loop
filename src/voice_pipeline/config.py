@@ -50,6 +50,11 @@ class Settings(BaseSettings):
         default=3, description="Max clarification rounds before forcing ticket creation"
     )
 
+    # Ralph Loop dispatch
+    auto_dispatch_loop: bool = Field(
+        default=True, description="Auto-queue tickets for Ralph Loop after creation"
+    )
+
     # App
     app_host: str = Field(default="0.0.0.0", description="Server bind host")
     app_port: int = Field(default=8000, description="Server port")

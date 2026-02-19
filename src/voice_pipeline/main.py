@@ -5,6 +5,9 @@ Entry points:
   POST /api/extract            — extract Jira intent from text
   POST /api/pipeline/run       — full pipeline: text/audio → Jira ticket
   POST /api/webhook/jira       — receive Jira webhook events
+  GET  /api/loop/queue         — pending tickets for Ralph Loop
+  POST /api/loop/started       — mark ticket as started by loop runner
+  POST /api/loop/completed     — mark ticket as completed by loop runner
   WS   /ws/status              — real-time pipeline status broadcast
   GET  /health                 — health check
 
@@ -33,6 +36,7 @@ from pydantic import BaseModel
 from .config import Settings, get_settings
 from .intent.extractor import IntentExtractionError, IntentExtractor
 from .intent.models import JiraTicketIntent
+from .loop_queue import LoopQueue
 from .pipeline.orchestrator import PipelineOrchestrator
 from .pipeline.status import MonitorService, PipelineStatus
 from .transcriber.base import TranscriptionError
@@ -90,6 +94,7 @@ class WebSocketManager:
 _ws_manager: WebSocketManager | None = None
 _monitor: MonitorService | None = None
 _orchestrator: PipelineOrchestrator | None = None
+_loop_queue: LoopQueue | None = None
 _transcriber: WhisperLocalTranscriber | None = None
 _extractor: IntentExtractor | None = None
 
@@ -107,6 +112,11 @@ def _get_monitor() -> MonitorService:
 def _get_orchestrator() -> PipelineOrchestrator:
     assert _orchestrator is not None, "App not started"
     return _orchestrator
+
+
+def _get_loop_queue() -> LoopQueue:
+    assert _loop_queue is not None, "App not started"
+    return _loop_queue
 
 
 def _get_transcriber(settings: Settings) -> WhisperLocalTranscriber:
@@ -138,12 +148,13 @@ def _get_extractor(settings: Settings) -> IntentExtractor:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: initialise and teardown singletons."""
-    global _ws_manager, _monitor, _orchestrator, _transcriber, _extractor
+    global _ws_manager, _monitor, _orchestrator, _loop_queue, _transcriber, _extractor
 
     settings = get_settings()
 
     _ws_manager = WebSocketManager()
     _monitor = MonitorService()
+    _loop_queue = LoopQueue()
 
     async def broadcast(state: dict[str, Any]) -> None:
         await _ws_manager.broadcast(state)  # type: ignore[union-attr]
@@ -152,12 +163,14 @@ async def lifespan(app: FastAPI):
         settings=settings,
         monitor=_monitor,
         broadcast=broadcast,
+        loop_queue=_loop_queue,
     )
 
     logger.info(
-        "Voice Pipeline started — Whisper=%s, Ollama=%s",
+        "Voice Pipeline started — Whisper=%s, Ollama=%s, auto_dispatch=%s",
         settings.whisper_model,
         settings.ollama_model,
+        settings.auto_dispatch_loop,
     )
 
     yield
@@ -401,6 +414,50 @@ def create_app() -> FastAPI:
             return {"status": "processed", "issue_key": issue_key}
 
         return {"status": "ignored", "event": event_type}
+
+    # -----------------------------------------------------------------------
+    # Ralph Loop queue
+    # -----------------------------------------------------------------------
+
+    class LoopStartedRequest(BaseModel):
+        key: str
+
+    class LoopCompletedRequest(BaseModel):
+        key: str
+        success: bool
+
+    @app.get("/api/loop/queue", tags=["loop"])
+    async def get_loop_queue() -> list[dict[str, str]]:
+        """Return pending tickets waiting for Ralph Loop pickup."""
+        return _get_loop_queue().get_pending()
+
+    @app.post("/api/loop/started", tags=["loop"])
+    async def loop_started(request: LoopStartedRequest) -> dict[str, str]:
+        """Mark a ticket as started by the loop runner."""
+        queue = _get_loop_queue()
+        queue.mark_started(request.key)
+
+        if _ws_manager:
+            await _ws_manager.broadcast({"type": "loop_started", "issue_key": request.key})
+
+        return {"status": "ok", "key": request.key}
+
+    @app.post("/api/loop/completed", tags=["loop"])
+    async def loop_completed(request: LoopCompletedRequest) -> dict[str, str]:
+        """Mark a ticket as completed by the loop runner."""
+        queue = _get_loop_queue()
+        queue.mark_completed(request.key, request.success)
+
+        if _ws_manager:
+            await _ws_manager.broadcast(
+                {
+                    "type": "loop_completed",
+                    "issue_key": request.key,
+                    "success": request.success,
+                }
+            )
+
+        return {"status": "ok", "key": request.key, "success": str(request.success)}
 
     return app
 

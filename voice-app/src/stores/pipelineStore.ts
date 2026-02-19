@@ -15,18 +15,28 @@ interface ClarificationState {
   round: number;
 }
 
+export interface LoopEventEntry {
+  type: "ticket_queued" | "loop_started" | "loop_completed";
+  issueKey: string;
+  summary?: string;
+  success?: boolean;
+  timestamp: string;
+}
+
 interface PipelineState {
   status: PipelineStatus;
   transcription: string;
   log: string[];
   serverUrl: string;
   clarification: ClarificationState | null;
+  loopEvents: LoopEventEntry[];
   setStatus: (status: PipelineStatus) => void;
   setTranscription: (text: string) => void;
   appendLog: (entry: string) => void;
   setServerUrl: (url: string) => void;
   setClarification: (c: ClarificationState | null) => void;
   clearClarification: () => void;
+  addLoopEvent: (event: LoopEventEntry) => void;
 }
 
 const DEFAULT_SERVER_URL = "http://localhost:8000";
@@ -45,6 +55,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   log: [],
   serverUrl: loadServerUrl(),
   clarification: null,
+  loopEvents: [],
 
   setStatus: (status) => set({ status }),
 
@@ -67,4 +78,9 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   setClarification: (c) => set({ clarification: c, status: "clarifying" }),
 
   clearClarification: () => set({ clarification: null }),
+
+  addLoopEvent: (event) =>
+    set((state) => ({
+      loopEvents: [...state.loopEvents, event],
+    })),
 }));

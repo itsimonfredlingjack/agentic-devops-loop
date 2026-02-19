@@ -13,6 +13,8 @@ At each transition the orchestrator broadcasts a status update to all
 connected WebSocket clients via the MonitorService + WebSocketManager.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import tempfile
@@ -20,9 +22,13 @@ import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..config import Settings
+
+if TYPE_CHECKING:
+    from ..loop_queue import LoopQueue
+
 from ..intent.extractor import IntentExtractionError, IntentExtractor
 from ..intent.models import JiraTicketIntent
 from ..jira.client import AsyncJiraClient, JiraAPIError
@@ -110,10 +116,12 @@ class PipelineOrchestrator:
         settings: Settings,
         monitor: MonitorService,
         broadcast: BroadcastCallback | None = None,
+        loop_queue: LoopQueue | None = None,
     ) -> None:
         self._settings = settings
         self._monitor = monitor
         self._broadcast = broadcast
+        self._loop_queue = loop_queue
         self._lock = asyncio.Lock()
         self._sessions: dict[str, PipelineSession] = {}
 
@@ -378,6 +386,18 @@ class PipelineOrchestrator:
             f"Ticket created: {issue.key} — {issue.url}",
         )
         self._monitor.set_task_info(title=intent.summary, status="completed")
+
+        # Auto-dispatch to Ralph Loop queue
+        if self._settings.auto_dispatch_loop and self._loop_queue is not None:
+            queued = self._loop_queue.add_ticket(issue.key, intent.summary)
+            if queued and self._broadcast:
+                await self._broadcast(
+                    {
+                        "type": "ticket_queued",
+                        "issue_key": issue.key,
+                        "summary": intent.summary,
+                    }
+                )
 
         return PipelineResult(
             ticket_key=issue.key,

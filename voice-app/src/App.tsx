@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { usePipelineStore } from "./stores/pipelineStore";
 import { connectWebSocket, disconnectWebSocket } from "./lib/ws";
+import type { LoopEvent } from "./lib/ws";
 
 function App() {
   const {
@@ -10,6 +11,7 @@ function App() {
     log,
     serverUrl,
     clarification,
+    loopEvents,
     setStatus,
     setTranscription,
     appendLog,
@@ -35,6 +37,15 @@ function App() {
           questions: data.questions,
           partialSummary: data.partial_summary,
           round: data.round,
+        });
+      },
+      (event: LoopEvent) => {
+        usePipelineStore.getState().addLoopEvent({
+          type: event.type,
+          issueKey: event.issue_key,
+          summary: event.summary,
+          success: event.success,
+          timestamp: new Date().toLocaleTimeString(),
         });
       },
     );
@@ -181,6 +192,36 @@ function App() {
           >
             Send
           </button>
+        </div>
+      )}
+
+      {loopEvents.length > 0 && (
+        <div style={{ border: "1px solid #444", padding: 8, margin: "8px 0" }}>
+          <strong>Ralph Loop Events:</strong>
+          <ul style={{ listStyle: "none", padding: 0, margin: "4px 0" }}>
+            {loopEvents.map((e, i) => (
+              <li key={i} style={{ padding: "2px 0" }}>
+                <span style={{ color: "#888" }}>[{e.timestamp}]</span>{" "}
+                {e.type === "ticket_queued" && (
+                  <span>
+                    Queued <strong>{e.issueKey}</strong>
+                    {e.summary ? ` — ${e.summary}` : ""}
+                  </span>
+                )}
+                {e.type === "loop_started" && (
+                  <span>
+                    Loop started for <strong>{e.issueKey}</strong>
+                  </span>
+                )}
+                {e.type === "loop_completed" && (
+                  <span>
+                    Loop completed for <strong>{e.issueKey}</strong>{" "}
+                    {e.success ? "(success)" : "(failed)"}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

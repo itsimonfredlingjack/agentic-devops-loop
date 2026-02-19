@@ -472,3 +472,57 @@ class TestFastAPIEndpoints:
         data = response.json()
         assert data["status"] == "processed"
         assert data["issue_key"] == "PROJ-42"
+
+
+# ---------------------------------------------------------------------------
+# Ralph Loop queue endpoint tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestLoopQueueEndpoints:
+    async def test_loop_queue_empty(self):
+        """GET /api/loop/queue should return empty list initially."""
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/api/loop/queue")
+        assert response.status_code == 200
+        assert response.json() == []
+
+    async def test_loop_started_endpoint(self):
+        """POST /api/loop/started should return ok."""
+        from src.voice_pipeline import main as app_mod
+
+        # Pre-populate queue
+        app_mod._loop_queue.add_ticket("DEV-10", "Test ticket")
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/api/loop/started",
+                json={"key": "DEV-10"},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["key"] == "DEV-10"
+
+        # Ticket should no longer be pending
+        pending = app_mod._loop_queue.get_pending()
+        assert len(pending) == 0
+
+    async def test_loop_completed_endpoint(self):
+        """POST /api/loop/completed should return ok with success status."""
+        from src.voice_pipeline import main as app_mod
+
+        app_mod._loop_queue.add_ticket("DEV-11", "Another ticket")
+        app_mod._loop_queue.mark_started("DEV-11")
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/api/loop/completed",
+                json={"key": "DEV-11", "success": True},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["key"] == "DEV-11"
+        assert data["success"] == "True"

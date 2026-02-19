@@ -9,6 +9,7 @@ import pytest
 
 from src.voice_pipeline import main as app_module
 from src.voice_pipeline.config import get_settings
+from src.voice_pipeline.loop_queue import LoopQueue
 from src.voice_pipeline.main import WebSocketManager
 from src.voice_pipeline.pipeline.orchestrator import PipelineOrchestrator
 from src.voice_pipeline.pipeline.status import MonitorService
@@ -25,6 +26,7 @@ def setup_app_singletons():
     settings = get_settings()
     ws = WebSocketManager()
     monitor = MonitorService()
+    loop_queue = LoopQueue()
 
     async def _noop_broadcast(state):  # noqa: ANN001
         pass
@@ -33,11 +35,13 @@ def setup_app_singletons():
         settings=settings,
         monitor=monitor,
         broadcast=_noop_broadcast,
+        loop_queue=loop_queue,
     )
 
     app_module._ws_manager = ws
     app_module._monitor = monitor
     app_module._orchestrator = orchestrator
+    app_module._loop_queue = loop_queue
 
     yield
 
@@ -45,5 +49,6 @@ def setup_app_singletons():
     app_module._ws_manager = None
     app_module._monitor = None
     app_module._orchestrator = None
+    app_module._loop_queue = None
     app_module._transcriber = None
     app_module._extractor = None
