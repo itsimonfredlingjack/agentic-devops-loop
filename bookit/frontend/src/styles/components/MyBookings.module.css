@@ -1,0 +1,172 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  animation: fade-in 400ms ease both;
+}
+
+.searchBar {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.emailInput {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color var(--transition-fast);
+}
+
+.emailInput:focus {
+  outline: none;
+  border-color: var(--coral);
+}
+
+.emailInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.searchButton {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--coral);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.searchButton:hover:not(:disabled) {
+  background: #d63a53;
+}
+
+.searchButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bookingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.bookingCard {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  animation: fade-in 400ms ease both;
+  transition: border-color var(--transition-fast);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .bookingCard {
+    background: var(--glass-bg-solid);
+  }
+}
+
+.bookingCard:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.bookingCancelled {
+  opacity: 0.5;
+}
+
+.bookingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.serviceName {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.cancelledText {
+  text-decoration: line-through;
+}
+
+.bookingMeta {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.status {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.statusConfirmed {
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--green);
+}
+
+.statusCancelled {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red);
+}
+
+.cancelBookingButton {
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--red);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.cancelBookingButton:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: var(--red);
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.emptyIcon {
+  font-size: 2rem;
+  opacity: 0.4;
+  margin-bottom: var(--space-sm);
+}
+
+.loading {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--text-secondary);
+}
+
+.error {
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius-sm);
+  color: var(--red);
+  font-size: 0.8rem;
+}
