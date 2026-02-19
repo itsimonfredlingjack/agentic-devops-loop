@@ -1,394 +1,138 @@
-# CLAUDE.md - AI Assistant Guide
+# CLAUDE.md
 
-> **For Claude Code and other AI assistants working in this repository**
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-This is an **autonomous development system** that implements Jira tickets using Claude Code in a persistent loop (Ralph Loop), validates with GitHub Actions, and enables AI-powered code review with self-healing capabilities.
+## What This Project Is
 
-## Project Overview
-
-```
-Jira Ticket → Claude Code (Ralph Loop) → GitHub Actions → Jules AI Review → Merge
-```
-
-**Core Purpose:** Automate the full development cycle from ticket to merged PR with AI assistance.
-
----
-
-## Quick Reference
-
-### Slash Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/start-task PROJ-123` | Initialize task from Jira ticket, create branch, setup memory |
-| `/finish-task` | Verify completion, create PR, transition Jira |
-| `/preflight` | Validate environment before starting work |
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `docs/CURRENT_TASK.md` | **Persistent memory** - read this first every iteration |
-| `docs/GUIDELINES.md` | Agent behavior reference (TDD, patterns, troubleshooting) |
-| `.claude/ralph-config.json` | Exit policy and profile configuration |
-| `.claude/package-allowlist.json` | Allowed packages for installation |
-| `.claude/settings.json` | Hook and permission configuration |
-
----
-
-## Repository Structure
+SEJFA — an autonomous development system. The full pipeline:
 
 ```
-.
-├── .claude/                          # Claude Code configuration
-│   ├── hooks/                        # Security hooks (PROTECTED)
-│   │   ├── pre-tool-use.py          # Package & command validation
-│   │   └── stop-hook.py             # Ralph loop exit control
-│   ├── commands/                     # Slash command definitions
-│   │   ├── start-task.md
-│   │   ├── finish-task.md
-│   │   └── preflight.md
-│   ├── skills/                       # Extended skill documentation
-│   ├── plugins/                      # MCP server configurations
-│   │   └── agentic-loop/manifest.json  # Jira MCP settings
-│   ├── utils/                        # Helper utilities
-│   │   ├── sanitize.py              # Prompt injection protection
-│   │   └── preflight_check.py       # Environment validation
-│   ├── settings.json                # Hook & permission config
-│   ├── ralph-config.json            # Exit policy configuration
-│   └── package-allowlist.json       # Allowed packages
-│
-├── .github/                          # GitHub configuration (PROTECTED)
-│   ├── CODEOWNERS                   # Protected file rules
-│   ├── workflows/
-│   │   ├── ci.yml                   # Lint, test, build pipeline
-│   │   ├── pr-validation.yml        # PR title/branch validation
-│   │   ├── jules-review.yml         # AI code review
-│   │   └── self-healing.yml         # Auto-fix on CI failure
-│   └── PULL_REQUEST_TEMPLATE.md
-│
-├── .githooks/                        # Local git hooks
-│   ├── commit-msg                   # Validates JIRA-ID: format
-│   └── pre-push                     # Validates branch naming
-│
-├── src/
-│   ├── voice_pipeline/              # FastAPI voice-to-Jira pipeline
-│   │   ├── main.py                  # FastAPI app (uvicorn entry point)
-│   │   ├── config.py                # Pipeline configuration
-│   │   ├── transcriber/             # Whisper speech-to-text
-│   │   ├── intent/                  # Ollama intent extraction
-│   │   ├── jira/                    # Jira ticket creation
-│   │   ├── pipeline/                # Pipeline orchestration
-│   │   └── security/                # Input validation
-│   └── sejfa/                       # Shared utilities
-│       ├── integrations/            # Jira API client
-│       ├── monitor/                 # Monitor service
-│       └── utils/                   # Security utilities
-│
-├── tests/
-│   ├── voice_pipeline/              # Voice pipeline tests (64 tests)
-│   ├── agent/                       # Agent/Ralph loop tests
-│   ├── integrations/                # Jira integration tests
-│   └── utils/                       # Utility tests
-│
-├── docs/
-│   ├── GUIDELINES.md                # Detailed agent guidance
-│   └── QUICKSTART.md                # Setup guide
-│
-├── scripts/                          # Helper scripts
-│   ├── setup-hooks.sh               # Install git hooks
-│   ├── create-branch.sh
-│   └── create-pr.sh
-│
-├── Dockerfile                        # Production image (uvicorn, port 8000)
-├── docker-compose.yml
-├── pyproject.toml                    # FastAPI dependencies, ruff, pytest config
-├── requirements.txt                  # Pinned dependencies
-└── README.md
+Voice → Whisper → Ollama → Jira Ticket → Claude Code (Ralph Loop) → GitHub Actions → Jules AI Review → Merge
 ```
 
----
+Three components in this monorepo:
 
-## Development Workflow
+| Directory | What | Stack |
+|-----------|------|-------|
+| `agentic-devops-loop/` | **Main project.** Ralph Loop infrastructure, hooks, skills, CI/CD, Jira integration | Python 3.11+, FastAPI, Claude Code hooks |
+| `voice-pipeline/` | Standalone FastAPI backend: audio transcription → intent extraction → Jira ticket creation | Python 3.11+, FastAPI, Whisper, Ollama |
+| `voice-app/` | Desktop app for voice recording | Tauri 2, React 18, TypeScript, Zustand |
 
-### The Ralph Loop
+**`agentic-devops-loop/` already contains `src/voice_pipeline/` inside it.** The standalone `voice-pipeline/` is a separate copy with different import paths (`src.*` vs `src.voice_pipeline.*`).
 
-When working on a Jira ticket, follow this iterative workflow:
+## Architecture: Ralph Loop
 
-1. **Read** `docs/CURRENT_TASK.md` (your persistent memory)
-2. **Check** acceptance criteria progress
-3. **Plan** the next small step
-4. **Execute** using TDD (test → implement → verify)
-5. **Update** CURRENT_TASK.md with progress
-6. **Repeat** until all criteria met
+Ralph Loop is NOT a script you create. It is the persistent iteration mechanism built into Claude Code via hooks in `agentic-devops-loop/.claude/`:
 
-### Test-Driven Development (TDD)
+1. `/start-task DEV-123` → fetches Jira ticket, creates branch, sets up `docs/CURRENT_TASK.md`, activates loop
+2. Agent works in TDD loop (RED → GREEN → REFACTOR) until all acceptance criteria met
+3. `stop-hook.py` blocks exit until: tests pass, lint clean, PR merged, `<promise>DONE</promise>` output
+4. `/finish-task` runs automatically as part of the loop — commit, push, PR, merge, Jira update
 
-**Required workflow:**
+Key files that control the loop:
+- `.claude/hooks/stop-hook.py` — quality gate, exit enforcement
+- `.claude/hooks/pre-tool-use.py` — security validation (package allowlist, protected paths, dangerous commands)
+- `.claude/ralph-config.json` — exit policy, max iterations (25), coverage threshold (80%)
+- `docs/CURRENT_TASK.md` — persistent agent memory across context windows
+- `.claude/.ralph_loop_active` — flag file that activates enforcement
+
+## Architecture: Voice Pipeline
+
 ```
-RED    → Write a failing test first
-GREEN  → Write minimal code to pass
-REFACTOR → Clean up without breaking tests
+Mac (Tauri app)                    ai-server2 (FastAPI :8000)
+  |                                    |
+  |--[audio via network]-------------->| POST /api/pipeline/run/audio
+  |                                    |   → Whisper transcription (GPU)
+  |                                    |   → Ollama intent extraction (GPU)
+  |                                    |   → Jira REST API → ticket created
+  |<--[WS: status updates]------------|
+  |                                    |
+  |--[clarification answer]----------->| POST /api/pipeline/clarify
+  |<--[WS: clarification_needed]------|   (if ambiguity > threshold)
 ```
 
-**Never skip the red phase.** If you can't write a failing test, you don't understand the requirement.
+The gap: voice pipeline creates tickets with `VOICE_INITIATED` label, but nothing currently triggers Ralph Loop to pick them up automatically.
 
-### Exit Conditions
+## Commands
 
-You may ONLY signal completion (`<promise>DONE</promise>`) when:
-
-- [ ] ALL acceptance criteria are checked off
-- [ ] ALL tests pass
-- [ ] NO linting errors
-- [ ] Changes are committed with proper format
-- [ ] Branch is pushed to remote
-
-**If ANY condition is false, keep working.**
-
----
-
-## Git Conventions
-
-### Branch Naming
-```
-{type}/{JIRA-ID}-{slug}
-```
-Examples:
-- `feature/PROJ-123-add-user-auth`
-- `bugfix/PROJ-456-fix-null-pointer`
-- `hotfix/PROJ-789-security-patch`
-
-Allowed types: `feature`, `bugfix`, `hotfix`, `refactor`, `docs`
-
-### Commit Messages
-```
-JIRA-ID: Description
-```
-Examples:
-- `PROJ-123: Implement login endpoint`
-- `PROJ-123: Add unit tests for auth service`
-
-Smart commits also supported:
-- `PROJ-123 #comment Ready for review`
-- `PROJ-123 #in-review`
-
-### PR Titles
-```
-[JIRA-ID] Description
-```
-Example: `[PROJ-123] Add user authentication`
-
----
-
-## Commands & Testing
-
-### Running Tests
-
+### agentic-devops-loop (Python)
 ```bash
-# Activate venv first (required)
-source venv/bin/activate && pytest tests/ -xvs    # Stop on first failure, verbose
-source venv/bin/activate && pytest --cov=src       # With coverage
-source venv/bin/activate && pytest path/to/test_file.py  # Single file
+cd agentic-devops-loop
+source venv/bin/activate && pytest tests/ -xvs          # All tests (stop on first failure)
+source venv/bin/activate && pytest tests/voice_pipeline/ -xvs  # Voice pipeline tests only
+source venv/bin/activate && pytest -k "test_name" -xvs   # Single test
+source venv/bin/activate && ruff check .                  # Lint
+source venv/bin/activate && ruff check --fix .            # Lint + auto-fix
+source venv/bin/activate && ruff format .                 # Format
+source venv/bin/activate && uvicorn src.voice_pipeline.main:app --host 0.0.0.0 --port 8000 --reload  # Run server
 ```
 
-### Linting
+**venv activation is mandatory.** Without it: ImportError, wasted iteration.
 
+### voice-pipeline (Python, standalone copy)
 ```bash
-# Activate venv first (required)
-source venv/bin/activate && ruff check .           # Check for issues
-source venv/bin/activate && ruff check --fix .     # Auto-fix
-source venv/bin/activate && ruff format .           # Format code
+cd voice-pipeline
+source venv/bin/activate && pytest tests/ -xvs
+source venv/bin/activate && ruff check .
+source venv/bin/activate && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Running the Application
+Note: imports are `from src.*` here, vs `from src.voice_pipeline.*` in agentic-devops-loop.
 
+### voice-app (Tauri/React)
 ```bash
-source venv/bin/activate && uvicorn src.voice_pipeline.main:app --host 0.0.0.0 --port 8000 --reload
+cd voice-app
+npm run dev              # Vite dev server :5173
+npm run build            # tsc && vite build
+npx tsc --noEmit         # Type check only
+npm run tauri dev        # Full Tauri desktop app
 ```
 
-### Git Operations
+## Git Conventions (agentic-devops-loop)
 
-```bash
-git status                     # Check state
-git diff                       # See changes
-git add -A                     # Stage all
-git commit -m "PROJ-123: Description"
-git push -u origin feature/PROJ-123-description
-```
-
----
-
-## Security Rules
-
-### NEVER Do
-
-- Modify `.github/` or `.claude/hooks/` directories
-- Install packages not in `.claude/package-allowlist.json`
-- Use `sudo`, `eval`, or pipe to shell (`curl | bash`)
-- Write to `/etc/` or system directories
-- Push with `--force`
-- Reset with `--hard`
-- Bypass hooks with `--no-verify`
-
-### ALWAYS Do
-
-- Validate input before using
-- Use parameterized queries
-- Escape output appropriately
-- Follow least-privilege principle
-- Read existing code before modifying
-
-### Protected Files (Require Human Review)
-
-Files in these paths require human review via CODEOWNERS:
-- `/.github/` - All workflow configurations
-- `/.claude/hooks/` - Security-critical hooks
-- `/Dockerfile`, `docker-compose.yml`
-- `/.env`, `/.env.*`, `/secrets/`
-- Lock files (`requirements.txt`, `pyproject.toml` dependency sections)
-
----
-
-## Package Installation
-
-Only packages in `.claude/package-allowlist.json` can be installed.
-
-**Current Allowlist:**
-
-```json
-{
-  "pip": ["pytest", "pytest-cov", "pytest-asyncio", "pytest-mock", "ruff", "mypy", "httpx"]
-}
-```
-
-To add packages, edit the allowlist file (requires human review).
-
----
-
-## Configuration Profiles
-
-The Ralph Loop supports different profiles in `.claude/ralph-config.json`:
-
-### `template_repo` (Current Active)
-- For documentation/template repos
-- Tests not required
-- Markdown lint enabled
-- Structure validation enabled
-
-### `code_repo`
-- For code repos with test frameworks
-- Tests must pass
-- 80% coverage threshold
-- Full TDD enforcement
-
----
+- **Branch:** `{type}/{JIRA-ID}-{slug}` (e.g., `feature/DEV-42-add-oauth`)
+- **Commit:** `DEV-42: Add OAuth login endpoint`
+- **PR title:** `[DEV-42] Add OAuth login`
+- **Allowed types:** feature, bugfix, hotfix, refactor, docs
+- **Never:** `git add -A` or `git add .` (use `git add -u` for tracked files only)
 
 ## Jira Integration
 
-The system uses the REST API helper (`.claude/utils/jira_api.py`) to interact with Jira. MCP is optional.
-
-**Available Commands:**
-- `python3 .claude/utils/jira_api.py ping`
-- `python3 .claude/utils/jira_api.py get-issue`
-- `python3 .claude/utils/jira_api.py transition-issue`
-- `python3 .claude/utils/jira_api.py add-comment`
-
-**Required Environment Variables:**
+Direct REST API — NOT MCP tools:
 ```bash
-JIRA_URL=https://company.atlassian.net
-JIRA_USERNAME=your@email.com
-JIRA_API_TOKEN=<your-api-token>
+source venv/bin/activate && python3 -c "
+from dotenv import load_dotenv; load_dotenv()
+from src.sejfa.integrations.jira_client import get_jira_client
+client = get_jira_client()
+issue = client.get_issue('DEV-42')
+print(f'{issue.key}: {issue.summary}')
+"
 ```
 
----
+Methods: `get_issue()`, `search_issues()`, `add_comment()`, `transition_issue()`, `create_issue()`, `test_connection()`
 
-## GitHub Actions Workflows
+## Protected Paths (Do Not Modify)
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | Push/PR to main | Lint, test, build, type-check |
-| `pr-validation.yml` | PR opened/edited | Validate title, branch, commits |
-| `jules-review.yml` | PR opened | AI code review |
-| `self-healing.yml` | CI failure | Auto-fix (max 3 retries) |
+- `.github/` — CI/CD workflows, CODEOWNERS
+- `.claude/hooks/` — security hooks (stop-hook, pre-tool-use, etc.)
+- `Dockerfile`, `docker-compose.yml`
+- `.env` files
 
----
+## Ruff Configuration
 
-## Code Style
+Both projects share the same style:
+- Line length: 100
+- Target: Python 3.11
+- Rules: E, F, W, I, N, UP, B, C4
+- Excludes: `.claude/hooks/*`, `venv`
 
-### Python
+## Test Markers
+
 ```python
-# Type hints required
-def process_data(items: list[str]) -> dict[str, int]:
-    """Process items and return counts.
-
-    Args:
-        items: List of strings to process
-
-    Returns:
-        Dictionary mapping items to their counts
-    """
-    return {item: items.count(item) for item in set(items)}
+@pytest.mark.unit          # Isolated components
+@pytest.mark.integration   # External dependencies
+@pytest.mark.e2e           # End-to-end workflows
+@pytest.mark.slow          # Long-running tests
 ```
 
----
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| Agent won't exit | Check tests pass, verify acceptance criteria, check `.claude/ralph-state.json` |
-| Jira connection fails | Verify `.env` credentials, run `/preflight` |
-| Git hooks not working | Run `./scripts/setup-hooks.sh` |
-| Package install blocked | Add to `.claude/package-allowlist.json` (requires review) |
-| Context lost | Read `docs/CURRENT_TASK.md`, check git log, review acceptance criteria |
-| Stuck in loop (>15 iterations) | Re-read criteria, simplify approach, break into smaller tasks |
-
----
-
-## Key Concepts
-
-| Term | Definition |
-|------|------------|
-| **Ralph Loop** | Persistent iteration loop that keeps the agent working until exit criteria are met |
-| **CURRENT_TASK.md** | Dynamic file serving as agent memory across context windows |
-| **Promise Format** | `<promise>DONE</promise>` - exact format required for exit detection |
-| **Stop-Hook Flag** | `.claude/.ralph_loop_active` - signals task enforcement is active |
-| **Self-Healing** | Automatic retry pipeline when CI fails (max 3 attempts) |
-| **MCP** | Model Context Protocol - integration protocol for Jira tools |
-| **Sanitization** | Wrapping external data in XML tags to prevent prompt injection |
-
----
-
-## Communication Standards
-
-### In CURRENT_TASK.md
-- Be specific about what was done
-- Note any blockers or decisions
-- Update iteration count
-- Track files modified
-
-### In Commits
-- Reference Jira ID
-- Describe the "what" and "why"
-- Keep under 72 characters for subject
-
-### In PR Description
-- Summarize all changes
-- Link to Jira ticket
-- Note any breaking changes
-- Include test instructions
-
----
-
-## Important Reminders
-
-1. **Read `docs/CURRENT_TASK.md` at the start of every iteration** - it's your persistent memory
-2. **Follow TDD strictly** - write failing tests before implementation
-3. **Make small, incremental changes** - one logical change per commit
-4. **Run tests after every change** - don't let failures accumulate
-5. **Update CURRENT_TASK.md frequently** - track your progress
-6. **Never modify protected files** - `.github/` and `.claude/hooks/` are off-limits
-
----
-
-*The goal is working software that meets requirements, not perfection.*
+Coverage threshold: 80% (local), 70% (CI).
