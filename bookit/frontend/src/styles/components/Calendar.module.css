@@ -1,0 +1,192 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  animation: fade-in 400ms ease both;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.weekNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.weekLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 200px;
+  text-align: center;
+}
+
+.arrowButton {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  transition: all var(--transition-fast);
+}
+
+.arrowButton:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.serviceSelect {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  min-width: 200px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.serviceSelect:hover,
+.serviceSelect:focus {
+  border-color: var(--coral);
+  outline: none;
+}
+
+.serviceSelect option {
+  background: #1a1a2e;
+  color: var(--text-primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-sm);
+}
+
+.dayColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.dayHeader {
+  text-align: center;
+  padding: var(--space-sm);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.dayName {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.dayDate {
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.todayHeader {
+  border-color: var(--coral);
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-height: 100px;
+}
+
+.slot {
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  text-align: center;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.slotAvailable {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: var(--blue);
+  cursor: pointer;
+}
+
+.slotAvailable:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--blue);
+  transform: scale(1.02);
+}
+
+.slotFull {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.slotTime {
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.slotCount {
+  font-size: 0.65rem;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.emptyDay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.noService {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  color: var(--text-secondary);
+  gap: var(--space-sm);
+}
+
+.noServiceIcon {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}

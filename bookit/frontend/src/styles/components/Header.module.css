@@ -1,0 +1,70 @@
+.header {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-lg);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  animation: fade-in 400ms ease both;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .header {
+    background: var(--glass-bg-solid);
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.logoAccent {
+  color: var(--coral);
+}
+
+.tenant {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.navButton {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.navButton:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg-hover);
+}
+
+.navButtonActive {
+  color: var(--text-primary);
+  background: rgba(233, 69, 96, 0.15);
+}
