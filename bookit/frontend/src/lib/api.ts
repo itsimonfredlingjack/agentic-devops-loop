@@ -63,6 +63,7 @@ export interface Booking {
   slot_id: number;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string | null;
   status: "confirmed" | "cancelled";
   created_at: string;
   // Joined fields from backend
@@ -76,6 +77,7 @@ export interface BookingCreate {
   slot_id: number;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string;
 }
 
 // -----------------------------------------------------------------------

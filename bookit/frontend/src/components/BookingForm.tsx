@@ -33,6 +33,7 @@ export function BookingForm({
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState(storedEmail);
+  const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -45,7 +46,12 @@ export function BookingForm({
       setSubmitting(true);
       setError(null);
       try {
-        await bookSlot(slot.id, name.trim(), email.trim());
+        await bookSlot(
+          slot.id,
+          name.trim(),
+          email.trim(),
+          phone.trim() || undefined,
+        );
         setSuccess(true);
       } catch (err) {
         setError(
@@ -55,7 +61,7 @@ export function BookingForm({
         setSubmitting(false);
       }
     },
-    [name, email, slot.id, bookSlot],
+    [name, email, phone, slot.id, bookSlot],
   );
 
   // Click outside to close
@@ -81,6 +87,9 @@ export function BookingForm({
             <div className={styles.successDetail}>
               {serviceName} den {formatDateSv(slot.date)} kl{" "}
               {slot.start_time.slice(0, 5)}
+            </div>
+            <div className={styles.successDetail}>
+              Bekraftelse skickad till {email}
             </div>
             <button className={styles.closeButton} onClick={onBooked}>
               Stang
@@ -138,6 +147,20 @@ export function BookingForm({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="booking-phone">
+                  Telefon (valfritt)
+                </label>
+                <input
+                  id="booking-phone"
+                  className={styles.input}
+                  type="tel"
+                  placeholder="+46701234567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                 />
               </div>
 

@@ -18,6 +18,7 @@ class BookingCreate(BaseModel):
     slot_id: int = Field(..., ge=1, examples=[1])
     customer_name: str = Field(..., min_length=1, max_length=200, examples=["Jane Doe"])
     customer_email: str = Field(..., examples=["jane@example.com"])
+    customer_phone: str | None = Field(default=None, max_length=30, examples=["+46701234567"])
 
     model_config = {"from_attributes": True}
 
@@ -29,6 +30,7 @@ class BookingRead(BaseModel):
     slot_id: int
     customer_name: str
     customer_email: str
+    customer_phone: str | None = None
     status: BookingStatus
     created_at: str
 

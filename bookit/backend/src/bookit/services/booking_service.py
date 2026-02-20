@@ -1,5 +1,7 @@
 """Booking business-logic: creation and cancellation with atomic DB updates."""
 
+import asyncio
+import logging
 from datetime import UTC, datetime, timedelta
 
 import aiosqlite
@@ -7,6 +9,12 @@ from fastapi import HTTPException
 
 from src.bookit.config import settings
 from src.bookit.schemas.booking import BookingCreate, BookingRead, BookingStatus
+from src.bookit.services.notification_service import (
+    send_booking_confirmation,
+    send_cancellation_notification,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def _row_to_booking(row: aiosqlite.Row) -> BookingRead:
@@ -23,9 +31,17 @@ def _row_to_booking(row: aiosqlite.Row) -> BookingRead:
         slot_id=row["slot_id"],
         customer_name=row["customer_name"],
         customer_email=row["customer_email"],
+        customer_phone=row["customer_phone"],
         status=BookingStatus(row["status"]),
         created_at=row["created_at"],
     )
+
+
+async def _get_service_name(db: aiosqlite.Connection, slot_row: aiosqlite.Row) -> str:
+    """Look up the service name for a slot."""
+    cursor = await db.execute("SELECT name FROM services WHERE id = ?", (slot_row["service_id"],))
+    svc = await cursor.fetchone()
+    return svc["name"] if svc else "Okänd tjänst"
 
 
 async def create_booking(db: aiosqlite.Connection, booking: BookingCreate) -> BookingRead:
@@ -73,10 +89,10 @@ async def create_booking(db: aiosqlite.Connection, booking: BookingCreate) -> Bo
     # Atomically insert booking and increment booked_count
     cursor = await db.execute(
         """
-        INSERT INTO bookings (slot_id, customer_name, customer_email)
-        VALUES (?, ?, ?)
+        INSERT INTO bookings (slot_id, customer_name, customer_email, customer_phone)
+        VALUES (?, ?, ?, ?)
         """,
-        (booking.slot_id, booking.customer_name, booking.customer_email),
+        (booking.slot_id, booking.customer_name, booking.customer_email, booking.customer_phone),
     )
     booking_id = cursor.lastrowid
     await db.execute(
@@ -87,7 +103,21 @@ async def create_booking(db: aiosqlite.Connection, booking: BookingCreate) -> Bo
 
     cursor = await db.execute("SELECT * FROM bookings WHERE id = ?", (booking_id,))
     row = await cursor.fetchone()
-    return _row_to_booking(row)
+    result = _row_to_booking(row)
+
+    # Fire-and-forget email notification
+    service_name = await _get_service_name(db, slot_row)
+    asyncio.create_task(
+        send_booking_confirmation(
+            customer_name=booking.customer_name,
+            customer_email=booking.customer_email,
+            service_name=service_name,
+            slot_start=slot_row["start_time"],
+            slot_end=slot_row["end_time"],
+        )
+    )
+
+    return result
 
 
 async def cancel_booking(db: aiosqlite.Connection, booking_id: int) -> BookingRead:
@@ -146,7 +176,20 @@ async def cancel_booking(db: aiosqlite.Connection, booking_id: int) -> BookingRe
 
     cursor = await db.execute("SELECT * FROM bookings WHERE id = ?", (booking_id,))
     row = await cursor.fetchone()
-    return _row_to_booking(row)
+    result = _row_to_booking(row)
+
+    # Fire-and-forget cancellation email
+    service_name = await _get_service_name(db, slot_row)
+    asyncio.create_task(
+        send_cancellation_notification(
+            customer_name=booking_row["customer_name"],
+            customer_email=booking_row["customer_email"],
+            service_name=service_name,
+            slot_start=slot_row["start_time"],
+        )
+    )
+
+    return result
 
 
 async def list_bookings_by_email(

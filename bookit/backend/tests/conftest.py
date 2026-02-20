@@ -57,6 +57,7 @@ async def test_db():
                 slot_id INTEGER NOT NULL REFERENCES slots(id),
                 customer_name TEXT NOT NULL,
                 customer_email TEXT NOT NULL,
+                customer_phone TEXT,
                 status TEXT NOT NULL DEFAULT 'confirmed',
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )

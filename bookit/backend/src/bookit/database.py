@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     slot_id INTEGER NOT NULL REFERENCES slots(id),
     customer_name TEXT NOT NULL,
     customer_email TEXT NOT NULL,
+    customer_phone TEXT,
     status TEXT NOT NULL DEFAULT 'confirmed',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
@@ -66,7 +67,21 @@ async def init_db(db_url: str | None = None) -> None:
         await db.execute(_CREATE_SERVICES)
         await db.execute(_CREATE_SLOTS)
         await db.execute(_CREATE_BOOKINGS)
+
+        # Migrations for existing databases
+        await _migrate_add_column(db, "bookings", "customer_phone", "TEXT")
+
         await db.commit()
+
+
+async def _migrate_add_column(
+    db: aiosqlite.Connection, table: str, column: str, col_type: str
+) -> None:
+    """Add a column to a table if it does not already exist."""
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    cols = [row[1] for row in await cursor.fetchall()]
+    if column not in cols:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
 
 
 @asynccontextmanager

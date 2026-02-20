@@ -26,7 +26,12 @@ interface BookingState {
   fetchServices: () => Promise<void>;
   fetchSlots: (serviceId: number) => Promise<void>;
   fetchMyBookings: () => Promise<void>;
-  bookSlot: (slotId: number, name: string, email: string) => Promise<void>;
+  bookSlot: (
+    slotId: number,
+    name: string,
+    email: string,
+    phone?: string,
+  ) => Promise<void>;
   cancelBooking: (id: number) => Promise<void>;
   createService: (data: api.ServiceCreate) => Promise<void>;
   generateSlots: (
@@ -117,13 +122,14 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
   },
 
-  bookSlot: async (slotId, name, email) => {
+  bookSlot: async (slotId, name, email, phone) => {
     set({ loading: true, error: null });
     try {
       await api.createBooking({
         slot_id: slotId,
         customer_name: name,
         customer_email: email,
+        customer_phone: phone,
       });
       set({ loading: false, userEmail: email });
       // Refresh slots
