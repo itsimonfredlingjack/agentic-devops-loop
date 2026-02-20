@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.bookit.config import settings
 from src.bookit.database import init_db
-from src.bookit.routers import bookings, services, slots, tenants
+from src.bookit.routers import bookings, public, services, slots, tenants
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ app.include_router(tenants.router, prefix="/api")
 app.include_router(services.router, prefix="/api")
 app.include_router(slots.router, prefix="/api")
 app.include_router(bookings.router, prefix="/api")
+app.include_router(public.router, prefix="/api")
 
 
 @app.get("/health", tags=["meta"])

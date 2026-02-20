@@ -1,23 +1,30 @@
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useBookingStore } from "../stores/bookingStore";
 import styles from "../styles/components/Header.module.css";
 
-type View = "calendar" | "my-bookings" | "admin";
-
 interface NavItem {
-  key: View;
+  to: string;
   label: string;
+  end?: boolean; // match exact path
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { key: "calendar", label: "Kalender" },
-  { key: "my-bookings", label: "Mina Bokningar" },
-  { key: "admin", label: "Administration" },
-];
-
 export function Header() {
-  const view = useBookingStore((s) => s.view);
-  const setView = useBookingStore((s) => s.setView);
+  const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const currentTenant = useBookingStore((s) => s.currentTenant);
+
+  const navItems: NavItem[] = [
+    { to: `/admin/${slug}`, label: "Kalender", end: true },
+    { to: `/admin/${slug}/bookings`, label: "Mina Bokningar" },
+    { to: `/admin/${slug}/manage`, label: "Administration" },
+  ];
+
+  function isActive(item: NavItem): boolean {
+    if (item.end) {
+      return location.pathname === item.to;
+    }
+    return location.pathname.startsWith(item.to);
+  }
 
   return (
     <header className={styles.header}>
@@ -29,16 +36,16 @@ export function Header() {
       </div>
 
       <nav className={styles.nav}>
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.key}
+        {navItems.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
             className={`${styles.navButton} ${
-              view === item.key ? styles.navButtonActive : ""
+              isActive(item) ? styles.navButtonActive : ""
             }`}
-            onClick={() => setView(item.key)}
           >
             {item.label}
-          </button>
+          </Link>
         ))}
       </nav>
     </header>

@@ -135,3 +135,26 @@ export const cancelBooking = (id: number) =>
 
 export const getMyBookings = (email: string) =>
   request<Booking[]>(`/bookings?email=${encodeURIComponent(email)}`);
+
+// -----------------------------------------------------------------------
+// Public booking APIs
+// -----------------------------------------------------------------------
+
+export interface PublicSlot {
+  id: number;
+  service_id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  available: number;
+}
+
+export interface PublicTenantView {
+  name: string;
+  slug: string;
+  services: Service[];
+  slots_by_service: Record<number, PublicSlot[]>;
+}
+
+export const getPublicTenantView = (slug: string) =>
+  request<PublicTenantView>(`/book/${slug}`);

@@ -14,11 +14,16 @@
   --glass-bg-solid: rgba(30, 30, 60, 0.85);
 
   /* Accent colors */
-  --coral: #e94560;
-  --blue: #4a9eff;
-  --green: #4ade80;
-  --yellow: #facc15;
+  --coral: #c084fc;
+  --blue: #38bdf8;
+  --green: #34d399;
+  --yellow: #fbbf24;
   --red: #f87171;
+
+  /* Semantic accents */
+  --accent-primary: #a78bfa;
+  --accent-warm: #f59e0b;
+  --accent-cool: #67e8f9;
 
   /* Text */
   --text-primary: rgba(255, 255, 255, 0.92);

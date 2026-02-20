@@ -84,6 +84,7 @@ async def test_client(test_db):
         An ``httpx.AsyncClient`` configured for ASGI transport.
     """
     from src.bookit.routers.bookings import get_db_dep as bookings_dep
+    from src.bookit.routers.public import get_db_dep as public_dep
     from src.bookit.routers.services import get_db_dep as services_dep
     from src.bookit.routers.slots import get_db_dep as slots_dep
     from src.bookit.routers.tenants import get_db_dep as tenants_dep
@@ -95,6 +96,7 @@ async def test_client(test_db):
     app.dependency_overrides[services_dep] = override_db
     app.dependency_overrides[slots_dep] = override_db
     app.dependency_overrides[bookings_dep] = override_db
+    app.dependency_overrides[public_dep] = override_db
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

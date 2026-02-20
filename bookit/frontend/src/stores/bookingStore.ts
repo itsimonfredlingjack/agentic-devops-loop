@@ -6,8 +6,6 @@ import type { Service, Slot, Booking } from "../lib/api";
 // Types
 // -----------------------------------------------------------------------
 
-type View = "calendar" | "my-bookings" | "admin";
-
 interface BookingState {
   // Data
   currentTenant: string;
@@ -17,13 +15,11 @@ interface BookingState {
   services: Service[];
   slots: Slot[];
   myBookings: Booking[];
-  view: View;
   loading: boolean;
   error: string | null;
 
   // Actions
   setTenant: (slug: string) => void;
-  setView: (view: View) => void;
   setSelectedService: (id: number | null) => void;
   setSelectedDate: (date: string) => void;
   setUserEmail: (email: string) => void;
@@ -61,12 +57,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   services: [],
   slots: [],
   myBookings: [],
-  view: "calendar",
   loading: false,
   error: null,
 
   setTenant: (slug) => set({ currentTenant: slug }),
-  setView: (view) => set({ view }),
   setSelectedService: (id) => set({ selectedService: id }),
   setSelectedDate: (date) => set({ selectedDate: date }),
   setUserEmail: (email) => set({ userEmail: email }),
