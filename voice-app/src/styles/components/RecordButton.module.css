@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   padding: var(--space-md) 0;
 }
 
@@ -101,6 +101,13 @@
 .bar:nth-child(4) { animation-delay: 0.45s; }
 .bar:nth-child(5) { animation-delay: 0.6s; }
 
+/* Reactive bars (driven by mic level, no CSS animation) */
+.barReactive {
+  animation: none;
+  transition: transform 60ms ease-out;
+  transform-origin: center;
+}
+
 /* Processing spinner */
 .spinner {
   width: 24px;
@@ -111,9 +118,26 @@
   animation: spinner-arc 0.8s linear infinite;
 }
 
-/* Label */
-.label {
+/* Recording timer */
+.timer {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--coral);
+  letter-spacing: 0.05em;
+}
+
+/* Processing step text */
+.stepText {
   font-size: 12px;
   color: var(--text-secondary);
   font-weight: 500;
+  animation: fade-in 300ms ease both;
+}
+
+/* Idle hint */
+.hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 400;
 }

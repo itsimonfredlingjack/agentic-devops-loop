@@ -15,6 +15,16 @@ export interface LoopEvent {
   success?: boolean;
 }
 
+const STEP_LABELS: Record<string, string> = {
+  transcribing: "Transcribing audio...",
+  extracting: "Analyzing intent...",
+  clarifying: "Waiting for clarification...",
+  creating_ticket: "Creating Jira ticket...",
+  creating: "Creating Jira ticket...",
+  completed: "",
+  error: "",
+};
+
 function getReconnectDelay(): number {
   const delay = Math.min(
     BASE_RECONNECT_DELAY * 2 ** reconnectAttempts,
@@ -27,6 +37,8 @@ export function connectWebSocket(
   getServerUrl: () => string,
   appendLog: (msg: string) => void,
   setStatus: (s: PipelineStatus) => void,
+  setProcessingStep: (step: string) => void,
+  setWsConnected: (connected: boolean) => void,
   onClarification?: (data: {
     session_id: string;
     questions: string[];
@@ -50,12 +62,14 @@ export function connectWebSocket(
       socket = new WebSocket(wsUrl);
     } catch (err) {
       appendLog(`[ws] Connection error: ${err}`);
+      setWsConnected(false);
       scheduleReconnect();
       return;
     }
 
     socket.onopen = () => {
       reconnectAttempts = 0;
+      setWsConnected(true);
       appendLog("[ws] Connected");
     };
 
@@ -66,6 +80,7 @@ export function connectWebSocket(
 
         // Handle clarification_needed WebSocket event
         if (data.type === "clarification_needed" && onClarification) {
+          setProcessingStep("");
           onClarification({
             session_id: data.session_id,
             questions: data.questions,
@@ -86,7 +101,7 @@ export function connectWebSocket(
           return;
         }
 
-        // Update status based on server events
+        // Update status + processing step based on server events
         if (data.status) {
           const statusMap: Record<string, PipelineStatus> = {
             transcribing: "processing",
@@ -99,6 +114,10 @@ export function connectWebSocket(
           const mapped = statusMap[data.status];
           if (mapped) {
             setStatus(mapped);
+          }
+          const step = STEP_LABELS[data.status];
+          if (step !== undefined) {
+            setProcessingStep(step);
           }
         }
 
@@ -117,6 +136,10 @@ export function connectWebSocket(
           if (mapped) {
             setStatus(mapped);
           }
+          const step = STEP_LABELS[data.current_node];
+          if (step !== undefined) {
+            setProcessingStep(step);
+          }
         }
       } catch {
         appendLog(`[ws] Raw: ${event.data}`);
@@ -126,6 +149,7 @@ export function connectWebSocket(
     socket.onclose = () => {
       appendLog("[ws] Disconnected");
       socket = null;
+      setWsConnected(false);
       scheduleReconnect();
     };
 

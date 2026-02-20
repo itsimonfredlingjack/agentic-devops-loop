@@ -1,5 +1,17 @@
 .card {
   border-left: 3px solid var(--blue);
+  animation: clarify-enter 300ms ease both;
+}
+
+@keyframes clarify-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .header {
@@ -34,30 +46,33 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  counter-reset: question;
 }
 
 .question {
   font-size: 13px;
   color: var(--text-primary);
-  padding-left: var(--space-md);
+  padding-left: calc(var(--space-md) + 4px);
   position: relative;
+  counter-increment: question;
+  line-height: 1.5;
 }
 
 .question::before {
-  content: "?";
+  content: counter(question) ".";
   position: absolute;
   left: 0;
   color: var(--blue);
   font-weight: 600;
+  font-size: 12px;
 }
 
 .inputRow {
-  display: flex;
-  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
 }
 
-.input {
-  flex: 1;
+.textarea {
+  width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -65,16 +80,25 @@
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 60px;
   transition: border-color var(--transition-fast);
 }
 
-.input:focus {
+.textarea:focus {
   border-color: var(--blue);
   outline: none;
 }
 
-.input::placeholder {
+.textarea::placeholder {
   color: var(--text-tertiary);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
 }
 
 .submitBtn {
@@ -97,6 +121,31 @@
 }
 
 .submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.skipBtn {
+  padding: 8px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.skipBtn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+.skipBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

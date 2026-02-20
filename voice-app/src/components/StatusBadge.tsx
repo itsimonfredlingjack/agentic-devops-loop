@@ -10,6 +10,7 @@ const LABEL: Record<PipelineStatus, string> = {
   recording: "Recording",
   processing: "Processing",
   clarifying: "Clarifying",
+  previewing: "Preview",
   done: "Done",
   error: "Error",
 };
@@ -18,6 +19,7 @@ const PULSING: Set<PipelineStatus> = new Set([
   "recording",
   "processing",
   "clarifying",
+  "previewing",
 ]);
 
 export function StatusBadge({ status }: StatusBadgeProps) {

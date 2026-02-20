@@ -8,6 +8,7 @@ interface ClarificationDialogProps {
   round: number;
   disabled: boolean;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
 }
 
 export function ClarificationDialog({
@@ -16,18 +17,26 @@ export function ClarificationDialog({
   round,
   disabled,
   onSubmit,
+  onSkip,
 }: ClarificationDialogProps) {
   const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    textareaRef.current?.focus();
   }, [questions]);
 
   const handleSubmit = () => {
     if (!input.trim() || disabled) return;
     onSubmit(input);
     setInput("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   return (
@@ -37,24 +46,36 @@ export function ClarificationDialog({
         <span className={styles.round}>Round {round}</span>
       </div>
       <div className={styles.summary}>{partialSummary}</div>
-      <ul className={styles.questions}>
+      <ol className={styles.questions}>
         {questions.map((q, i) => (
           <li key={i} className={styles.question}>
             {q}
           </li>
         ))}
-      </ul>
+      </ol>
       <div className={styles.inputRow}>
-        <input
-          ref={inputRef}
-          className={styles.input}
-          type="text"
+        <textarea
+          ref={textareaRef}
+          className={styles.textarea}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          placeholder="Type your answer..."
+          onKeyDown={handleKeyDown}
+          placeholder="Type your answer... (Enter to send, Shift+Enter for new line)"
           disabled={disabled}
+          rows={3}
         />
+      </div>
+      <div className={styles.actions}>
+        {onSkip && (
+          <button
+            className={styles.skipBtn}
+            onClick={onSkip}
+            disabled={disabled}
+            type="button"
+          >
+            Skip
+          </button>
+        )}
         <button
           className={styles.submitBtn}
           onClick={handleSubmit}
