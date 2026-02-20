@@ -229,3 +229,26 @@ export const cancelRecurringSeries = (ruleId: number) =>
   request<{ cancelled: number }>(`/bookings/recurring/${ruleId}`, {
     method: "DELETE",
   });
+
+// -----------------------------------------------------------------------
+// Stats APIs
+// -----------------------------------------------------------------------
+
+export interface ServiceStats {
+  service_id: number;
+  service_name: string;
+  booking_count: number;
+  revenue_cents: number;
+}
+
+export interface StatsResponse {
+  total_bookings: number;
+  confirmed_bookings: number;
+  cancelled_bookings: number;
+  total_revenue_cents: number;
+  services: ServiceStats[];
+  period: string;
+}
+
+export const getTenantStats = (slug: string, period: string = "month") =>
+  request<StatsResponse>(`/tenants/${slug}/stats?period=${period}`);

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { BookingSuccess } from "./pages/BookingSuccess";
+import { StatsDashboard } from "./pages/StatsDashboard";
 import { AdminLayout } from "./pages/AdminLayout";
 import { Calendar } from "./components/Calendar";
 import { MyBookings } from "./components/MyBookings";
@@ -16,6 +17,7 @@ export function App() {
           <Route index element={<Calendar />} />
           <Route path="bookings" element={<MyBookings />} />
           <Route path="manage" element={<AdminPanel />} />
+          <Route path="stats" element={<StatsDashboard />} />
         </Route>
         <Route path="/" element={<Navigate to="/admin/demo" replace />} />
       </Routes>

@@ -17,6 +17,7 @@ export function Header() {
     { to: `/admin/${slug}`, label: "Kalender", end: true },
     { to: `/admin/${slug}/bookings`, label: "Mina Bokningar" },
     { to: `/admin/${slug}/manage`, label: "Administration" },
+    { to: `/admin/${slug}/stats`, label: "Statistik" },
   ];
 
   function isActive(item: NavItem): boolean {

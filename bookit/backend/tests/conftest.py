@@ -115,6 +115,10 @@ async def test_client(test_db):
     app.dependency_overrides[payments_dep] = override_db
     app.dependency_overrides[recurring_dep] = override_db
 
+    from src.bookit.routers.stats import get_db_dep as stats_dep
+
+    app.dependency_overrides[stats_dep] = override_db
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",

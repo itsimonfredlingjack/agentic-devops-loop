@@ -1,0 +1,159 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.periodPicker {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.periodButton {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.periodButton:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.15));
+}
+
+.periodActive {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* KPI Grid */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.kpiCard {
+  padding: 1.2rem;
+  border-radius: var(--radius-lg, 12px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  text-align: center;
+}
+
+.kpiValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.kpiLabel {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Bar Chart */
+.chartSection {
+  padding: 1.2rem;
+  border-radius: var(--radius-lg, 12px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+}
+
+.chartTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.barChart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.barLabel {
+  flex: 0 0 120px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barTrack {
+  flex: 1;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light, #9b59b6));
+  min-width: 4px;
+  transition: width 0.4s ease;
+}
+
+.barValue {
+  flex: 0 0 40px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* States */
+.loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 2rem;
+}
+
+.error {
+  color: var(--error, #e74c3c);
+  background: rgba(231, 76, 60, 0.1);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 2rem;
+  font-size: 0.9rem;
+}

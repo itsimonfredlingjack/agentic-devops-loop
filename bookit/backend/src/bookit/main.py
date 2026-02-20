@@ -8,7 +8,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.bookit.config import settings
 from src.bookit.database import init_db
-from src.bookit.routers import bookings, payments, public, recurring, services, slots, tenants
+from src.bookit.routers import (
+    bookings,
+    payments,
+    public,
+    recurring,
+    services,
+    slots,
+    stats,
+    tenants,
+)
 
 
 @asynccontextmanager
@@ -34,8 +43,9 @@ app.add_middleware(
 )
 
 # Register routers under /api prefix
-for _router_module in (tenants, services, slots, bookings, public, payments, recurring):
-    app.include_router(_router_module.router, prefix="/api")
+_all_routers = [tenants, services, slots, bookings, public, payments, recurring, stats]
+for _mod in _all_routers:
+    app.include_router(_mod.router, prefix="/api")
 
 
 @app.get("/health", tags=["meta"])
