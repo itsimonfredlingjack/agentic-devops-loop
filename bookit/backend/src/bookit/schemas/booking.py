@@ -31,6 +31,8 @@ class BookingRead(BaseModel):
     customer_name: str
     customer_email: str
     customer_phone: str | None = None
+    stripe_session_id: str | None = None
+    payment_status: str = "none"
     status: BookingStatus
     created_at: str
 

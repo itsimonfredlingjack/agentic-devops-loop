@@ -53,8 +53,9 @@ async def create_service(
     """
     tenant_id = await _get_tenant_id(db, slug)
     cursor = await db.execute(
-        "INSERT INTO services (tenant_id, name, duration_min, capacity) VALUES (?, ?, ?, ?)",
-        (tenant_id, payload.name, payload.duration_min, payload.capacity),
+        "INSERT INTO services (tenant_id, name, duration_min, capacity, price_cents)"
+        " VALUES (?, ?, ?, ?, ?)",
+        (tenant_id, payload.name, payload.duration_min, payload.capacity, payload.price_cents),
     )
     await db.commit()
     service_id = cursor.lastrowid

@@ -33,6 +33,7 @@ export interface Service {
   name: string;
   duration_minutes: number;
   capacity: number;
+  price_cents: number;
   created_at: string;
 }
 
@@ -40,6 +41,7 @@ export interface ServiceCreate {
   name: string;
   duration_minutes: number;
   capacity: number;
+  price_cents?: number;
 }
 
 export interface Slot {
@@ -160,3 +162,34 @@ export interface PublicTenantView {
 
 export const getPublicTenantView = (slug: string) =>
   request<PublicTenantView>(`/book/${slug}`);
+
+// -----------------------------------------------------------------------
+// Stripe Checkout APIs
+// -----------------------------------------------------------------------
+
+export interface CheckoutResponse {
+  checkout_url: string;
+  session_id: string;
+  booking_id: number;
+}
+
+export interface CheckoutStatus {
+  booking_id: number | null;
+  payment_status: string;
+  booking_status: string;
+}
+
+export const createCheckoutSession = (data: {
+  slot_id: number;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  tenant_slug: string;
+}) =>
+  request<CheckoutResponse>("/bookings/checkout", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const getCheckoutStatus = (sessionId: string) =>
+  request<CheckoutStatus>(`/bookings/checkout/${sessionId}/status`);

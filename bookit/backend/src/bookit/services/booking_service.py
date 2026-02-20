@@ -32,6 +32,8 @@ def _row_to_booking(row: aiosqlite.Row) -> BookingRead:
         customer_name=row["customer_name"],
         customer_email=row["customer_email"],
         customer_phone=row["customer_phone"],
+        stripe_session_id=row["stripe_session_id"],
+        payment_status=row["payment_status"],
         status=BookingStatus(row["status"]),
         created_at=row["created_at"],
     )

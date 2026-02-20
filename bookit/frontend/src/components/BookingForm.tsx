@@ -1,11 +1,14 @@
 import { useState, useCallback } from "react";
 import { useBookingStore } from "../stores/bookingStore";
+import { createCheckoutSession } from "../lib/api";
 import type { Slot } from "../lib/api";
 import styles from "../styles/components/BookingForm.module.css";
 
 interface BookingFormProps {
   slot: Slot;
   serviceName: string;
+  priceCents?: number;
+  tenantSlug?: string;
   onClose: () => void;
   onBooked: () => void;
 }
@@ -25,9 +28,12 @@ function formatDateSv(dateStr: string): string {
 export function BookingForm({
   slot,
   serviceName,
+  priceCents = 0,
+  tenantSlug,
   onClose,
   onBooked,
 }: BookingFormProps) {
+  const isPaid = priceCents > 0;
   const bookSlot = useBookingStore((s) => s.bookSlot);
   const storedEmail = useBookingStore((s) => s.userEmail);
 
@@ -46,6 +52,17 @@ export function BookingForm({
       setSubmitting(true);
       setError(null);
       try {
+        if (isPaid && tenantSlug) {
+          const checkout = await createCheckoutSession({
+            slot_id: slot.id,
+            customer_name: name.trim(),
+            customer_email: email.trim(),
+            customer_phone: phone.trim() || undefined,
+            tenant_slug: tenantSlug,
+          });
+          window.location.href = checkout.checkout_url;
+          return;
+        }
         await bookSlot(
           slot.id,
           name.trim(),
@@ -116,6 +133,14 @@ export function BookingForm({
                   {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
                 </span>
               </div>
+              {isPaid && (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Pris</span>
+                  <span className={styles.infoValue}>
+                    {(priceCents / 100).toFixed(0)} kr
+                  </span>
+                </div>
+              )}
             </div>
 
             <form className={styles.form} onSubmit={handleSubmit}>
@@ -172,7 +197,11 @@ export function BookingForm({
                   className={styles.bookButton}
                   disabled={submitting || !name.trim() || !email.trim()}
                 >
-                  {submitting ? "Bokar..." : "Boka"}
+                  {submitting
+                    ? "Bokar..."
+                    : isPaid
+                      ? `Betala ${(priceCents / 100).toFixed(0)} kr`
+                      : "Boka"}
                 </button>
                 <button
                   type="button"

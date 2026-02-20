@@ -37,6 +37,7 @@ async def test_db():
                 name TEXT NOT NULL,
                 duration_min INTEGER NOT NULL DEFAULT 60,
                 capacity INTEGER NOT NULL DEFAULT 1,
+                price_cents INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
         """)
@@ -58,6 +59,8 @@ async def test_db():
                 customer_name TEXT NOT NULL,
                 customer_email TEXT NOT NULL,
                 customer_phone TEXT,
+                stripe_session_id TEXT,
+                payment_status TEXT NOT NULL DEFAULT 'none',
                 status TEXT NOT NULL DEFAULT 'confirmed',
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
@@ -85,6 +88,7 @@ async def test_client(test_db):
         An ``httpx.AsyncClient`` configured for ASGI transport.
     """
     from src.bookit.routers.bookings import get_db_dep as bookings_dep
+    from src.bookit.routers.payments import get_db_dep as payments_dep
     from src.bookit.routers.public import get_db_dep as public_dep
     from src.bookit.routers.services import get_db_dep as services_dep
     from src.bookit.routers.slots import get_db_dep as slots_dep
@@ -98,6 +102,7 @@ async def test_client(test_db):
     app.dependency_overrides[slots_dep] = override_db
     app.dependency_overrides[bookings_dep] = override_db
     app.dependency_overrides[public_dep] = override_db
+    app.dependency_overrides[payments_dep] = override_db
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

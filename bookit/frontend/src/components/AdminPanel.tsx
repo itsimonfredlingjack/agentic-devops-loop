@@ -18,6 +18,7 @@ export function AdminPanel() {
   const [serviceName, setServiceName] = useState("");
   const [duration, setDuration] = useState("60");
   const [capacity, setCapacity] = useState("1");
+  const [priceSek, setPriceSek] = useState("0");
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
@@ -53,16 +54,24 @@ export function AdminPanel() {
         return;
       }
 
+      const priceNum = parseInt(priceSek, 10);
+      if (isNaN(priceNum) || priceNum < 0) {
+        setCreateError("Ange ett giltigt pris");
+        return;
+      }
+
       try {
         await createServiceAction({
           name: serviceName.trim(),
           duration_minutes: durationNum,
           capacity: capacityNum,
+          price_cents: priceNum * 100,
         });
         setCreateSuccess(`Tjanst "${serviceName.trim()}" skapad!`);
         setServiceName("");
         setDuration("60");
         setCapacity("1");
+        setPriceSek("0");
       } catch (err) {
         setCreateError(
           err instanceof Error ? err.message : "Kunde inte skapa tjanst",
@@ -172,6 +181,20 @@ export function AdminPanel() {
             />
           </div>
 
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="admin-price">
+              Pris (kr)
+            </label>
+            <input
+              id="admin-price"
+              className={styles.input}
+              type="number"
+              min="0"
+              value={priceSek}
+              onChange={(e) => setPriceSek(e.target.value)}
+            />
+          </div>
+
           <button
             type="submit"
             className={styles.createButton}
@@ -208,6 +231,11 @@ export function AdminPanel() {
                       <div className={styles.serviceMeta}>
                         <span>{service.duration_minutes} min</span>
                         <span>Kapacitet: {service.capacity}</span>
+                        <span>
+                          {service.price_cents > 0
+                            ? `${(service.price_cents / 100).toFixed(0)} kr`
+                            : "Gratis"}
+                        </span>
                       </div>
                     </div>
 

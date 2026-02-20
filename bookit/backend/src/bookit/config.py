@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     smtp_from_email: str = "noreply@bookit.local"
     email_enabled: bool = False
 
+    # Stripe settings
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_enabled: bool = False
+    frontend_url: str = "http://localhost:5173"
+
     model_config = {"env_prefix": "BOOKIT_", "case_sensitive": False}
 
 

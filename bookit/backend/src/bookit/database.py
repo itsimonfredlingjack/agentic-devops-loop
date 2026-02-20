@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS services (
     name TEXT NOT NULL,
     duration_min INTEGER NOT NULL DEFAULT 60,
     capacity INTEGER NOT NULL DEFAULT 1,
+    price_cents INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 """
@@ -47,6 +48,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     customer_name TEXT NOT NULL,
     customer_email TEXT NOT NULL,
     customer_phone TEXT,
+    stripe_session_id TEXT,
+    payment_status TEXT NOT NULL DEFAULT 'none',
     status TEXT NOT NULL DEFAULT 'confirmed',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
@@ -70,6 +73,9 @@ async def init_db(db_url: str | None = None) -> None:
 
         # Migrations for existing databases
         await _migrate_add_column(db, "bookings", "customer_phone", "TEXT")
+        await _migrate_add_column(db, "services", "price_cents", "INTEGER DEFAULT 0")
+        await _migrate_add_column(db, "bookings", "stripe_session_id", "TEXT")
+        await _migrate_add_column(db, "bookings", "payment_status", "TEXT DEFAULT 'none'")
 
         await db.commit()
 
