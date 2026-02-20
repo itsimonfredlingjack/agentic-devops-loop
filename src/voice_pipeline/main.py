@@ -419,12 +419,36 @@ def create_app() -> FastAPI:
     # Ralph Loop queue
     # -----------------------------------------------------------------------
 
+    class LoopEnqueueRequest(BaseModel):
+        key: str
+        summary: str = ""
+
     class LoopStartedRequest(BaseModel):
         key: str
 
     class LoopCompletedRequest(BaseModel):
         key: str
         success: bool
+
+    @app.post("/api/loop/enqueue", tags=["loop"])
+    async def enqueue_ticket(request: LoopEnqueueRequest) -> dict[str, Any]:
+        """Enqueue a ticket for Ralph Loop pickup.
+
+        Used by the epic-runner to bulk-add tickets from Jira Epics.
+        """
+        queue = _get_loop_queue()
+        added = queue.add_ticket(request.key, request.summary)
+
+        if added and _ws_manager:
+            await _ws_manager.broadcast(
+                {
+                    "type": "ticket_queued",
+                    "issue_key": request.key,
+                    "summary": request.summary,
+                }
+            )
+
+        return {"status": "queued" if added else "duplicate", "key": request.key}
 
     @app.get("/api/loop/queue", tags=["loop"])
     async def get_loop_queue() -> list[dict[str, str]]:
