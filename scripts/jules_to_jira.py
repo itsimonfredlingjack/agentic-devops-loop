@@ -268,11 +268,7 @@ def parse_findings(review_body: str) -> list[Finding]:
         for pattern in SEVERITY_PATTERNS:
             match = pattern.search(line)
             if match:
-                key = (
-                    match.group("severity").upper()
-                    + "|"
-                    + match.group("location").strip()
-                )
+                key = match.group("severity").upper() + "|" + match.group("location").strip()
                 if key not in seen:
                     seen.add(key)
                     findings.append(
@@ -331,10 +327,7 @@ def create_tasks(
 
     to_create = high_findings[:MAX_TASKS]
     if len(high_findings) > MAX_TASKS:
-        _log(
-            f"Found {len(high_findings)} actionable findings, "
-            f"capping at {MAX_TASKS} tasks"
-        )
+        _log(f"Found {len(high_findings)} actionable findings, capping at {MAX_TASKS} tasks")
 
     created_keys: list[str] = []
 
@@ -394,10 +387,7 @@ def main() -> int:
 
     # Early exit: detect timeout/error messages from jules_review_api.py
     if _is_error_or_timeout(review_body):
-        _log(
-            "Review body is a timeout/error message, not findings — "
-            "skipping Jira processing"
-        )
+        _log("Review body is a timeout/error message, not findings — skipping Jira processing")
         _log(f"First 200 chars: {review_body[:200]}")
         return 0
 
@@ -419,9 +409,7 @@ def main() -> int:
         _log(f"First 300 chars: {review_body[:300]}")
         return 0
 
-    task_count = sum(
-        1 for f in findings if f.severity in ("HIGH", "CRITICAL", "MEDIUM")
-    )
+    task_count = sum(1 for f in findings if f.severity in ("HIGH", "CRITICAL", "MEDIUM"))
     low_count = sum(1 for f in findings if f.severity == "LOW")
     _log(
         f"Found {len(findings)} findings: "

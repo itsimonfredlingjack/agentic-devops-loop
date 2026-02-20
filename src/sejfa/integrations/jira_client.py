@@ -84,20 +84,12 @@ class JiraIssue:
             description=fields.get("description"),
             issue_type=fields.get("issuetype", {}).get("name", "Unknown"),
             status=fields.get("status", {}).get("name", "Unknown"),
-            priority=(
-                fields.get("priority", {}).get("name")
-                if fields.get("priority")
-                else None
-            ),
+            priority=(fields.get("priority", {}).get("name") if fields.get("priority") else None),
             assignee=(
-                fields.get("assignee", {}).get("displayName")
-                if fields.get("assignee")
-                else None
+                fields.get("assignee", {}).get("displayName") if fields.get("assignee") else None
             ),
             reporter=(
-                fields.get("reporter", {}).get("displayName")
-                if fields.get("reporter")
-                else None
+                fields.get("reporter", {}).get("displayName") if fields.get("reporter") else None
             ),
             labels=fields.get("labels", []),
             raw=data,
@@ -245,9 +237,7 @@ class JiraClient:
 
         if not transition_id:
             available = [t.get("name") for t in transitions_data.get("transitions", [])]
-            raise JiraAPIError(
-                f"Transition '{transition_name}' not found. Available: {available}"
-            )
+            raise JiraAPIError(f"Transition '{transition_name}' not found. Available: {available}")
 
         # Perform the transition
         self._request(
