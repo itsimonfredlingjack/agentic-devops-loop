@@ -1,0 +1,18 @@
+[Unit]
+Description=BookIt Backend (FastAPI on :8001)
+After=network.target
+
+[Service]
+Type=simple
+User=ai-server2
+WorkingDirectory=/home/ai-server2/04-voice-mode-4-loop/bookit/backend
+Environment=PATH=/home/ai-server2/04-voice-mode-4-loop/bookit/backend/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/ai-server2/04-voice-mode-4-loop/bookit/backend/venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8001
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sejfa-bookit
+
+[Install]
+WantedBy=multi-user.target
