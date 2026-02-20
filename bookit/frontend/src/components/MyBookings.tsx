@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useBookingStore } from "../stores/bookingStore";
+import { cancelRecurringSeries } from "../lib/api";
 import styles from "../styles/components/MyBookings.module.css";
 
 function formatDateSv(dateStr: string | undefined): string {
@@ -65,6 +66,15 @@ export function MyBookings() {
       await cancelBookingAction(id);
     },
     [cancelBookingAction],
+  );
+
+  const handleCancelSeries = useCallback(
+    async (ruleId: number) => {
+      if (!window.confirm("Avboka HELA serien?")) return;
+      await cancelRecurringSeries(ruleId);
+      await fetchMyBookings();
+    },
+    [fetchMyBookings],
   );
 
   // Suppress the unused handleSearch lint error by using it indirectly
@@ -140,12 +150,32 @@ export function MyBookings() {
                 </div>
 
                 {!isCancelled && (
-                  <button
-                    className={styles.cancelBookingButton}
-                    onClick={() => void handleCancel(booking.id)}
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}
                   >
-                    Avboka
-                  </button>
+                    {booking.recurring_rule_id && (
+                      <button
+                        className={styles.cancelBookingButton}
+                        onClick={() =>
+                          void handleCancelSeries(booking.recurring_rule_id!)
+                        }
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        Avboka serien
+                      </button>
+                    )}
+                    <button
+                      className={styles.cancelBookingButton}
+                      onClick={() => void handleCancel(booking.id)}
+                    >
+                      Avboka
+                    </button>
+                  </div>
+                )}
+                {booking.recurring_rule_id && !isCancelled && (
+                  <div style={{ fontSize: "0.7rem", opacity: 0.6 }}>
+                    Del av serie
+                  </div>
                 )}
               </div>
             );

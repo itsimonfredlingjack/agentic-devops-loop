@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useBookingStore } from "../stores/bookingStore";
-import { createCheckoutSession } from "../lib/api";
+import { createCheckoutSession, createRecurringBooking } from "../lib/api";
 import type { Slot } from "../lib/api";
 import styles from "../styles/components/BookingForm.module.css";
 
@@ -40,6 +40,11 @@ export function BookingForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState(storedEmail);
   const [phone, setPhone] = useState("");
+  const [recurring, setRecurring] = useState(false);
+  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">(
+    "weekly",
+  );
+  const [occurrences, setOccurrences] = useState("4");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -63,12 +68,23 @@ export function BookingForm({
           window.location.href = checkout.checkout_url;
           return;
         }
-        await bookSlot(
-          slot.id,
-          name.trim(),
-          email.trim(),
-          phone.trim() || undefined,
-        );
+        if (recurring) {
+          await createRecurringBooking({
+            slot_id: slot.id,
+            customer_name: name.trim(),
+            customer_email: email.trim(),
+            customer_phone: phone.trim() || undefined,
+            frequency,
+            occurrences: parseInt(occurrences, 10) || 4,
+          });
+        } else {
+          await bookSlot(
+            slot.id,
+            name.trim(),
+            email.trim(),
+            phone.trim() || undefined,
+          );
+        }
         setSuccess(true);
       } catch (err) {
         setError(
@@ -188,6 +204,59 @@ export function BookingForm({
                   onChange={(e) => setPhone(e.target.value)}
                 />
               </div>
+
+              <div className={styles.field}>
+                <label className={styles.label}>
+                  <input
+                    type="checkbox"
+                    checked={recurring}
+                    onChange={(e) => setRecurring(e.target.checked)}
+                    style={{ marginRight: 8 }}
+                  />
+                  Boka aterkommande
+                </label>
+              </div>
+
+              {recurring && (
+                <div
+                  className={styles.field}
+                  style={{ display: "flex", gap: 12 }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <label className={styles.label} htmlFor="booking-freq">
+                      Frekvens
+                    </label>
+                    <select
+                      id="booking-freq"
+                      className={styles.input}
+                      value={frequency}
+                      onChange={(e) =>
+                        setFrequency(
+                          e.target.value as "weekly" | "biweekly" | "monthly",
+                        )
+                      }
+                    >
+                      <option value="weekly">Varje vecka</option>
+                      <option value="biweekly">Varannan vecka</option>
+                      <option value="monthly">Varje manad</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className={styles.label} htmlFor="booking-occ">
+                      Antal
+                    </label>
+                    <input
+                      id="booking-occ"
+                      className={styles.input}
+                      type="number"
+                      min="2"
+                      max="52"
+                      value={occurrences}
+                      onChange={(e) => setOccurrences(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
               {error && <div className={styles.error}>{error}</div>}
 

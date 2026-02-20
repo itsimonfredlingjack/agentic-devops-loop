@@ -66,6 +66,7 @@ export interface Booking {
   customer_name: string;
   customer_email: string;
   customer_phone?: string | null;
+  recurring_rule_id?: number | null;
   status: "confirmed" | "cancelled";
   created_at: string;
   // Joined fields from backend
@@ -193,3 +194,38 @@ export const createCheckoutSession = (data: {
 
 export const getCheckoutStatus = (sessionId: string) =>
   request<CheckoutStatus>(`/bookings/checkout/${sessionId}/status`);
+
+// -----------------------------------------------------------------------
+// Recurring Booking APIs
+// -----------------------------------------------------------------------
+
+export interface RecurringCreate {
+  slot_id: number;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  frequency: "weekly" | "biweekly" | "monthly";
+  occurrences: number;
+}
+
+export interface RecurringRead {
+  id: number;
+  frequency: string;
+  occurrences: number;
+  booking_ids: number[];
+  created_at: string;
+}
+
+export const createRecurringBooking = (data: RecurringCreate) =>
+  request<RecurringRead>("/bookings/recurring", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const getRecurringRule = (ruleId: number) =>
+  request<RecurringRead>(`/bookings/recurring/${ruleId}`);
+
+export const cancelRecurringSeries = (ruleId: number) =>
+  request<{ cancelled: number }>(`/bookings/recurring/${ruleId}`, {
+    method: "DELETE",
+  });

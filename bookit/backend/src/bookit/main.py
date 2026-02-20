@@ -8,23 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.bookit.config import settings
 from src.bookit.database import init_db
-from src.bookit.routers import bookings, payments, public, services, slots, tenants
+from src.bookit.routers import bookings, payments, public, recurring, services, slots, tenants
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan handler.
-
-    Initialises the database schema on startup.  No teardown is needed for
-    SQLite connections because each request opens and closes its own
-    connection via the dependency.
-
-    Args:
-        app: The FastAPI application instance.
-
-    Yields:
-        Control back to FastAPI while the application is running.
-    """
+    """Application lifespan handler."""
     await init_db()
     yield
 
@@ -45,19 +34,11 @@ app.add_middleware(
 )
 
 # Register routers under /api prefix
-app.include_router(tenants.router, prefix="/api")
-app.include_router(services.router, prefix="/api")
-app.include_router(slots.router, prefix="/api")
-app.include_router(bookings.router, prefix="/api")
-app.include_router(public.router, prefix="/api")
-app.include_router(payments.router, prefix="/api")
+for _router_module in (tenants, services, slots, bookings, public, payments, recurring):
+    app.include_router(_router_module.router, prefix="/api")
 
 
 @app.get("/health", tags=["meta"])
 async def health() -> dict[str, str]:
-    """Health check endpoint.
-
-    Returns:
-        A simple status dict.
-    """
+    """Health check endpoint."""
     return {"status": "ok"}

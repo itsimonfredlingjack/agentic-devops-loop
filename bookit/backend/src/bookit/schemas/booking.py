@@ -33,6 +33,7 @@ class BookingRead(BaseModel):
     customer_phone: str | None = None
     stripe_session_id: str | None = None
     payment_status: str = "none"
+    recurring_rule_id: int | None = None
     status: BookingStatus
     created_at: str
 

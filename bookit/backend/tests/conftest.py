@@ -61,7 +61,16 @@ async def test_db():
                 customer_phone TEXT,
                 stripe_session_id TEXT,
                 payment_status TEXT NOT NULL DEFAULT 'none',
+                recurring_rule_id INTEGER,
                 status TEXT NOT NULL DEFAULT 'confirmed',
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS recurring_rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                frequency TEXT NOT NULL DEFAULT 'weekly',
+                occurrences INTEGER NOT NULL DEFAULT 4,
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
         """)
@@ -90,6 +99,7 @@ async def test_client(test_db):
     from src.bookit.routers.bookings import get_db_dep as bookings_dep
     from src.bookit.routers.payments import get_db_dep as payments_dep
     from src.bookit.routers.public import get_db_dep as public_dep
+    from src.bookit.routers.recurring import get_db_dep as recurring_dep
     from src.bookit.routers.services import get_db_dep as services_dep
     from src.bookit.routers.slots import get_db_dep as slots_dep
     from src.bookit.routers.tenants import get_db_dep as tenants_dep
@@ -103,6 +113,7 @@ async def test_client(test_db):
     app.dependency_overrides[bookings_dep] = override_db
     app.dependency_overrides[public_dep] = override_db
     app.dependency_overrides[payments_dep] = override_db
+    app.dependency_overrides[recurring_dep] = override_db
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

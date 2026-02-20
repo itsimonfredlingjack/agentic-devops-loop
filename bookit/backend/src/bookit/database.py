@@ -50,7 +50,17 @@ CREATE TABLE IF NOT EXISTS bookings (
     customer_phone TEXT,
     stripe_session_id TEXT,
     payment_status TEXT NOT NULL DEFAULT 'none',
+    recurring_rule_id INTEGER,
     status TEXT NOT NULL DEFAULT 'confirmed',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
+_CREATE_RECURRING_RULES = """
+CREATE TABLE IF NOT EXISTS recurring_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    frequency TEXT NOT NULL DEFAULT 'weekly',
+    occurrences INTEGER NOT NULL DEFAULT 4,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 """
@@ -70,12 +80,14 @@ async def init_db(db_url: str | None = None) -> None:
         await db.execute(_CREATE_SERVICES)
         await db.execute(_CREATE_SLOTS)
         await db.execute(_CREATE_BOOKINGS)
+        await db.execute(_CREATE_RECURRING_RULES)
 
         # Migrations for existing databases
         await _migrate_add_column(db, "bookings", "customer_phone", "TEXT")
         await _migrate_add_column(db, "services", "price_cents", "INTEGER DEFAULT 0")
         await _migrate_add_column(db, "bookings", "stripe_session_id", "TEXT")
         await _migrate_add_column(db, "bookings", "payment_status", "TEXT DEFAULT 'none'")
+        await _migrate_add_column(db, "bookings", "recurring_rule_id", "INTEGER")
 
         await db.commit()
 
