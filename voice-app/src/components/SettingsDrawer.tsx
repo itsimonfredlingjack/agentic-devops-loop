@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/SettingsDrawer.module.css";
 
 interface SettingsDrawerProps {
@@ -17,6 +17,11 @@ export function SettingsDrawer({
   const [closing, setClosing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const handleClose = useCallback(() => {
+    setClosing(true);
+    setTimeout(onClose, 200);
+  }, [onClose]);
+
   useEffect(() => {
     if (open) {
       setClosing(false);
@@ -33,12 +38,7 @@ export function SettingsDrawer({
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
-
-  const handleClose = () => {
-    setClosing(true);
-    setTimeout(onClose, 200);
-  };
+  }, [open, handleClose]);
 
   if (!open && !closing) return null;
 

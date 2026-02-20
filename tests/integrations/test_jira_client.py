@@ -239,9 +239,7 @@ class TestJiraClient:
 
     def test_test_connection_failure(self, client: JiraClient) -> None:
         """Should return False for failed connection."""
-        with patch.object(
-            client, "_request", side_effect=JiraAPIError("Auth failed", 401)
-        ):
+        with patch.object(client, "_request", side_effect=JiraAPIError("Auth failed", 401)):
             assert client.test_connection() is False
 
 
@@ -257,8 +255,6 @@ class TestJiraAPIError:
 
     def test_error_with_response(self) -> None:
         """Error should include response body."""
-        error = JiraAPIError(
-            "Test error", status_code=400, response='{"error": "Bad request"}'
-        )
+        error = JiraAPIError("Test error", status_code=400, response='{"error": "Bad request"}')
 
         assert error.response == '{"error": "Bad request"}'

@@ -10,9 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # The hook is at .claude/hooks/prevent-push.py
-HOOK_PATH = (
-    Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "prevent-push.py"
-)
+HOOK_PATH = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "prevent-push.py"
 
 
 @pytest.fixture

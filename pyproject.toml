@@ -29,7 +29,7 @@ include = ["src*"]
 
 [tool.ruff]
 exclude = [
-    ".claude/hooks/*",
+    ".claude/*",
     "venv",
     ".venv",
     "__pycache__",

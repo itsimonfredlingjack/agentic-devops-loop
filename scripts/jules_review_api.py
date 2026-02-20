@@ -284,16 +284,12 @@ def _deep_find_texts(
             if key in skip_keys:
                 continue
             hits.extend(
-                _deep_find_texts(
-                    val, skip_keys=skip_keys, pattern=pattern, _depth=_depth + 1
-                )
+                _deep_find_texts(val, skip_keys=skip_keys, pattern=pattern, _depth=_depth + 1)
             )
     elif isinstance(obj, list):
         for item in obj:
             hits.extend(
-                _deep_find_texts(
-                    item, skip_keys=skip_keys, pattern=pattern, _depth=_depth + 1
-                )
+                _deep_find_texts(item, skip_keys=skip_keys, pattern=pattern, _depth=_depth + 1)
             )
 
     # De-duplicate preserving order, longest first
@@ -453,9 +449,7 @@ def extract_review_text(session: dict) -> str:
     severity_texts = _deep_find_texts(session)
     if severity_texts:
         _log(f"Found {len(severity_texts)} text blocks with severity markers")
-        non_diff = [
-            t for t in severity_texts if not t.lstrip().startswith(_UNIFIED_DIFF_HEADER)
-        ]
+        non_diff = [t for t in severity_texts if not t.lstrip().startswith(_UNIFIED_DIFF_HEADER)]
         if non_diff:
             parts.extend(non_diff)
             return "\n\n".join(parts)
@@ -470,10 +464,7 @@ def extract_review_text(session: dict) -> str:
     # --- Strategy 1b: Extract structured finding objects ---
     structured = _extract_structured_findings(session)
     if structured:
-        _log(
-            f"Found {len(structured)} structured finding objects "
-            "(dict with severity key)"
-        )
+        _log(f"Found {len(structured)} structured finding objects (dict with severity key)")
         return "\n\n".join(structured)
 
     # --- Strategy 2: Check known structured fields ---
@@ -668,14 +659,12 @@ def main() -> int:
         source_names = [s.get("name", "") for s in sources]
         if source_name not in source_names:
             _log(
-                f"Source {source_name} not found in connected sources. "
-                f"Available: {source_names}",
+                f"Source {source_name} not found in connected sources. Available: {source_names}",
                 "warning",
             )
             if source_names:
                 _log(
-                    "Tip: Install the Jules GitHub App on your repo at "
-                    "https://jules.google",
+                    "Tip: Install the Jules GitHub App on your repo at https://jules.google",
                     "warning",
                 )
     except Exception as exc:
@@ -755,9 +744,7 @@ def main() -> int:
     _log(f"Session finished with state: {state}")
 
     if state == "FAILED":
-        error_msg = final_session.get(
-            "error", final_session.get("message", "Unknown error")
-        )
+        error_msg = final_session.get("error", final_session.get("message", "Unknown error"))
         body = (
             f"\u274c **Jules Review** \u2014 Session failed.\n\n"
             f"Error: `{error_msg}`\n"

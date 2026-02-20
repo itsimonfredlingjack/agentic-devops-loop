@@ -17,6 +17,7 @@ import smart_commit
 # Jira ID extraction
 # ---------------------------------------------------------------------------
 
+
 class TestExtractJiraId:
     """Extract Jira ID from commit message."""
 
@@ -39,6 +40,7 @@ class TestExtractJiraId:
 # ---------------------------------------------------------------------------
 # Directive parsing
 # ---------------------------------------------------------------------------
+
 
 class TestParseDirectives:
     """Parse smart commit directives from message."""
@@ -83,6 +85,7 @@ class TestParseDirectives:
 # API backend detection
 # ---------------------------------------------------------------------------
 
+
 class TestDetectBackend:
     """Detect whether to use jira-api.sh or jira_api.py."""
 
@@ -118,6 +121,7 @@ class TestDetectBackend:
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
+
 
 class TestDispatch:
     """Test dispatching directives to Jira API."""
@@ -179,6 +183,7 @@ class TestDispatch:
 # Credential check
 # ---------------------------------------------------------------------------
 
+
 class TestHasCredentials:
     """Skip silently if no .env credentials."""
 
@@ -187,11 +192,7 @@ class TestHasCredentials:
 
     def test_env_with_creds_returns_true(self, tmp_path):
         env_file = tmp_path / ".env"
-        env_file.write_text(
-            "JIRA_URL=https://x.atlassian.net\n"
-            "JIRA_USERNAME=u\n"
-            "JIRA_API_TOKEN=t\n"
-        )
+        env_file.write_text("JIRA_URL=https://x.atlassian.net\nJIRA_USERNAME=u\nJIRA_API_TOKEN=t\n")
         assert smart_commit.has_credentials(str(env_file)) is True
 
     def test_env_missing_token_returns_false(self, tmp_path):
