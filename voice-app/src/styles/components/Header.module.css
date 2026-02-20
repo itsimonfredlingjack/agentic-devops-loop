@@ -17,6 +17,31 @@
   flex: 1;
 }
 
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.wsDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background var(--transition-normal);
+}
+
+.wsConnected {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+}
+
+.wsDisconnected {
+  background: var(--red);
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
 .settingsBtn {
   display: flex;
   align-items: center;

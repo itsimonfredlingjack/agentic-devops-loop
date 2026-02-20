@@ -1,11 +1,14 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use serde::Serialize;
 use std::sync::{Arc, Mutex};
-use tauri::State;
+use std::time::Instant;
+use tauri::{AppHandle, Emitter, State};
 
 pub struct MicState {
     recording: Arc<Mutex<bool>>,
     buffer: Arc<Mutex<Vec<i16>>>,
     stream: Arc<Mutex<Option<cpal::Stream>>>,
+    app_handle: Arc<Mutex<Option<AppHandle>>>,
 }
 
 impl Default for MicState {
@@ -14,6 +17,7 @@ impl Default for MicState {
             recording: Arc::new(Mutex::new(false)),
             buffer: Arc::new(Mutex::new(Vec::new())),
             stream: Arc::new(Mutex::new(None)),
+            app_handle: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -23,7 +27,22 @@ impl Default for MicState {
 unsafe impl Send for MicState {}
 unsafe impl Sync for MicState {}
 
+impl MicState {
+    pub fn set_app_handle(&self, handle: AppHandle) {
+        if let Ok(mut h) = self.app_handle.lock() {
+            *h = Some(handle);
+        }
+    }
+}
+
 const SAMPLE_RATE: u32 = 16_000;
+const RMS_WINDOW: usize = 800; // ~50ms at 16kHz
+const MIN_EMIT_INTERVAL_MS: u128 = 50; // Max 20 events/s
+
+#[derive(Clone, Serialize)]
+struct MicLevelPayload {
+    rms: f32,
+}
 
 #[tauri::command]
 pub fn start_mic(state: State<'_, MicState>) -> Result<String, String> {
@@ -51,6 +70,11 @@ pub fn start_mic(state: State<'_, MicState>) -> Result<String, String> {
 
     let buffer = Arc::clone(&state.buffer);
     let recording_flag = Arc::clone(&state.recording);
+    let app_handle = Arc::clone(&state.app_handle);
+
+    // State for RMS calculation + throttling
+    let rms_buffer: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(RMS_WINDOW)));
+    let last_emit = Arc::new(Mutex::new(Instant::now()));
 
     let stream = device
         .build_input_stream(
@@ -60,7 +84,8 @@ pub fn start_mic(state: State<'_, MicState>) -> Result<String, String> {
                 if !is_recording {
                     return;
                 }
-                // Convert f32 samples to i16
+
+                // Convert f32 samples to i16 and store
                 let samples: Vec<i16> = data
                     .iter()
                     .map(|&s| {
@@ -70,6 +95,39 @@ pub fn start_mic(state: State<'_, MicState>) -> Result<String, String> {
                     .collect();
                 if let Ok(mut buf) = buffer.lock() {
                     buf.extend_from_slice(&samples);
+                }
+
+                // Accumulate samples for RMS calculation
+                if let Ok(mut rms_buf) = rms_buffer.lock() {
+                    rms_buf.extend_from_slice(data);
+
+                    if rms_buf.len() >= RMS_WINDOW {
+                        // Check throttle
+                        let should_emit = last_emit
+                            .lock()
+                            .map(|t| t.elapsed().as_millis() >= MIN_EMIT_INTERVAL_MS)
+                            .unwrap_or(true);
+
+                        if should_emit {
+                            // Calculate RMS
+                            let sum_sq: f32 =
+                                rms_buf.iter().map(|&s| s * s).sum();
+                            let rms = (sum_sq / rms_buf.len() as f32).sqrt();
+
+                            // Emit event
+                            if let Ok(handle) = app_handle.lock() {
+                                if let Some(ref h) = *handle {
+                                    let _ = h.emit("mic-level", MicLevelPayload { rms });
+                                }
+                            }
+
+                            if let Ok(mut t) = last_emit.lock() {
+                                *t = Instant::now();
+                            }
+                        }
+
+                        rms_buf.clear();
+                    }
                 }
             },
             move |err| {

@@ -1,5 +1,5 @@
 [package]
-name = "sejfa-voice"
+name = "agentic-devops-voice"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,9 +17,9 @@ hound = "3.5"
 tauri-build = { version = "2", features = [] }
 
 [lib]
-name = "sejfa_voice_lib"
+name = "agentic_devops_voice_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "sejfa-voice"
+name = "agentic-devops-voice"
 path = "src/main.rs"

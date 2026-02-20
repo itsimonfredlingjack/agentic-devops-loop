@@ -4,15 +4,22 @@ import styles from "../styles/components/Header.module.css";
 
 interface HeaderProps {
   status: PipelineStatus;
+  wsConnected: boolean;
   onSettingsClick: () => void;
 }
 
-export function Header({ status, onSettingsClick }: HeaderProps) {
+export function Header({ status, wsConnected, onSettingsClick }: HeaderProps) {
   return (
     <header className={styles.header}>
-      <span className={styles.title}>SEJFA Voice Pipeline</span>
+      <span className={styles.title}>Agentic DevOps Voice</span>
       <div className={styles.spacer} />
-      <StatusBadge status={status} />
+      <div className={styles.statusRow}>
+        <span
+          className={`${styles.wsDot} ${wsConnected ? styles.wsConnected : styles.wsDisconnected}`}
+          title={wsConnected ? "WebSocket connected" : "WebSocket disconnected"}
+        />
+        <StatusBadge status={status} />
+      </div>
       <button
         className={styles.settingsBtn}
         onClick={onSettingsClick}

@@ -39,6 +39,10 @@
   background: var(--blue);
 }
 
+.previewing .dot {
+  background: var(--blue);
+}
+
 .done .dot {
   background: var(--green);
 }
