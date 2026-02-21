@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     auto_dispatch_loop: bool = Field(
         default=True, description="Auto-queue tickets for Ralph Loop after creation"
     )
+    queue_db_path: str = Field(
+        default="loop_queue.db",
+        description="Path to SQLite database for persistent queue storage",
+    )
 
     # App
     app_host: str = Field(default="0.0.0.0", description="Server bind host")
