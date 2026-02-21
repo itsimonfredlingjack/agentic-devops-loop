@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from storeit.config import settings
-from storeit.routers import cart, categories, inventory, orders, products
+from storeit.routers import cart, categories, inventory, orders, payments, products
 
 
 @asynccontextmanager
@@ -32,7 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_all_routers = [products, categories, inventory, cart, orders]
+_all_routers = [products, categories, inventory, cart, orders, payments]
 for _mod in _all_routers:
     app.include_router(_mod.router, prefix="/api")
 

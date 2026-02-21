@@ -46,6 +46,7 @@ async def test_client(test_session):
     from storeit.routers.categories import get_db_dep as categories_dep
     from storeit.routers.inventory import get_db_dep as inventory_dep
     from storeit.routers.orders import get_db_dep as orders_dep
+    from storeit.routers.payments import get_db_dep as payments_dep
     from storeit.routers.products import get_db_dep as products_dep
 
     async def override_db():
@@ -56,6 +57,7 @@ async def test_client(test_session):
     app.dependency_overrides[inventory_dep] = override_db
     app.dependency_overrides[cart_dep] = override_db
     app.dependency_overrides[orders_dep] = override_db
+    app.dependency_overrides[payments_dep] = override_db
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
