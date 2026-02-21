@@ -186,6 +186,12 @@ async def test_webhook_fulfills_order(
     r = await test_client.get(f"/api/orders/{order['id']}")
     assert r.json()["status"] == "paid"
 
+    # Verify inventory was fulfilled: on_hand decremented, reserved released
+    r = await test_client.get(f"/api/inventory/{sample_variant.id}")
+    data = r.json()
+    assert data["quantity_on_hand"] == 48  # 50 - 2 items
+    assert data["quantity_reserved"] == 0  # reservation fulfilled
+
 
 @pytest.mark.asyncio
 @patch("storeit.services.payment_service.verify_webhook_signature")

@@ -114,6 +114,8 @@ async def stripe_webhook(
         if order:
             logger.info("Fulfilled order %d via Stripe webhook", order.id)
         else:
-            logger.warning("No order found for Stripe session %s", stripe_session_id)
+            # Return 500 so Stripe retries — order may not exist yet
+            logger.warning("No order for Stripe session %s — will retry", stripe_session_id)
+            raise HTTPException(status_code=500, detail="Order not found, retry later")
 
     return {"received": True}

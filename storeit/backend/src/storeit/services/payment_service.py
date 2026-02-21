@@ -107,10 +107,11 @@ async def fulfill_checkout(session: AsyncSession, stripe_session_id: str) -> Ord
     # Transition to paid
     order.status = OrderStatus.paid
 
-    # Fulfill all inventory reservations for this order's cart
+    # Fulfill inventory reservations linked to this order via cart_id="order-{id}"
+    reservation_key = f"order-{order.id}"
     reservations = await session.execute(
         select(InventoryReservation).where(
-            InventoryReservation.cart_id == stripe_session_id,
+            InventoryReservation.cart_id == reservation_key,
             InventoryReservation.status == "active",
         )
     )

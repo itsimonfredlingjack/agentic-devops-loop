@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from storeit.models.cart import Cart
-from storeit.models.inventory import InventoryRecord
 from storeit.models.order import ORDER_TRANSITIONS, Order, OrderItem, OrderStatus
 from storeit.models.product import ProductVariant
 from storeit.schemas.order import OrderCreate, OrderRead
@@ -39,14 +38,20 @@ async def create_order(session: AsyncSession, payload: OrderCreate) -> OrderRead
     session.add(order)
     await session.flush()
 
+    # Use order ID as reservation key so fulfill_checkout can find them
+    reservation_key = f"order-{order.id}"
+
     total_cents = 0
-    for cart_item in cart.items:
+    # Sort by variant_id for deterministic lock ordering (prevents ABBA deadlocks)
+    for cart_item in sorted(cart.items, key=lambda i: i.variant_id):
         # Reserve stock (SELECT FOR UPDATE under the hood)
         await inventory_service.reserve_stock(
-            session, cart_item.variant_id, cart_item.quantity, payload.cart_session_id
+            session, cart_item.variant_id, cart_item.quantity, reservation_key
         )
 
         variant = await session.get(ProductVariant, cart_item.variant_id)
+        if variant is None:
+            raise ValueError(f"Variant {cart_item.variant_id} not found")
         line_total = variant.price_cents * cart_item.quantity
 
         order_item = OrderItem(
@@ -118,17 +123,19 @@ async def transition_order(session: AsyncSession, order_id: int, new_status_str:
             f"Allowed: {sorted(s.value for s in allowed)}"
         )
 
-    # On cancellation of a pending order, release reserved stock
+    # On cancellation of a pending order, cancel actual reservations
     if new_status == OrderStatus.cancelled and current == OrderStatus.pending:
-        for item in order.items:
-            inv_result = await session.execute(
-                select(InventoryRecord)
-                .where(InventoryRecord.variant_id == item.variant_id)
-                .with_for_update()
+        from storeit.models.inventory import InventoryReservation
+
+        reservation_key = f"order-{order.id}"
+        res_result = await session.execute(
+            select(InventoryReservation).where(
+                InventoryReservation.cart_id == reservation_key,
+                InventoryReservation.status == "active",
             )
-            record = inv_result.scalar_one_or_none()
-            if record is not None:
-                record.quantity_reserved = max(0, record.quantity_reserved - item.quantity)
+        )
+        for reservation in res_result.scalars().all():
+            await inventory_service.cancel_reservation(session, reservation.id)
 
     order.status = new_status.value
     await session.flush()
