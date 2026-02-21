@@ -41,5 +41,6 @@ class TicketRead(BaseModel):
     attendee_name: str
     attendee_email: str
     qr_code: str
+    qr_image_b64: str | None = None
     status: str
     created_at: datetime

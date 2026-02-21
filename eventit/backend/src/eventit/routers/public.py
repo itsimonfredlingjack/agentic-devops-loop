@@ -21,6 +21,12 @@ async def get_db_dep() -> AsyncGenerator[AsyncSession, None]:
 _db_dep = Depends(get_db_dep)
 
 
+@router.get("/public", response_model=list[EventRead])
+async def list_published_events(session: AsyncSession = _db_dep) -> list[EventRead]:
+    """List all published events for public browsing."""
+    return await event_service.list_published_events(session)
+
+
 @router.get("/{event_id}", response_model=EventRead)
 async def get_event(event_id: int, session: AsyncSession = _db_dep) -> EventRead:
     result = await event_service.get_event(session, event_id)

@@ -47,6 +47,14 @@ async def list_events(session: AsyncSession, tenant_slug: str) -> list[EventRead
     return [EventRead.model_validate(e) for e in result.scalars().all()]
 
 
+async def list_published_events(session: AsyncSession) -> list[EventRead]:
+    """List all published events across all tenants (for public browsing)."""
+    result = await session.execute(
+        select(Event).where(Event.status == EventStatus.published).order_by(Event.start_time)
+    )
+    return [EventRead.model_validate(e) for e in result.scalars().all()]
+
+
 async def get_event(session: AsyncSession, event_id: int) -> EventRead | None:
     result = await session.execute(
         select(Event).where(Event.id == event_id).options(selectinload(Event.tiers))
