@@ -1,0 +1,135 @@
+# SEJFA Application Stack
+#
+# Starts all backends, frontends, and databases with one command.
+#
+# Usage:
+#   docker compose -f docker-compose.apps.yml up -d        # Start everything
+#   docker compose -f docker-compose.apps.yml logs -f       # Follow logs
+#   docker compose -f docker-compose.apps.yml down           # Stop everything
+#   docker compose -f docker-compose.apps.yml down -v        # Stop + delete volumes
+#
+# Ports:
+#   5175  - StoreIt frontend   (Stockholm Monochrome)
+#   5176  - TrackIt frontend   (Brutalist Terminal)
+#   8002  - TrackIt backend    (FastAPI + SQLite)
+#   8004  - StoreIt backend    (FastAPI + PostgreSQL)
+#   5433  - PostgreSQL 16      (StoreIt database)
+
+services:
+  # ─────────────────────────────────────────────
+  # Database
+  # ─────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sejfa-postgres
+    environment:
+      POSTGRES_DB: storeit
+      POSTGRES_USER: storeit
+      POSTGRES_PASSWORD: storeit_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storeit"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sejfa
+
+  # ─────────────────────────────────────────────
+  # TrackIt Backend (aiosqlite, port 8002)
+  # ─────────────────────────────────────────────
+
+  trackit-api:
+    build:
+      context: ./trackit/backend
+    container_name: sejfa-trackit-api
+    ports:
+      - "8002:8002"
+    environment:
+      TRACKIT_HOST: "0.0.0.0"
+      TRACKIT_PORT: "8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - sejfa
+
+  # ─────────────────────────────────────────────
+  # StoreIt Backend (PostgreSQL, port 8004)
+  # ─────────────────────────────────────────────
+
+  storeit-api:
+    build:
+      context: ./storeit/backend
+    container_name: sejfa-storeit-api
+    ports:
+      - "8004:8004"
+    environment:
+      STOREIT_DATABASE_URL: "postgresql+asyncpg://storeit:storeit_dev@postgres:5432/storeit"
+      STOREIT_HOST: "0.0.0.0"
+      STOREIT_PORT: "8004"
+      STOREIT_STRIPE_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sejfa
+
+  # ─────────────────────────────────────────────
+  # TrackIt Frontend (Brutalist Terminal, port 5176)
+  # ─────────────────────────────────────────────
+
+  trackit-web:
+    build:
+      context: ./trackit/frontend
+    container_name: sejfa-trackit-web
+    ports:
+      - "5176:5176"
+    environment:
+      API_URL: "http://trackit-api:8002"
+    depends_on:
+      trackit-api:
+        condition: service_healthy
+    networks:
+      - sejfa
+
+  # ─────────────────────────────────────────────
+  # StoreIt Frontend (Stockholm Monochrome, port 5175)
+  # ─────────────────────────────────────────────
+
+  storeit-web:
+    build:
+      context: ./storeit/frontend
+    container_name: sejfa-storeit-web
+    ports:
+      - "5175:5175"
+    environment:
+      API_URL: "http://storeit-api:8004"
+    depends_on:
+      storeit-api:
+        condition: service_healthy
+    networks:
+      - sejfa
+
+networks:
+  sejfa:
+    driver: bridge
+
+volumes:
+  pgdata:
