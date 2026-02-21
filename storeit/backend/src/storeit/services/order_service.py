@@ -42,7 +42,8 @@ async def create_order(session: AsyncSession, payload: OrderCreate) -> OrderRead
     reservation_key = f"order-{order.id}"
 
     total_cents = 0
-    for cart_item in cart.items:
+    # Sort by variant_id for deterministic lock ordering (prevents ABBA deadlocks)
+    for cart_item in sorted(cart.items, key=lambda i: i.variant_id):
         # Reserve stock (SELECT FOR UPDATE under the hood)
         await inventory_service.reserve_stock(
             session, cart_item.variant_id, cart_item.quantity, reservation_key

@@ -2,6 +2,9 @@
 
 All stock mutations go through this service. reserve_stock() is the
 critical path that prevents overselling.
+
+LOCK ORDERING: Always acquire InventoryRecord lock FIRST, then
+InventoryReservation. This prevents ABBA deadlocks across all functions.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -26,9 +29,9 @@ async def get_stock(session: AsyncSession, variant_id: int) -> StockRead | None:
 
 
 async def set_stock(session: AsyncSession, variant_id: int, quantity_on_hand: int) -> StockRead:
-    """Set stock for a variant. Creates inventory record if it doesn't exist."""
+    """Set stock for a variant. Uses FOR UPDATE to prevent TOCTOU race."""
     result = await session.execute(
-        select(InventoryRecord).where(InventoryRecord.variant_id == variant_id)
+        select(InventoryRecord).where(InventoryRecord.variant_id == variant_id).with_for_update()
     )
     record = result.scalar_one_or_none()
 
@@ -54,12 +57,9 @@ async def reserve_stock(
 ) -> InventoryReservation:
     """Reserve stock with SELECT FOR UPDATE to prevent overselling.
 
-    Acquires a row-level lock on the inventory record, checks available
-    quantity, creates a reservation, and updates reserved count atomically.
-
-    Raises:
-        ValueError: If variant has no inventory record or insufficient stock.
+    Lock order: InventoryRecord first (consistent with all other functions).
     """
+    # Lock inventory FIRST
     result = await session.execute(
         select(InventoryRecord).where(InventoryRecord.variant_id == variant_id).with_for_update()
     )
@@ -92,22 +92,35 @@ async def reserve_stock(
 
 
 async def fulfill_reservation(session: AsyncSession, reservation_id: int) -> None:
-    """Convert a reservation to a fulfilled order: deduct on_hand, release reserved."""
-    res_result = await session.execute(
-        select(InventoryReservation)
-        .where(InventoryReservation.id == reservation_id)
-        .with_for_update()
+    """Convert a reservation to fulfilled: deduct on_hand, release reserved.
+
+    Lock order: InventoryRecord first, then InventoryReservation.
+    """
+    # Peek at reservation without lock to get variant_id
+    res_peek = await session.execute(
+        select(InventoryReservation).where(InventoryReservation.id == reservation_id)
     )
-    reservation = res_result.scalar_one_or_none()
+    reservation = res_peek.scalar_one_or_none()
     if reservation is None or reservation.status != "active":
         raise ValueError(f"Reservation {reservation_id} not found or not active")
 
+    # Lock inventory FIRST
     inv_result = await session.execute(
         select(InventoryRecord)
         .where(InventoryRecord.variant_id == reservation.variant_id)
         .with_for_update()
     )
-    record = inv_result.scalar_one()
+    record = inv_result.scalar_one_or_none()
+    if record is None:
+        raise ValueError(f"No inventory record for variant {reservation.variant_id}")
+
+    # Then lock reservation
+    res_result = await session.execute(
+        select(InventoryReservation)
+        .where(InventoryReservation.id == reservation_id)
+        .with_for_update()
+    )
+    reservation = res_result.scalar_one()
 
     record.quantity_on_hand -= reservation.quantity
     record.quantity_reserved -= reservation.quantity
@@ -117,22 +130,35 @@ async def fulfill_reservation(session: AsyncSession, reservation_id: int) -> Non
 
 
 async def cancel_reservation(session: AsyncSession, reservation_id: int) -> None:
-    """Cancel a reservation and release the reserved stock."""
-    res_result = await session.execute(
-        select(InventoryReservation)
-        .where(InventoryReservation.id == reservation_id)
-        .with_for_update()
+    """Cancel a reservation and release the reserved stock.
+
+    Lock order: InventoryRecord first, then InventoryReservation.
+    """
+    # Peek at reservation without lock to get variant_id
+    res_peek = await session.execute(
+        select(InventoryReservation).where(InventoryReservation.id == reservation_id)
     )
-    reservation = res_result.scalar_one_or_none()
+    reservation = res_peek.scalar_one_or_none()
     if reservation is None or reservation.status != "active":
         raise ValueError(f"Reservation {reservation_id} not found or not active")
 
+    # Lock inventory FIRST
     inv_result = await session.execute(
         select(InventoryRecord)
         .where(InventoryRecord.variant_id == reservation.variant_id)
         .with_for_update()
     )
-    record = inv_result.scalar_one()
+    record = inv_result.scalar_one_or_none()
+    if record is None:
+        raise ValueError(f"No inventory record for variant {reservation.variant_id}")
+
+    # Then lock reservation
+    res_result = await session.execute(
+        select(InventoryReservation)
+        .where(InventoryReservation.id == reservation_id)
+        .with_for_update()
+    )
+    reservation = res_result.scalar_one()
 
     record.quantity_reserved -= reservation.quantity
     reservation.status = "cancelled"
@@ -141,26 +167,49 @@ async def cancel_reservation(session: AsyncSession, reservation_id: int) -> None
 
 
 async def expire_stale_reservations(session: AsyncSession) -> int:
-    """Expire all reservations past their TTL. Returns count expired."""
+    """Expire all reservations past their TTL. Returns count expired.
+
+    Lock order: InventoryRecord first, then InventoryReservation.
+    Processes one reservation at a time to maintain consistent lock ordering.
+    """
     now = datetime.now(UTC)
+
+    # Find expired reservation IDs without locking
     result = await session.execute(
-        select(InventoryReservation)
+        select(InventoryReservation.id, InventoryReservation.variant_id)
         .where(
             InventoryReservation.status == "active",
             InventoryReservation.expires_at < now,
         )
-        .with_for_update()
+        .order_by(InventoryReservation.variant_id)  # Group by variant for fewer lock switches
     )
-    expired_list = result.scalars().all()
+    expired_ids = [(row.id, row.variant_id) for row in result.all()]
 
     count = 0
-    for reservation in expired_list:
+    for reservation_id, variant_id in expired_ids:
+        # Lock inventory FIRST
         inv_result = await session.execute(
             select(InventoryRecord)
-            .where(InventoryRecord.variant_id == reservation.variant_id)
+            .where(InventoryRecord.variant_id == variant_id)
             .with_for_update()
         )
-        record = inv_result.scalar_one()
+        record = inv_result.scalar_one_or_none()
+        if record is None:
+            continue
+
+        # Then lock reservation
+        res_result = await session.execute(
+            select(InventoryReservation)
+            .where(
+                InventoryReservation.id == reservation_id,
+                InventoryReservation.status == "active",  # Re-check under lock
+            )
+            .with_for_update()
+        )
+        reservation = res_result.scalar_one_or_none()
+        if reservation is None:
+            continue  # Already expired/cancelled by another process
+
         record.quantity_reserved -= reservation.quantity
         reservation.status = "expired"
         count += 1

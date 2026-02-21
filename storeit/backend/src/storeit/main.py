@@ -1,5 +1,7 @@
 """StoreIt -- Production-grade e-commerce backend."""
 
+import asyncio
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -7,14 +9,38 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from storeit.config import settings
+from storeit.database import async_session_factory, engine
 from storeit.routers import cart, categories, inventory, orders, payments, products
+
+logger = logging.getLogger(__name__)
+
+
+async def _reservation_expiry_loop() -> None:
+    """Background task that expires stale reservations every 60 seconds."""
+    from storeit.services.inventory_service import expire_stale_reservations
+
+    while True:
+        await asyncio.sleep(60)
+        try:
+            async with async_session_factory() as session:
+                count = await expire_stale_reservations(session)
+                await session.commit()
+                if count > 0:
+                    logger.info("Expired %d stale reservation(s)", count)
+        except Exception:
+            logger.exception("Error expiring reservations")
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
-    # Alembic handles schema in production.
-    # For dev, use Base.metadata.create_all via a script.
+    # Start reservation expiry background task
+    task = asyncio.create_task(_reservation_expiry_loop())
+    logger.info("Reservation expiry loop started (interval=60s)")
     yield
+    # Shutdown: cancel background task and dispose engine
+    task.cancel()
+    await engine.dispose()
+    logger.info("StoreIt shutdown complete")
 
 
 app = FastAPI(
