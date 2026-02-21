@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: storeit-postgres
+    environment:
+      POSTGRES_DB: storeit
+      POSTGRES_USER: storeit
+      POSTGRES_PASSWORD: storeit_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - storeit_pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storeit"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  storeit_pgdata:
