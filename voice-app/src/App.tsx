@@ -18,6 +18,52 @@ import { LogPanel } from "./components/LogPanel";
 import { SettingsDrawer } from "./components/SettingsDrawer";
 import { ToastContainer } from "./components/Toast";
 
+function normalizeUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
+function buildConnectionHelpMessage(serverUrl: string): string {
+  const target = normalizeUrl(serverUrl) || "<empty>";
+  return `Cannot reach backend at ${target}. Check Settings -> Server URL and ensure the backend is reachable from this Mac.`;
+}
+
+function formatRequestError(err: unknown, serverUrl: string): string {
+  const raw = String(err);
+  if (
+    raw.includes("HTTP request failed") ||
+    raw.includes("error sending request for url") ||
+    raw.includes("Connection refused") ||
+    raw.includes("timed out")
+  ) {
+    return buildConnectionHelpMessage(serverUrl);
+  }
+  return `Request failed: ${raw}`;
+}
+
+async function checkBackendHealth(serverUrl: string): Promise<{ ok: boolean; detail: string }> {
+  const base = normalizeUrl(serverUrl);
+  if (!base) {
+    return { ok: false, detail: "Server URL is empty" };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const resp = await fetch(`${base}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    if (!resp.ok) {
+      return { ok: false, detail: `Health check returned HTTP ${resp.status}` };
+    }
+    return { ok: true, detail: "ok" };
+  } catch (err) {
+    return { ok: false, detail: String(err) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function App() {
   const {
     status,
@@ -46,6 +92,8 @@ function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const serverUrlRef = useRef(serverUrl);
+  const wasBackendReachableRef = useRef<boolean | null>(null);
+  const lastHealthCheckUrlRef = useRef("");
   serverUrlRef.current = serverUrl;
 
   // Mic level visualization
@@ -93,6 +141,46 @@ function App() {
     return () => disconnectWebSocket();
   }, [appendLog]);
 
+  useEffect(() => {
+    if (settingsOpen) return;
+    const normalized = normalizeUrl(serverUrl);
+    if (!normalized || normalized === lastHealthCheckUrlRef.current) return;
+
+    const timer = setTimeout(async () => {
+      const result = await checkBackendHealth(serverUrl);
+      lastHealthCheckUrlRef.current = normalized;
+
+      if (result.ok) {
+        if (wasBackendReachableRef.current === false) {
+          addToast("success", `Connected to backend: ${normalized}`);
+        }
+        wasBackendReachableRef.current = true;
+        appendLog(`[client] Backend reachable: ${normalized}`);
+      } else {
+        if (wasBackendReachableRef.current !== false) {
+          addToast("error", buildConnectionHelpMessage(serverUrl));
+        }
+        wasBackendReachableRef.current = false;
+        appendLog(`[client] Backend health check failed: ${result.detail}`);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [serverUrl, settingsOpen, addToast, appendLog]);
+
+  const ensureBackendAvailable = useCallback(
+    async (operation: string): Promise<boolean> => {
+      const result = await checkBackendHealth(serverUrl);
+      if (result.ok) return true;
+
+      const msg = buildConnectionHelpMessage(serverUrl);
+      appendLog(`[client] Backend unavailable while ${operation}: ${result.detail}`);
+      addToast("error", msg);
+      return false;
+    },
+    [serverUrl, appendLog, addToast],
+  );
+
   const handleToggle = useCallback(async () => {
     if (status === "recording") {
       try {
@@ -137,26 +225,109 @@ function App() {
     if (!pendingSamples) return;
 
     const samples = pendingSamples;
-    setPendingSamples(null);
     setStatus("processing");
     setProcessingStep("Sending audio...");
     appendLog(`[client] Sending ${samples.length} samples...`);
 
     try {
-      const result: { text: string; job_id: string } = await invoke(
+      const backendOk = await ensureBackendAvailable("sending audio");
+      if (!backendOk) {
+        setStatus("previewing");
+        setProcessingStep("");
+        return;
+      }
+
+      setPendingSamples(null);
+
+      const result = await invoke<Record<string, unknown>>(
         "send_audio",
         { samples, serverUrl },
       );
 
-      setTranscription(result.text);
-      appendLog(`[client] Transcription received (job: ${result.job_id})`);
-      // Don't set "done" here — wait for WS pipeline completion
-      // But set done as fallback if no WS update comes
-      setStatus("done");
+      const endpointUsed =
+        typeof result._endpoint_used === "string"
+          ? result._endpoint_used
+          : "unknown";
+
+      const transcribedText =
+        typeof result.transcribed_text === "string"
+          ? result.transcribed_text
+          : typeof result.text === "string"
+            ? result.text
+            : "";
+      if (transcribedText) {
+        setTranscription(transcribedText);
+      }
+
+      if (result.status === "clarification_needed") {
+        const sessionId =
+          typeof result.session_id === "string" ? result.session_id : "";
+        const questions = Array.isArray(result.questions)
+          ? result.questions.filter((q): q is string => typeof q === "string")
+          : [];
+        const partialSummary =
+          typeof result.partial_summary === "string"
+            ? result.partial_summary
+            : "";
+        const round = typeof result.round === "number" ? result.round : 1;
+
+        if (!sessionId || questions.length === 0) {
+          appendLog(
+            `[client] Invalid clarification payload (${endpointUsed}): ${JSON.stringify(result)}`,
+          );
+          setStatus("error");
+          addToast("error", "Invalid clarification response from server");
+          return;
+        }
+
+        setClarification({
+          sessionId,
+          questions,
+          partialSummary,
+          round,
+        });
+        appendLog(`[client] Clarification needed (${endpointUsed})`);
+        return;
+      }
+
+      const ticketKey =
+        typeof result.ticket_key === "string" ? result.ticket_key : "";
+      const ticketUrl =
+        typeof result.ticket_url === "string" ? result.ticket_url : "";
+      const summary =
+        typeof result.summary === "string" ? result.summary : ticketKey;
+
+      if (ticketKey && ticketUrl) {
+        clearClarification();
+        setProcessingStep("");
+        setTicketResult({
+          key: ticketKey,
+          url: ticketUrl,
+          summary: summary || ticketKey,
+        });
+        appendLog(`[client] Ticket created: ${ticketKey} — ${ticketUrl}`);
+        setStatus("done");
+        addToast("success", `Ticket ${ticketKey} created`);
+        return;
+      }
+
+      if (typeof result.text === "string") {
+        appendLog(`[client] Transcription received (${endpointUsed})`);
+        // Don't set "done" here in pipeline mode — wait for WS completion.
+        // In fallback mode (/api/transcribe), this is our completion signal.
+        setStatus("done");
+        return;
+      }
+
+      appendLog(
+        `[client] Unexpected response payload (${endpointUsed}): ${JSON.stringify(result)}`,
+      );
+      setStatus("error");
+      addToast("error", "Unexpected server response");
     } catch (err) {
       appendLog(`[client] Error: ${err}`);
       setStatus("error");
-      addToast("error", `Failed to send audio: ${err}`);
+      addToast("error", formatRequestError(err, serverUrl));
     }
   }, [
     pendingSamples,
@@ -167,6 +338,10 @@ function App() {
     setPendingSamples,
     setProcessingStep,
     addToast,
+    setClarification,
+    clearClarification,
+    setTicketResult,
+    ensureBackendAvailable,
   ]);
 
   const handleDiscardAudio = useCallback(() => {
@@ -178,6 +353,12 @@ function App() {
 
   const handleClarifySubmit = async (answer: string) => {
     if (!clarification) return;
+
+    const backendOk = await ensureBackendAvailable("sending clarification");
+    if (!backendOk) {
+      setStatus("clarifying");
+      return;
+    }
 
     appendLog(`[client] Sending clarification: ${answer}`);
     setStatus("processing");
@@ -212,7 +393,7 @@ function App() {
           setTicketResult({
             key: data.ticket_key,
             url: data.ticket_url,
-            summary: data.ticket_summary || data.ticket_key,
+            summary: data.summary || data.ticket_summary || data.ticket_key,
           });
         }
 
@@ -225,7 +406,7 @@ function App() {
     } catch (err) {
       appendLog(`[client] Clarification error: ${err}`);
       setStatus("error");
-      addToast("error", `Clarification failed: ${err}`);
+      addToast("error", formatRequestError(err, serverUrl));
     }
   };
 
