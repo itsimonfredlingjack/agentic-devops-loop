@@ -1,4 +1,4 @@
-"""Alembic async migration environment."""
+"""Alembic async migration environment for EventIt."""
 
 import asyncio
 import os
@@ -8,18 +8,18 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from storeit.models.base import Base
+from eventit.models.base import Base
 
 # Import all models so metadata is populated
-from storeit.models.cart import Cart, CartItem  # noqa: F401
-from storeit.models.inventory import InventoryRecord, InventoryReservation  # noqa: F401
-from storeit.models.order import Order, OrderItem  # noqa: F401
-from storeit.models.product import Category, Product, ProductVariant  # noqa: F401
+from eventit.models.checkin import CheckIn  # noqa: F401
+from eventit.models.event import Event  # noqa: F401
+from eventit.models.tenant import Tenant  # noqa: F401
+from eventit.models.ticket import Ticket, TicketTier  # noqa: F401
 
 config = context.config
 
 # Override sqlalchemy.url from environment variable if set
-db_url = os.environ.get("STOREIT_DATABASE_URL")
+db_url = os.environ.get("EVENTIT_DATABASE_URL")
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
 

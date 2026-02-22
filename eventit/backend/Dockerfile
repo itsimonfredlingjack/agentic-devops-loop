@@ -15,8 +15,8 @@ COPY src/ src/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY entrypoint.sh .
-RUN useradd -r storeit && chown -R storeit:storeit /app && chmod +x entrypoint.sh
-USER storeit
-EXPOSE 8004
-HEALTHCHECK --interval=10s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"
+RUN useradd -r eventit && chown -R eventit:eventit /app && chmod +x entrypoint.sh
+USER eventit
+EXPOSE 8005
+HEALTHCHECK --interval=10s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"
 CMD ["./entrypoint.sh"]
