@@ -2,23 +2,66 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What This Project Is
+## UNDERSTAND THIS FIRST — Read Before Doing Anything
 
-SEJFA — an autonomous development system. The full pipeline:
+This project is **ONE product**: an autonomous development pipeline (Ralph Loop).
+It is NOT a collection of apps. It is NOT a monorepo of services.
+
+**The product is the process itself** — AI agents that autonomously take a Jira ticket
+from backlog to merged PR, with TDD, quality gates, and AI code review at every step.
+
+The apps in this repo (BookIt, EventIt, StoreIt, TrackIt) are **demo-targets** — proof
+that the pipeline works across different domains. They are NOT products to maintain,
+harden, or improve unless a Jira ticket specifically asks for it.
+
+### Priority Hierarchy (follow this strictly)
+
+```
+P0  Pipeline infrastructure    hooks, skills, CI/CD, self-healing, Ralph Loop
+P1  Voice Pipeline             input channel: voice → Whisper → Ollama → Jira ticket
+P2  Jira integration           two-way sync, automatic transitions, ticket creation
+P3  Monitoring & observability real-time dashboard, agent telemetry
+P4  Demo apps                  ONLY when a Jira ticket targets them specifically
+```
+
+### What This Means For You (the AI agent)
+
+- **NEVER** propose improvements to demo apps on your own initiative
+- **NEVER** treat BookIt/EventIt/StoreIt/TrackIt as production services
+- **NEVER** suggest auth, pagination, logging, or hardening for demo apps
+- **ALWAYS** prioritize pipeline reliability over app features
+- **ALWAYS** ask: "does this make the autonomous loop better?" — if not, don't do it
+
+### The Full Pipeline (this is the product)
 
 ```
 Voice → Whisper → Ollama → Jira Ticket → Claude Code (Ralph Loop) → GitHub Actions → Jules AI Review → Merge
 ```
 
-Three components in this monorepo:
+## Repository Structure
+
+### Core product (the pipeline)
 
 | Directory | What | Stack |
 |-----------|------|-------|
-| `agentic-devops-loop/` | **Main project.** Ralph Loop infrastructure, hooks, skills, CI/CD, Jira integration | Python 3.11+, FastAPI, Claude Code hooks |
-| `voice-pipeline/` | Standalone FastAPI backend: audio transcription → intent extraction → Jira ticket creation | Python 3.11+, FastAPI, Whisper, Ollama |
-| `voice-app/` | Desktop app for voice recording | Tauri 2, React 18, TypeScript, Zustand |
+| `agentic-devops-loop/` | **The product.** Ralph Loop hooks, skills, CI/CD, Jira integration, voice pipeline backend | Python 3.11+, FastAPI, Claude Code hooks |
+| `voice-app/` | Voice input UI — records audio, sends to pipeline, displays results | Tauri 2, React 18, TypeScript, Zustand |
+| `.github/workflows/` | CI/CD: testing, self-healing, Jules AI review, branch cleanup | GitHub Actions |
 
-**`agentic-devops-loop/` already contains `src/voice_pipeline/` inside it.** The standalone `voice-pipeline/` is a separate copy with different import paths (`src.*` vs `src.voice_pipeline.*`).
+### Demo targets (built BY the pipeline, not the product)
+
+| Directory | Domain | Purpose as demo |
+|-----------|--------|-----------------|
+| `bookit/` | Appointment booking | Proves: Stripe integration, email, multi-tenant |
+| `eventit/` | Event ticketing | Proves: QR codes, SQLAlchemy, Alembic migrations |
+| `storeit/` | E-commerce | Proves: PostgreSQL concurrency, pessimistic locking, webhooks |
+| `trackit/` | Time tracking | Proves: invoicing, Swedish VAT (moms), integer arithmetic |
+
+### Legacy (do not develop here)
+
+| Directory          | Note                                                                                          |
+|--------------------|-----------------------------------------------------------------------------------------------|
+| `voice-pipeline/`  | **Deprecated standalone copy.** Canonical source is `agentic-devops-loop/src/voice_pipeline/`. |
 
 ## Architecture: Ralph Loop
 

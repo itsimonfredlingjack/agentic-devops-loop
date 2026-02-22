@@ -37,6 +37,7 @@ from .config import Settings, get_settings
 from .intent.extractor import IntentExtractionError, IntentExtractor
 from .intent.models import JiraTicketIntent
 from .loop_queue import LoopQueue
+from .persistent_loop_queue import PersistentLoopQueue
 from .pipeline.orchestrator import PipelineOrchestrator
 from .pipeline.status import MonitorService, PipelineStatus
 from .transcriber.base import TranscriptionError
@@ -154,7 +155,7 @@ async def lifespan(app: FastAPI):
 
     _ws_manager = WebSocketManager()
     _monitor = MonitorService()
-    _loop_queue = LoopQueue()
+    _loop_queue = PersistentLoopQueue(db_path=settings.queue_db_path)
 
     async def broadcast(state: dict[str, Any]) -> None:
         await _ws_manager.broadcast(state)  # type: ignore[union-attr]
