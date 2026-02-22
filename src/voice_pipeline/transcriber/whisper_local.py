@@ -17,6 +17,21 @@ from .base import Transcriber, TranscriptionError, TranscriptionResult
 logger = logging.getLogger(__name__)
 
 
+def _is_cuda_runtime_error(exc: Exception) -> bool:
+    """Best-effort detector for missing CUDA runtime/library errors."""
+    text = str(exc).lower()
+    cuda_markers = (
+        "libcublas",
+        "libcudnn",
+        "libcuda",
+        "cuda driver",
+        "cuda runtime",
+        "cublas",
+        "cudnn",
+    )
+    return any(marker in text for marker in cuda_markers)
+
+
 class WhisperLocalTranscriber(Transcriber):
     """Transcription via faster-whisper running on local GPU.
 
@@ -67,13 +82,45 @@ class WhisperLocalTranscriber(Transcriber):
         """Blocking transcription — runs in a thread-pool executor."""
         model = self._load_model()
 
-        segments, info = model.transcribe(
-            audio_path,
-            beam_size=5,
-            vad_filter=True,  # Skip silent regions
-            vad_parameters={"min_silence_duration_ms": 500},
-            language=None,  # Auto-detect (handles Swedish)
-        )
+        try:
+            segments, info = model.transcribe(
+                audio_path,
+                beam_size=5,
+                vad_filter=True,  # Skip silent regions
+                vad_parameters={"min_silence_duration_ms": 500},
+                language=None,  # Auto-detect (handles Swedish)
+            )
+        except Exception as exc:
+            if self.device in ("auto", "cuda") and _is_cuda_runtime_error(exc):
+                logger.warning(
+                    "CUDA runtime failed during transcription on '%s' (%s). Retrying on CPU fallback.",
+                    self.device,
+                    exc,
+                )
+                self._unload_model()
+                try:
+                    from faster_whisper import WhisperModel  # noqa: PLC0415
+
+                    self._model = WhisperModel(
+                        self.model_size,
+                        device="cpu",
+                        compute_type="int8",
+                    )
+                    model = self._model
+                    segments, info = model.transcribe(
+                        audio_path,
+                        beam_size=5,
+                        vad_filter=True,
+                        vad_parameters={"min_silence_duration_ms": 500},
+                        language=None,
+                    )
+                except Exception as cpu_exc:
+                    raise TranscriptionError(
+                        f"Transcription failed on '{self.device}' (CUDA runtime unavailable) "
+                        f"and CPU fallback failed: {cpu_exc}"
+                    ) from cpu_exc
+            else:
+                raise TranscriptionError(f"Transcription failed: {exc}") from exc
 
         # Materialise the lazy iterator before releasing the model
         text_parts = [segment.text for segment in segments]
@@ -88,22 +135,45 @@ class WhisperLocalTranscriber(Transcriber):
     def _load_model(self):
         """Load faster-whisper model into GPU memory if not already loaded."""
         if self._model is None:
+            requested_device = self.device
+            requested_compute_type = "float16" if requested_device in ("cuda", "auto") else "int8"
             try:
                 from faster_whisper import WhisperModel  # noqa: PLC0415
 
                 logger.info(
                     "Loading Whisper model '%s' on device '%s'",
                     self.model_size,
-                    self.device,
+                    requested_device,
                 )
-                compute_type = "float16" if self.device in ("cuda", "auto") else "int8"
                 self._model = WhisperModel(
                     self.model_size,
-                    device=self.device,
-                    compute_type=compute_type,
+                    device=requested_device,
+                    compute_type=requested_compute_type,
                 )
                 logger.info("Whisper model loaded")
             except Exception as exc:
+                if requested_device in ("auto", "cuda") and _is_cuda_runtime_error(exc):
+                    logger.warning(
+                        "CUDA runtime unavailable for Whisper '%s' device (%s). Falling back to CPU.",
+                        requested_device,
+                        exc,
+                    )
+                    try:
+                        from faster_whisper import WhisperModel  # noqa: PLC0415
+
+                        self._model = WhisperModel(
+                            self.model_size,
+                            device="cpu",
+                            compute_type="int8",
+                        )
+                        logger.info("Whisper model loaded on CPU fallback")
+                        return self._model
+                    except Exception as cpu_exc:
+                        raise TranscriptionError(
+                            f"Failed to load Whisper model on '{requested_device}' (CUDA unavailable) "
+                            f"and CPU fallback failed: {cpu_exc}"
+                        ) from cpu_exc
+
                 raise TranscriptionError(f"Failed to load Whisper model: {exc}") from exc
 
         return self._model
