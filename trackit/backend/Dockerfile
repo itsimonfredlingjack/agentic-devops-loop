@@ -9,8 +9,9 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 COPY src/ src/
-RUN useradd -r trackit && chown -R trackit:trackit /app
+RUN useradd -r trackit && mkdir -p /data && chown -R trackit:trackit /app /data
 USER trackit
 EXPOSE 8002
+ENV TRACKIT_DATABASE_URL=/data/trackit.db
 HEALTHCHECK --interval=10s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"
 CMD ["uvicorn", "trackit.main:app", "--host", "0.0.0.0", "--port", "8002"]

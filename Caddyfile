@@ -1,0 +1,52 @@
+{
+    email admin@fredlingautomation.dev
+    acme_dns cloudflare {env.CF_API_TOKEN}
+}
+
+bookit.fredlingautomation.dev {
+    handle /api/* {
+        reverse_proxy bookit-api:8001
+    }
+    handle /health {
+        reverse_proxy bookit-api:8001
+    }
+    handle {
+        reverse_proxy bookit-web:80
+    }
+}
+
+eventit.fredlingautomation.dev {
+    handle /api/* {
+        reverse_proxy eventit-api:8005
+    }
+    handle /health {
+        reverse_proxy eventit-api:8005
+    }
+    handle {
+        reverse_proxy eventit-web:80
+    }
+}
+
+storeit.fredlingautomation.dev {
+    handle /api/* {
+        reverse_proxy storeit-api:8004
+    }
+    handle /health {
+        reverse_proxy storeit-api:8004
+    }
+    handle {
+        reverse_proxy storeit-web:5175
+    }
+}
+
+trackit.fredlingautomation.dev {
+    handle /api/* {
+        reverse_proxy trackit-api:8002
+    }
+    handle /health {
+        reverse_proxy trackit-api:8002
+    }
+    handle {
+        reverse_proxy trackit-web:5176
+    }
+}

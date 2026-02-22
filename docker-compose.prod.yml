@@ -1,0 +1,205 @@
+# Production compose for Hetzner CX23 (4GB RAM)
+# Images from ghcr.io, built by GitHub Actions
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  caddy:
+    image: ghcr.io/${GITHUB_REPO}/caddy-cloudflare:latest
+    container_name: sejfa-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      CF_API_TOKEN: ${CF_API_TOKEN}
+    networks:
+      - sejfa
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sejfa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sejfa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    networks:
+      - sejfa
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sejfa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  bookit-api:
+    image: ghcr.io/${GITHUB_REPO}/bookit-api:${IMAGE_TAG:-latest}
+    container_name: sejfa-bookit-api
+    restart: unless-stopped
+    environment:
+      BOOKIT_DATABASE_URL: /data/bookit.db
+      BOOKIT_CORS_ORIGINS: '["https://bookit.fredlingautomation.dev"]'
+    volumes:
+      - bookit-sqlite:/data
+    networks:
+      - sejfa
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  bookit-web:
+    image: ghcr.io/${GITHUB_REPO}/bookit-web:${IMAGE_TAG:-latest}
+    container_name: sejfa-bookit-web
+    restart: unless-stopped
+    networks:
+      - sejfa
+    depends_on:
+      bookit-api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  eventit-api:
+    image: ghcr.io/${GITHUB_REPO}/eventit-api:${IMAGE_TAG:-latest}
+    container_name: sejfa-eventit-api
+    restart: unless-stopped
+    environment:
+      EVENTIT_DATABASE_URL: "postgresql+asyncpg://sejfa:${POSTGRES_PASSWORD}@postgres:5432/eventit"
+      EVENTIT_CORS_ORIGINS: '["https://eventit.fredlingautomation.dev"]'
+    networks:
+      - sejfa
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  eventit-web:
+    image: ghcr.io/${GITHUB_REPO}/eventit-web:${IMAGE_TAG:-latest}
+    container_name: sejfa-eventit-web
+    restart: unless-stopped
+    networks:
+      - sejfa
+    depends_on:
+      eventit-api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  storeit-api:
+    image: ghcr.io/${GITHUB_REPO}/storeit-api:${IMAGE_TAG:-latest}
+    container_name: sejfa-storeit-api
+    restart: unless-stopped
+    environment:
+      STOREIT_DATABASE_URL: "postgresql+asyncpg://sejfa:${POSTGRES_PASSWORD}@postgres:5432/storeit"
+      STOREIT_CORS_ORIGINS: '["https://storeit.fredlingautomation.dev"]'
+      STOREIT_STRIPE_ENABLED: "false"
+    networks:
+      - sejfa
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  storeit-web:
+    image: ghcr.io/${GITHUB_REPO}/storeit-web:${IMAGE_TAG:-latest}
+    container_name: sejfa-storeit-web
+    restart: unless-stopped
+    environment:
+      API_URL: "http://storeit-api:8004"
+    networks:
+      - sejfa
+    depends_on:
+      storeit-api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  trackit-api:
+    image: ghcr.io/${GITHUB_REPO}/trackit-api:${IMAGE_TAG:-latest}
+    container_name: sejfa-trackit-api
+    restart: unless-stopped
+    environment:
+      TRACKIT_DATABASE_URL: /data/trackit.db
+      TRACKIT_CORS_ORIGINS: '["https://trackit.fredlingautomation.dev"]'
+    volumes:
+      - trackit-sqlite:/data
+    networks:
+      - sejfa
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  trackit-web:
+    image: ghcr.io/${GITHUB_REPO}/trackit-web:${IMAGE_TAG:-latest}
+    container_name: sejfa-trackit-web
+    restart: unless-stopped
+    environment:
+      API_URL: "http://trackit-api:8002"
+    networks:
+      - sejfa
+    depends_on:
+      trackit-api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+networks:
+  sejfa:
+    driver: bridge
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:
+  bookit-sqlite:
+  trackit-sqlite:
