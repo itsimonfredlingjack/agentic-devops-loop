@@ -123,6 +123,19 @@ Access the application at `http://localhost:8000`.
 
 Health check: `http://localhost:8000/health`
 
+### Remote Workflow (Mac App + ai-server2 Backend)
+
+If your voice app runs on macOS and the heavy backend runs on `ai-server2`, use:
+
+```bash
+bash scripts/remote-dev-shell.sh ai-server2 /home/ai-server2/04-voice-mode-4-loop coffeedev
+```
+
+This opens a persistent `tmux` dev shell on `ai-server2` and bootstraps a reverse tunnel so your Mac can call backend APIs through `http://localhost:8000`.
+
+For manual tunnel control and persistent service setup, see:
+- `docs/REMOTE_DEV.md`
+
 ### Running with Docker
 
 ```bash
@@ -228,6 +241,7 @@ This pushes the changes, creates a PR, and updates the Jira ticket.
 - **[Jules Playbook](docs/jules-playbook.md)** - Insights into the AI review system.
 - **[Agent Guidelines](docs/GUIDELINES.md)** - Detailed agent behavior reference.
 - **[Quick Start](docs/QUICKSTART.md)** - Setup guide.
+- **[Remote Dev Workflow](docs/REMOTE_DEV.md)** - One-command SSH + reverse tunnel workflow (Mac + ai-server2).
 
 ---
 
