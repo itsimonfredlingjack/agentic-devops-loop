@@ -11,3 +11,25 @@ target/
 *.db
 *.egg-info/
 grupp-ett-github/
+
+# Build caches
+.vite/
+.next/
+
+# SQLite WAL
+*.db-shm
+*.db-wal
+
+# Next.js generated
+next-env.d.ts
+
+# Duplicate nested repo
+agentic-devops-loop/
+
+# Backup files
+*.bak
+*.disabled
+
+# Coverage
+.coverage
+htmlcov/
