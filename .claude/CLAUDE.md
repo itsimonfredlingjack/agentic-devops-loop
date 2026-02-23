@@ -69,9 +69,9 @@ Voice → Whisper → Ollama → Jira Ticket → Claude Code (Ralph Loop) → Gi
 
 ### Legacy (do not develop here)
 
-| Directory          | Note                                                                                          |
-|--------------------|-----------------------------------------------------------------------------------------------|
-| `voice-pipeline/`  | **Deprecated standalone copy.** Canonical source is `agentic-devops-loop/src/voice_pipeline/`. |
+| Directory          | Note                                                                                |
+|--------------------|------------------------------------------------------------------------------------|
+| `voice-pipeline/`  | **Deprecated standalone copy.** Canonical source is `src/voice_pipeline/`. |
 
 ## Architecture: Ralph Loop
 

@@ -13,7 +13,8 @@ An autonomous development system where you **speak a feature request**, and AI h
      You see SuccessCard                                                  │
      with ticket link                                                     ▼
                                                                     Ralph Loop
-                                                                   (Claude Code)
+                                                                  (Claude Code
+                                                                    on Mac)
                                                                       │  ▲
                                                                       │  │  TDD loop
                                                                       ▼  │  until done
@@ -26,7 +27,9 @@ An autonomous development system where you **speak a feature request**, and AI h
                                                                     Merge ✓
 ```
 
-## Three Products, Two Machines
+## Two Machines, One Repo
+
+Code syncs via `git pull` from GitHub — no rsync, no SSH mounts.
 
 ```
 ┌─────────────────────────────────┐      ┌─────────────────────────────────┐
@@ -36,31 +39,28 @@ An autonomous development system where you **speak a feature request**, and AI h
 │  │  Agentic DevOps Voice     │──│─────→│  │  Voice Pipeline Backend   │  │
 │  │  (Tauri + React + Rust)   │  │      │  │  (FastAPI + Whisper +     │  │
 │  │  Desktop app              │  │  WS  │  │   Ollama + Jira API)      │  │
-│  │  Port: —                  │←─│──────│  │  Port: 8000               │  │
+│  │                           │←─│──────│  │  Port: 8000               │  │
 │  └───────────────────────────┘  │      │  └───────────────────────────┘  │
 │                                 │      │                                 │
-│                                 │      │  ┌───────────────────────────┐  │
-│                                 │      │  │  BookIt                   │  │
-│                                 │      │  │  (FastAPI + React + SQLite)│  │
-│                                 │      │  │  Multi-tenant booking     │  │
-│                                 │      │  │  Port: 8001 + 5173       │  │
-│                                 │      │  └───────────────────────────┘  │
-│                                 │      │                                 │
-│                                 │      │  ┌───────────────────────────┐  │
-│                                 │      │  │  Ralph Loop               │  │
-│                                 │      │  │  (Claude Code + hooks +   │  │
-│                                 │      │  │   GitHub Actions + Jules) │  │
-│                                 │      │  │  Autonomous dev agent     │  │
-│                                 │      │  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │      │  ┌───────────────────────────┐  │
+│  │  Claude Code / Ralph Loop │  │      │  │  Demo Apps                │  │
+│  │  (hooks, skills, Jira)    │  │      │  │  BookIt :8001, EventIt,   │  │
+│  │  Dev env, tests, git      │  │      │  │  StoreIt, TrackIt         │  │
+│  └───────────────────────────┘  │      │  └───────────────────────────┘  │
 └─────────────────────────────────┘      └─────────────────────────────────┘
-                                                       │
-                                              ┌────────┴────────┐
-                                              ▼                 ▼
-                                         Jira Cloud      GitHub (CI/CD)
-                                        (Atlassian)    (Actions + Jules)
+              │                                        │
+              │     ┌──────────────────────┐           │
+              └────→│  GitHub (git only)   │←──────────┘
+                    │  Single source of    │
+                    │  truth — no rsync    │
+                    └──────────┬───────────┘
+                    ┌──────────┴───────────┐
+                    ▼                      ▼
+               Jira Cloud          GitHub Actions
+              (Atlassian)          (CI/CD + Jules)
 ```
 
-## The Three Products
+## The Products
 
 ### 1. Agentic DevOps Voice (Desktop App)
 
@@ -71,7 +71,7 @@ An autonomous development system where you **speak a feature request**, and AI h
 | **Runs on** | coffeedev (Mac M4) |
 | **Stack** | Tauri 2, React 18, TypeScript, Zustand, Rust (cpal) |
 | **Code** | `voice-app/` |
-| **Talks to** | Voice Pipeline Backend on ai-server2:8000 |
+| **Talks to** | Voice Pipeline Backend on ai-server2:8000 (configurable in Settings) |
 
 **Flow:** Mic capture (Rust) → Audio preview → Send WAV → Get transcription → See processing steps via WebSocket → SuccessCard with ticket link.
 
@@ -85,44 +85,29 @@ An autonomous development system where you **speak a feature request**, and AI h
 |---|---|
 | **Runs on** | ai-server2 (Ubuntu, RTX 2060 6 GB) |
 | **Stack** | Python 3.12, FastAPI, Whisper, Ollama, Jira REST API |
-| **Code** | `agentic-devops-loop/src/voice_pipeline/` (integrated) + `voice-pipeline/` (standalone copy) |
+| **Code** | `src/voice_pipeline/` |
 | **Port** | 8000 |
 | **GPU** | Whisper small + Ollama qwen2.5-coder-helpful:3b |
 
 **Pipeline stages:**
-1. `POST /api/transcribe` — Whisper speech-to-text
-2. `POST /api/extract` — Ollama intent extraction (project, type, priority, description)
+1. `POST /api/pipeline/run/audio` — Upload audio → Whisper speech-to-text
+2. Ollama intent extraction (project, type, priority, description)
 3. If ambiguous → WebSocket `clarification_needed` → user answers → retry
-4. If clear → Jira REST API → ticket created
+4. If clear → Jira REST API → ticket created with `VOICE_INITIATED` label
 5. WebSocket `completed` with ticket info
+6. Auto-queue for Ralph Loop (if `AUTO_DISPATCH_LOOP=true`)
 
-**Endpoints:** `/health`, `/api/transcribe`, `/api/extract`, `/api/pipeline/run`, `/api/pipeline/clarify`, `/ws/status`
+**Endpoints:** `/health`, `/api/transcribe`, `/api/extract`, `/api/pipeline/run`, `/api/pipeline/run/audio`, `/api/pipeline/clarify`, `/api/loop/queue`, `/ws/status`
 
-### 3. BookIt (Booking System)
+### 3. Ralph Loop (Autonomous Dev Agent)
 
-**What:** Multi-tenant booking system for businesses. Customers book via a public page.
-
-| | |
-|---|---|
-| **Runs on** | ai-server2 |
-| **Stack** | FastAPI + aiosqlite (backend), React 18 + Vite (frontend) |
-| **Code** | `bookit/` |
-| **Ports** | Backend :8001, Frontend :5173 |
-| **DB** | SQLite (`bookit.db`) |
-
-**Features:** Multi-tenant (slug-based URLs), service management, slot generation, Stripe payments, recurring bookings, email notifications, statistics dashboard.
-
-**Demo data:** "Klipp & Trim" hair salon with Herrklippning, Damklippning, Färgning, Skäggtrimning.
-
-### 4. Ralph Loop (Autonomous Dev Agent)
-
-**What:** Not a product you use directly — it's the infrastructure that makes Claude Code work autonomously on Jira tickets.
+**What:** Infrastructure that makes Claude Code work autonomously on Jira tickets.
 
 | | |
 |---|---|
-| **Runs on** | ai-server2 (via Claude Code CLI) |
+| **Runs on** | coffeedev (Mac) via Claude Code CLI |
 | **Stack** | Claude Code hooks (Python), GitHub Actions, Jules AI |
-| **Code** | `agentic-devops-loop/.claude/` |
+| **Code** | `.claude/` |
 
 **How it works:**
 1. `/start-task DEV-123` — fetches Jira ticket, creates branch, populates `CURRENT_TASK.md`
@@ -140,6 +125,17 @@ An autonomous development system where you **speak a feature request**, and AI h
 - `.claude/ralph-config.json` — exit policy, max 25 iterations, 80% coverage
 - `docs/CURRENT_TASK.md` — persistent agent memory
 
+### 4. Demo Apps (built BY the pipeline)
+
+| App | Domain | Purpose |
+|-----|--------|---------|
+| BookIt | Appointment booking | Proves: Stripe, email, multi-tenant |
+| EventIt | Event ticketing | Proves: QR codes, SQLAlchemy, Alembic |
+| StoreIt | E-commerce | Proves: PostgreSQL concurrency, webhooks |
+| TrackIt | Time tracking | Proves: invoicing, Swedish VAT, integer arithmetic |
+
+These run on ai-server2. They are NOT products — they exist to prove the pipeline works.
+
 ## Hardware
 
 ### coffeedev (Mac)
@@ -148,8 +144,8 @@ An autonomous development system where you **speak a feature request**, and AI h
 | **CPU** | Apple M4 |
 | **RAM** | 16 GB |
 | **OS** | macOS 26.3 |
-| **Role** | Desktop app runtime, Tauri/Rust compilation |
-| **Toolchain** | Node v25.6.1, Rust 1.93.1 |
+| **Role** | Voice app, Claude Code / Ralph Loop, dev environment, tests |
+| **Toolchain** | Node v22.22.0 (NVM), Python 3.14.3 (pyenv), Rust |
 
 ### ai-server2 (Ubuntu)
 | | |
@@ -158,7 +154,7 @@ An autonomous development system where you **speak a feature request**, and AI h
 | **RAM** | 15 GB |
 | **GPU** | NVIDIA RTX 2060 (6 GB VRAM), CUDA 12.2 |
 | **OS** | Ubuntu 24.04 LTS |
-| **Role** | AI inference, backend services, Claude Code agent |
+| **Role** | AI inference (Whisper + Ollama), pipeline backend, demo apps |
 | **Toolchain** | Python 3.12, Node v24.13.0, Docker v29.2.0 |
 | **Ollama** | v0.13.5 on localhost:11434 |
 
@@ -169,55 +165,52 @@ An autonomous development system where you **speak a feature request**, and AI h
 | Audio upload | Mac (Tauri) | ai-server2 | HTTP POST multipart | 8000 |
 | Pipeline status | ai-server2 | Mac (React) | WebSocket | 8000 |
 | Clarification | Mac (React) | ai-server2 | HTTP POST JSON | 8000 |
-| BookIt API | Browser | ai-server2 | HTTP REST | 8001 |
-| BookIt frontend | Browser | ai-server2 | HTTP (Vite) | 5173 |
 | Whisper inference | FastAPI | local GPU | — | — |
 | Ollama inference | FastAPI | localhost | HTTP | 11434 |
-| Jira | ai-server2 | Atlassian Cloud | HTTPS REST | 443 |
-| Stripe | ai-server2 | Stripe API | HTTPS | 443 |
-| GitHub | ai-server2 | github.com | HTTPS (git + API) | 443 |
-| Code sync | ai-server2 | Mac | rsync over SSH | 22 |
+| Jira | Mac + ai-server2 | Atlassian Cloud | HTTPS REST | 443 |
+| GitHub | Mac + ai-server2 | github.com | HTTPS (git + API) | 443 |
+| Code sync | Both machines | GitHub | git pull/push | 443 |
+
+**Tailscale:** Both machines connected via Tailscale VPN (ai-server2: `100.101.182.67`).
 
 ## Repository Structure
 
 Everything lives in one monorepo: `github.com/itsimonfredlingjack/agentic-devops-loop`
 
+Both machines clone the same repo. `git pull` to sync.
+
 ```
-04-voice-mode-4-loop/
+agentic-devops-loop/
 │
 ├── voice-app/                  ← Tauri desktop app (React + Rust)
 │   ├── src/                      React components, hooks, stores
 │   ├── src-tauri/                Rust: mic capture, WAV encoding, API calls
-│   ├── ARCHITECTURE.md           Detailed architecture doc
-│   └── package.json              Node dependencies
-│
-├── bookit/                     ← Multi-tenant booking system
-│   ├── backend/                  FastAPI + SQLite
-│   │   ├── src/bookit/           Routers, services, schemas
-│   │   ├── tests/                8 test modules
-│   │   └── scripts/seed.py       Demo data generator
-│   ├── frontend/                 React + Vite + Zustand
-│   │   └── src/                  Pages, components, store, API client
 │   └── ARCHITECTURE.md           Detailed architecture doc
 │
-├── agentic-devops-loop/        ← Ralph Loop infrastructure
-│   ├── .claude/                  Hooks, skills, config, security
-│   │   ├── hooks/                stop-hook, pre-tool-use, prevent-push
-│   │   ├── skills/               start-task, finish-task
-│   │   └── ralph-config.json     Exit policy
-│   ├── .github/workflows/        11 CI/CD workflows
-│   ├── src/voice_pipeline/       Voice pipeline (integrated copy)
-│   ├── src/sejfa/                Shared utils (Jira client, monitor)
-│   └── tests/                    64+ tests
+├── src/voice_pipeline/         ← FastAPI voice-to-Jira pipeline
+│   ├── main.py                   FastAPI app entry point
+│   ├── config.py                 Pydantic Settings (.env)
+│   ├── transcriber/              Whisper speech-to-text
+│   ├── intent/                   Ollama intent extraction
+│   ├── jira/                     Jira ticket creation
+│   └── pipeline/                 Orchestration + status
 │
-├── voice-pipeline/             ← Standalone voice pipeline (separate copy)
-│   └── src/                      Same as above, different import paths
+├── .claude/                    ← Ralph Loop infrastructure
+│   ├── hooks/                    stop-hook, pre-tool-use, prevent-push
+│   ├── skills/                   start-task, finish-task
+│   └── ralph-config.json         Exit policy
 │
-├── grupp-ett-github/           ← Multi-agent monitor/dashboard
+├── .github/workflows/          ← CI/CD pipelines
 │
-└── docs/
-    ├── SYSTEM_OVERVIEW.md      ← This document
-    └── SYSTEM_MAP.md           ← Project inventory
+├── bookit/                     ← Demo: appointment booking
+├── eventit/                    ← Demo: event ticketing
+├── storeit/                    ← Demo: e-commerce
+├── trackit/                    ← Demo: time tracking
+│
+├── tests/                      ← pytest test suite (64+ tests)
+├── infra/                      ← Docker, Caddy, Hetzner setup
+├── scripts/                    ← Helper scripts
+└── docs/                       ← Documentation
 ```
 
 ## GitHub Actions (CI/CD)
@@ -230,7 +223,7 @@ Everything lives in one monorepo: `github.com/itsimonfredlingjack/agentic-devops
 | `jules-review.yml` | PR opened | AI code review via Jules |
 | `self-healing.yml` | CI failure | Auto-fix and retry (max 3x) |
 | `cleanup-branches.yml` | Manual dispatch | Remove stale branches |
-| `pages.yml` | Push to main | Deploy docs to GitHub Pages |
+| `deploy-apps.yml` | Push to main | Deploy demo apps via Docker |
 
 ## Security Layers
 
@@ -248,33 +241,25 @@ Everything lives in one monorepo: `github.com/itsimonfredlingjack/agentic-devops
 
 ```bash
 # ── Voice Pipeline Backend (ai-server2) ──
-cd /home/ai-server2/04-voice-mode-4-loop/agentic-devops-loop
+cd /home/ai-server2/agentic-devops-loop
 source venv/bin/activate
 uvicorn src.voice_pipeline.main:app --host 0.0.0.0 --port 8000 --reload
 
-# ── Voice Desktop App (Mac, via SSH) ──
-ssh coffeedev "cd ~/Projects/agentic-devops-pipeline-v2/sejfa-voice/voice-app && \
-  npm run tauri dev"
+# ── Voice Desktop App (Mac) ──
+cd ~/Projects/agentic-devops-pipeline-v2/agentic-devops-loop/voice-app
+npm run tauri dev
 
-# ── BookIt Backend (ai-server2) ──
-cd /home/ai-server2/04-voice-mode-4-loop/bookit/backend
-source venv/bin/activate
-python -m scripts.seed                    # First time: seed demo data
-uvicorn src.bookit.main:app --host 0.0.0.0 --port 8001 --reload
+# ── Sync code (both machines) ──
+git pull                                 # That's it. No rsync.
 
-# ── BookIt Frontend (ai-server2) ──
-cd /home/ai-server2/04-voice-mode-4-loop/bookit/frontend
-npm run dev                               # → http://localhost:5173
+# ── Health Checks (from Mac) ──
+curl -s http://100.101.182.67:8000/health   # Voice pipeline on ai-server2
+curl -s http://100.101.182.67:11434/api/tags # Ollama models (if exposed)
 
-# ── Health Checks ──
-curl -s http://localhost:8000/health      # Voice pipeline
-curl -s http://localhost:8001/health      # BookIt
-curl -s http://localhost:11434/api/tags   # Ollama models
-
-# ── Code Sync (ai-server2 → Mac) ──
-rsync -avz --exclude node_modules --exclude dist --exclude target --exclude .vite \
-  /home/ai-server2/04-voice-mode-4-loop/voice-app/ \
-  coffeedev:~/Projects/agentic-devops-pipeline-v2/sejfa-voice/voice-app/
+# ── Tests (Mac) ──
+cd ~/Projects/agentic-devops-pipeline-v2/agentic-devops-loop
+source venv/bin/activate && pytest tests/ -xvs
+source venv/bin/activate && ruff check .
 ```
 
 ## Design Language
@@ -292,6 +277,4 @@ Both the voice app and BookIt share a **glassmorphism** design system:
 ## What's Next
 
 - **Auto-trigger Ralph Loop** — when voice app creates a `VOICE_INITIATED` ticket, automatically start Claude Code on it
-- **BookIt voice integration** — "Book a haircut for Thursday at 2pm" via the voice app
-- **Better app icon** — replace placeholder coral circle with a proper mic/waveform icon
 - **Production deployment** — Docker compose for backend services, Tauri build for Mac app distribution
