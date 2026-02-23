@@ -215,7 +215,9 @@ Everything lives in one monorepo: `github.com/itsimonfredlingjack/agentic-devops
 │
 ├── grupp-ett-github/           ← Multi-agent monitor/dashboard
 │
-└── SYSTEM_OVERVIEW.md          ← This document
+└── docs/
+    ├── SYSTEM_OVERVIEW.md      ← This document
+    └── SYSTEM_MAP.md           ← Project inventory
 ```
 
 ## GitHub Actions (CI/CD)
