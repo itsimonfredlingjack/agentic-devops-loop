@@ -31,6 +31,9 @@ agentic-devops-loop/
 *.bak
 *.disabled
 
+# Monitor data
+data/
+
 # Coverage
 .coverage
 htmlcov/
