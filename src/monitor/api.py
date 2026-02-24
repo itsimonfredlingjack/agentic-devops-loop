@@ -151,6 +151,18 @@ async def receive_event(body: HookEventBody) -> dict[str, Any]:
 
         await session.commit()
 
+    # 2a. Broadcast session_complete on stop
+    if body.event_type == "stop":
+        await broadcast.emit("session_complete", {
+            "session_id": body.session_id,
+            "ticket_id": body.ticket_id,
+            "outcome": "done",
+            "pytest_summary": None,
+            "ruff_summary": None,
+            "git_diff_summary": None,
+            "pr_url": None,
+        })
+
     # 2. Broadcast tool_event
     await broadcast.emit("tool_event", event_dict)
 
@@ -262,6 +274,12 @@ async def get_status() -> dict[str, Any]:
             "total_events": s.total_events,
             "total_cost_usd": s.total_cost_usd,
         }
+
+
+@fastapi_app.get("/debug/clients")
+async def debug_clients() -> dict[str, Any]:
+    """Debug: show connected Socket.IO clients."""
+    return {"monitor_clients": broadcast.client_count}
 
 
 @fastapi_app.post("/reset")
